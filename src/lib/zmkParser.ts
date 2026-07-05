@@ -382,6 +382,64 @@ export function addLayerToSource(source: string, name: string, keyCount: number)
   return source.slice(0, closeBrace) + `\n${node}\n    ` + source.slice(closeBrace);
 }
 
+/** Rename a layer node (and its display-name if present). Minimal-diff. */
+export function renameLayerInSource(source: string, oldName: string, newName: string): string {
+  const keymapStart = source.search(/keymap\s*\{/);
+  if (keymapStart === -1) return source;
+
+  const nodeRe = new RegExp(`(\\n[ \\t]*)(${escapeRegex(oldName)})(\\s*\\{)`);
+  const m = nodeRe.exec(source.slice(keymapStart));
+  if (!m) return source;
+  const nameStart = keymapStart + m.index + m[1].length;
+  let result = source.slice(0, nameStart) + newName + source.slice(nameStart + oldName.length);
+
+  // Update display-name inside this node if present
+  const node = findLayerNode(result, newName);
+  if (node) {
+    const dm = /(display-name\s*=\s*")([^"]*)(")/.exec(node.body);
+    if (dm) {
+      const start = node.open + 1 + dm.index + dm[1].length;
+      result = result.slice(0, start) + newName + result.slice(start + dm[2].length);
+    }
+  }
+  return result;
+}
+
+/** Remove a layer node from the keymap block entirely. */
+export function deleteLayerFromSource(source: string, name: string): string {
+  const node = findLayerNode(source, name);
+  if (!node) return source;
+  // Extend to trailing `;` and leading indentation/newline
+  let end = node.close + 1;
+  const semi = source.slice(end).match(/^\s*;/);
+  if (semi) end += semi[0].length;
+  let start = node.nameStart;
+  while (start > 0 && (source[start - 1] === ' ' || source[start - 1] === '\t')) start--;
+  if (start > 0 && source[start - 1] === '\n') start--;
+  return source.slice(0, start) + source.slice(end);
+}
+
+function findLayerNode(source: string, name: string): { nameStart: number; open: number; close: number; body: string } | null {
+  const keymapStart = source.search(/keymap\s*\{/);
+  if (keymapStart === -1) return null;
+  const re = new RegExp(`\\b${escapeRegex(name)}\\s*\\{`);
+  const m = re.exec(source.slice(keymapStart));
+  if (!m) return null;
+  const nameStart = keymapStart + m.index;
+  const open = source.indexOf('{', nameStart);
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}') {
+      depth--;
+      if (depth === 0) break;
+    }
+    i++;
+  }
+  return { nameStart, open, close: i, body: source.slice(open + 1, i) };
+}
+
 function generateComboNode(combo: ZMKCombo): string {
   const lines: string[] = [];
   lines.push(`${combo.name} {`);

@@ -32,6 +32,10 @@ const ZMK_BEHAVIORS = [
   { code: '&bt',       label: 'BT',         title: 'Bluetooth action',                        color: 'rgba(56,189,248,0.2)',   params: ['bt_action'] },
   { code: '&mkp',      label: 'Mouse',      title: 'Mouse button click',                      color: 'rgba(244,114,182,0.2)', params: ['mouse_btn'] },
   { code: '&caps_word',label: 'Caps Word',  title: 'Smart caps lock until non-alpha key',     color: 'rgba(52,211,153,0.2)',  params: [] },
+  { code: '&out',      label: 'Output',     title: 'Select USB/BLE output (&out)',            color: 'rgba(34,211,238,0.18)', params: ['out_action'] },
+  { code: '&soft_off', label: 'Soft Off',   title: 'Power the keyboard down (&soft_off)',     color: 'rgba(251,113,133,0.15)', params: [] },
+  { code: '&sys_reset',label: 'Reset',      title: 'Restart the keyboard firmware (&sys_reset)', color: 'rgba(251,113,133,0.15)', params: [] },
+  { code: '&bootloader',label: 'Bootloader', title: 'Reboot into flash mode (&bootloader)',   color: 'rgba(251,113,133,0.15)', params: [] },
   { code: '&trans',    label: 'Pass-thru',  title: 'Transparent — falls through to lower layer', color: 'rgba(255,255,255,0.04)', params: [] },
   { code: '&none',     label: 'Block',      title: 'Blocked — does nothing',                  color: 'rgba(255,80,80,0.08)',  params: [] },
 ]
@@ -70,13 +74,17 @@ function useLayerOptions(firmware: Firmware): { value: string; label: string }[]
 const ZMK_KEYCODES = [
   ...('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')),
   ...([0,1,2,3,4,5,6,7,8,9].map(n => `N${n}`)),
-  'SPACE','ENTER','TAB','BACKSPACE','ESC','DELETE',
+  'SPACE','ENTER','TAB','BACKSPACE','ESC','DELETE','CAPSLOCK',
   'LEFT_ARROW','RIGHT_ARROW','UP_ARROW','DOWN_ARROW',
+  'HOME','END','PG_UP','PG_DN','INSERT','PRINTSCREEN',
   'COMMA','DOT','SEMI','SQT','DQT','SLASH','BACKSLASH','MINUS','EQUAL','GRAVE',
   'TILDE','LEFT_BRACKET','RIGHT_BRACKET','LEFT_BRACE','RIGHT_BRACE',
   'PIPE','COLON','EXCL','AT','HASH','DLLR','PRCNT','CARET','AMPS','ASTRK','LPAR','RPAR','PLUS','UNDER','LT','GT','QMARK',
   ...([1,2,3,4,5,6,7,8,9,10,11,12].map(n => `F${n}`)),
-  'C_VOL_UP','C_VOL_DN','K_MUTE','C_PLAY_PAUSE','C_NEXT','C_PREV','C_BRIGHTNESS_INC','C_BRIGHTNESS_DEC',
+  'C_VOL_UP','C_VOL_DN','K_MUTE','C_PLAY_PAUSE','C_NEXT','C_PREV',
+  'C_BRIGHTNESS_INC','C_BRIGHTNESS_DEC','C_POWER','C_AC_SEARCH','C_AL_CONTROL_PANEL',
+  'LG(C)','LG(V)','LG(X)','LG(Z)','LG(A)','LG(S)','LG(TAB)',
+  'LG(LS(NUMBER_4))','LG(LS(S))','LA(TAB)','LA(PRINTSCREEN)',
 ]
 
 const ZMK_MODIFIERS = [
@@ -85,6 +93,7 @@ const ZMK_MODIFIERS = [
 ]
 
 const ZMK_BT_ACTIONS = ['BT_CLR','BT_CLR_ALL','BT_SEL 0','BT_SEL 1','BT_SEL 2','BT_SEL 3','BT_SEL 4','BT_NXT','BT_PRV']
+const ZMK_OUT_ACTIONS = ['OUT_TOG','OUT_USB','OUT_BLE']
 const ZMK_MOUSE_BTNS = ['LCLK','RCLK','MCLK','MB4','MB5']
 
 const QMK_KEYCODES = [
@@ -117,8 +126,10 @@ function parseZMK(binding: string): ParsedZMK {
   return { behavior, params }
 }
 
+const ZMK_ZERO_PARAM = new Set(['&trans', '&none', '&caps_word', '&soft_off', '&sys_reset', '&bootloader'])
+
 function serializeZMK(b: string, params: string[]): string {
-  if (b === '&trans' || b === '&none' || b === '&caps_word') return b
+  if (ZMK_ZERO_PARAM.has(b)) return b
   return [b, ...params].join(' ')
 }
 
@@ -228,14 +239,33 @@ function ParamPicker({
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search or type any keycode…"
             onKeyDown={e => {
-              if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
+              if (e.key === 'Enter') {
+                // Prefer exact/filtered match, else accept the raw text —
+                // covers modifier wraps like LG(LS(N4)) and uncommon codes
+                const pick = filtered.length > 0 && !query ? filtered[0]
+                  : filtered.find(o => o.toLowerCase() === query.toLowerCase()) ?? (query.trim() || filtered[0])
+                if (pick) { onChange(pick); setOpen(false); setQuery('') }
+              }
               if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
             }}
             style={{ margin: 6, fontSize: 11 }}
           />
           <div style={{ overflowY: 'auto', flex: 1 }}>
+            {/* Raw entry: whatever was typed is always usable */}
+            {query.trim() && !filtered.some(o => o.toLowerCase() === query.trim().toLowerCase()) && (
+              <div
+                onClick={() => { onChange(query.trim()); setOpen(false); setQuery('') }}
+                style={{
+                  padding: '5px 10px', cursor: 'pointer', fontSize: 11,
+                  fontFamily: 'var(--font-mono)', color: 'var(--accent)',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
+                Use “{query.trim()}”
+              </div>
+            )}
             {filtered.map(opt => (
               <div
                 key={opt}
@@ -253,6 +283,9 @@ function ParamPicker({
                 {opt}
               </div>
             ))}
+          </div>
+          <div style={{ padding: '5px 10px', fontSize: 9.5, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
+            Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable
           </div>
         </div>
       )}
@@ -300,7 +333,7 @@ function ZMKParamEditor({
       {bDef.params.map((pType, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : pType === 'modifier' ? 'Mod' : pType === 'bt_action' ? 'Action' : 'Button'}
+            {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : pType === 'modifier' ? 'Mod' : pType === 'bt_action' || pType === 'out_action' ? 'Action' : 'Button'}
           </span>
           {pType === 'layer' ? (
             <LayerPicker firmware="zmk" value={params[i] ?? '0'} onChange={v => setParam(i, v)} />
@@ -310,6 +343,8 @@ function ZMKParamEditor({
             <ParamPicker options={ZMK_MODIFIERS} value={params[i] ?? ''} onChange={v => setParam(i, v)} />
           ) : pType === 'bt_action' ? (
             <ParamPicker options={ZMK_BT_ACTIONS} value={params[i] ?? ''} onChange={v => setParam(i, v)} />
+          ) : pType === 'out_action' ? (
+            <ParamPicker options={ZMK_OUT_ACTIONS} value={params[i] ?? ''} onChange={v => setParam(i, v)} />
           ) : (
             <ParamPicker options={ZMK_MOUSE_BTNS} value={params[i] ?? ''} onChange={v => setParam(i, v)} />
           )}
@@ -366,6 +401,7 @@ function defaultZMKParams(behavior: string): string[] {
     case '&sk':  return ['LEFT_SHIFT']
     case '&bt':  return ['BT_SEL 0']
     case '&mkp': return ['LCLK']
+    case '&out': return ['OUT_TOG']
     default:     return []
   }
 }

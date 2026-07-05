@@ -13,10 +13,13 @@ import QMKComboEditor from './QMKComboEditor';
 // ─── ZMK Tab ──────────────────────────────────────────────────────────────────
 
 const ZMKTab: React.FC = () => {
-  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey, selectedLayer, setSelectedLayer, addLayer } = useZMKStore();
+  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey, selectedLayer, setSelectedLayer, addLayer, renameLayer, deleteLayer } = useZMKStore();
   const [keyboard, setKeyboard] = useState<ZMKKeyboardDef>(getSelectedKeyboard);
   const [addingLayer, setAddingLayer] = useState(false);
   const [newLayerName, setNewLayerName] = useState('');
+  const [renamingLayer, setRenamingLayer] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [view, setView] = useState<'keymap' | 'combos'>('keymap');
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,83 +186,149 @@ const ZMKTab: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Layer tabs */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 4 }}>Layer:</span>
-            <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
-              {keymap.layers.map((layer, idx) => (
-                <button
-                  key={layer.name}
-                  className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
-                  onClick={() => setSelectedLayer(idx)}
-                  title={`Layer ${idx} — ${layer.name}`}
-                >
-                  <span style={{
-                    fontSize: 9.5,
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 700,
-                    opacity: selectedLayer === idx ? 0.9 : 0.45,
-                    marginRight: 5,
-                  }}>{idx}</span>
-                  {layer.displayName ?? layer.name}
-                </button>
-              ))}
-            </div>
-            {/* New layer */}
-            {addingLayer ? (
-              <form
-                style={{ display: 'flex', gap: 6, alignItems: 'center' }}
-                onSubmit={e => {
-                  e.preventDefault();
-                  const name = newLayerName.trim().replace(/[^\w+]/g, '_');
-                  if (!name) return;
-                  if (keymap.layers.some(l => l.name === name || l.displayName === name)) {
-                    setStatus({ msg: `Layer "${name}" already exists`, ok: false });
-                    return;
-                  }
-                  const idx = addLayer(name);
-                  if (idx >= 0) {
-                    setStatus({ msg: `Layer ${idx} "${name}" created — all keys transparent`, ok: true });
-                    setTimeout(() => setStatus(null), 2500);
-                  }
-                  setNewLayerName('');
-                  setAddingLayer(false);
-                }}
-              >
-                <input
-                  autoFocus
-                  value={newLayerName}
-                  onChange={e => setNewLayerName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Escape') { setAddingLayer(false); setNewLayerName(''); } }}
-                  placeholder="layer_name"
-                  style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }}
+          {/* View switcher — one board at a time */}
+          <div className="seg-ctrl" style={{ alignSelf: 'flex-start' }}>
+            <button className={`seg-btn${view === 'keymap' ? ' active' : ''}`} onClick={() => setView('keymap')}>
+              Keymap
+            </button>
+            <button className={`seg-btn${view === 'combos' ? ' active' : ''}`} onClick={() => setView('combos')}>
+              Combos ({keymap.combos.length})
+            </button>
+          </div>
+
+          {view === 'keymap' && (
+            <>
+              {/* Layer tabs + management */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 4 }}>Layer:</span>
+                <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
+                  {keymap.layers.map((layer, idx) => (
+                    <button
+                      key={layer.name}
+                      className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
+                      onClick={() => setSelectedLayer(idx)}
+                      title={`Layer ${idx} — ${layer.name}`}
+                    >
+                      <span style={{
+                        fontSize: 9.5,
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 700,
+                        opacity: selectedLayer === idx ? 0.9 : 0.45,
+                        marginRight: 5,
+                      }}>{idx}</span>
+                      {layer.displayName ?? layer.name}
+                    </button>
+                  ))}
+                </div>
+                {/* New layer */}
+                {addingLayer ? (
+                  <form
+                    style={{ display: 'flex', gap: 6, alignItems: 'center' }}
+                    onSubmit={e => {
+                      e.preventDefault();
+                      const name = newLayerName.trim().replace(/[^\w+]/g, '_');
+                      if (!name) return;
+                      if (keymap.layers.some(l => l.name === name || l.displayName === name)) {
+                        setStatus({ msg: `Layer "${name}" already exists`, ok: false });
+                        return;
+                      }
+                      const idx = addLayer(name);
+                      if (idx >= 0) {
+                        setStatus({ msg: `Layer ${idx} "${name}" created — all keys transparent`, ok: true });
+                        setTimeout(() => setStatus(null), 2500);
+                      }
+                      setNewLayerName('');
+                      setAddingLayer(false);
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      value={newLayerName}
+                      onChange={e => setNewLayerName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Escape') { setAddingLayer(false); setNewLayerName(''); } }}
+                      placeholder="layer_name"
+                      style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }}
+                    />
+                    <button type="submit" className="btn btn-primary btn-sm">Create</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAddingLayer(false); setNewLayerName(''); }}>Cancel</button>
+                  </form>
+                ) : renamingLayer ? (
+                  <form
+                    style={{ display: 'flex', gap: 6, alignItems: 'center' }}
+                    onSubmit={e => {
+                      e.preventDefault();
+                      const name = renameValue.trim().replace(/[^\w+]/g, '_');
+                      if (!name) return;
+                      const err = renameLayer(selectedLayer, name);
+                      setStatus(err ? { msg: err, ok: false } : { msg: `Renamed to "${name}"`, ok: true });
+                      if (!err) setTimeout(() => setStatus(null), 2000);
+                      setRenamingLayer(false);
+                      setRenameValue('');
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Escape') { setRenamingLayer(false); setRenameValue(''); } }}
+                      placeholder="new_name"
+                      style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }}
+                    />
+                    <button type="submit" className="btn btn-primary btn-sm">Rename</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRenamingLayer(false); setRenameValue(''); }}>Cancel</button>
+                  </form>
+                ) : (
+                  <>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setAddingLayer(true)} title="Add a new empty layer">
+                      + Layer
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      title={`Rename layer ${selectedLayer}`}
+                      onClick={() => {
+                        setRenameValue(keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name ?? '');
+                        setRenamingLayer(true);
+                      }}
+                    >
+                      Rename
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--danger)' }}
+                      title={`Delete layer ${selectedLayer} (blocked if referenced)`}
+                      onClick={() => {
+                        const l = keymap.layers[selectedLayer];
+                        if (!window.confirm(`Delete layer ${selectedLayer} "${l?.displayName ?? l?.name}"? References to higher layers will be renumbered.`)) return;
+                        const err = deleteLayer(selectedLayer);
+                        setStatus(err ? { msg: err, ok: false } : { msg: 'Layer deleted — higher layer references renumbered', ok: true });
+                        if (!err) setTimeout(() => setStatus(null), 3000);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Keyboard */}
+              <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Layer {selectedLayer}: {keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name}
+                  <span style={{ fontWeight: 400, marginLeft: 8 }}>— click key to edit</span>
+                </div>
+                <SplitKeyboard
+                  layer={keymap.layers[selectedLayer] ?? null}
+                  onBindingChange={handleBindingChange}
                 />
-                <button type="submit" className="btn btn-primary btn-sm">Create</button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAddingLayer(false); setNewLayerName(''); }}>Cancel</button>
-              </form>
-            ) : (
-              <button className="btn btn-secondary btn-sm" onClick={() => setAddingLayer(true)} title="Add a new empty layer">
-                + Layer
-              </button>
-            )}
-          </div>
+              </div>
+            </>
+          )}
 
-          {/* Keyboard */}
-          <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Layer {selectedLayer}: {keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name}
-              <span style={{ fontWeight: 400, marginLeft: 8 }}>— click key to edit</span>
+          {view === 'combos' && (
+            <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+              <ComboEditor />
             </div>
-            <SplitKeyboard
-              layer={keymap.layers[selectedLayer] ?? null}
-              onBindingChange={handleBindingChange}
-            />
-          </div>
-
-          {/* Combo editor — full width below keyboard */}
-          <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
-            <ComboEditor />
-          </div>
+          )}
         </>
       )}
     </div>
