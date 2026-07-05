@@ -397,32 +397,18 @@ const ZMKEditor: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('zmk');
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 16,
-      padding: 24,
-      height: '100%',
-      overflow: 'auto',
-    }}>
-      {/* Header */}
-      <div className="anim-fade-up" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div>
-          <h2 style={{ margin: '0 0 2px', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
-            Keymap Editor
-          </h2>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-            Visual editor for your ZMK keyboards (Corne · Crosses) and QMK (corne_procyon)
-          </p>
-        </div>
-        <div className="seg-ctrl" style={{ marginLeft: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+      {/* Header — same section-header pattern as Pointing/Settings */}
+      <div className="section-header">
+        <span className="section-title">Keymap Editor</span>
+        <div className="seg-ctrl">
           <button className={`seg-btn${activeTab === 'zmk' ? ' active' : ''}`} onClick={() => setActiveTab('zmk')}>ZMK</button>
           <button className={`seg-btn${activeTab === 'qmk' ? ' active' : ''}`} onClick={() => setActiveTab('qmk')}>QMK</button>
         </div>
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, padding: 24 }}>
         {activeTab === 'zmk' ? <ZMKTab /> : <QMKTab />}
       </div>
     </div>

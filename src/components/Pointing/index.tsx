@@ -191,8 +191,28 @@ export default function Pointing() {
   const [values, setValues] = useState<PointingValues | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null)
+  /** Device the user tried to switch to while having unsaved changes */
+  const [pendingSwitch, setPendingSwitch] = useState<PointingDevice | null>(null)
 
-  const dirty = orig && values && JSON.stringify(orig) !== JSON.stringify(values)
+  const dirty = !!(orig && values && JSON.stringify(orig) !== JSON.stringify(values))
+
+  // Guard reload/close while dirty (matches the keymap editor's behavior)
+  useEffect(() => {
+    if (!dirty) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [dirty])
+
+  const switchDevice = (d: PointingDevice, force = false) => {
+    if (d.keyboardId === devId) return
+    if (dirty && !force) {
+      setPendingSwitch(d)
+      return
+    }
+    setPendingSwitch(null)
+    setDevId(d.keyboardId)
+  }
 
   const load = (d: PointingDevice) => {
     setSource(null); setOrig(null); setValues(null); setLoadError(null)
@@ -241,20 +261,41 @@ export default function Pointing() {
         </div>
       </div>
 
-      <div style={{ padding: 24, maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ padding: 24, maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Device switcher */}
         <div className="seg-ctrl" style={{ alignSelf: 'flex-start' }}>
           {POINTING_DEVICES.map(d => (
             <button
               key={d.keyboardId}
               className={`seg-btn${devId === d.keyboardId ? ' active' : ''}`}
-              onClick={() => setDevId(d.keyboardId)}
+              onClick={() => switchDevice(d)}
               title={d.overlayPath}
             >
               {d.keyboardName} <span style={{ opacity: 0.65, fontWeight: 400, marginLeft: 4 }}>· {d.deviceName.toLowerCase()}</span>
             </button>
           ))}
         </div>
+
+        {/* Unsaved-changes guard when switching devices */}
+        {pendingSwitch && (
+          <div className="glass anim-fade-up" style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            padding: '10px 14px', fontSize: 12,
+            borderColor: 'rgba(251,191,36,0.35)',
+          }}>
+            <span>
+              Unsaved changes on <strong>{dev.keyboardName}</strong> — switch to{' '}
+              <strong>{pendingSwitch.keyboardName}</strong> and discard them?
+            </span>
+            <button className="btn btn-secondary btn-sm" onClick={() => switchDevice(pendingSwitch, true)}>
+              Discard &amp; switch
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={async () => { await save(); switchDevice(pendingSwitch, true) }}>
+              Save, then switch
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPendingSwitch(null)}>Cancel</button>
+          </div>
+        )}
 
         {loadError ? (
           <div className="panel-inset" style={{ padding: '12px 16px', color: 'var(--danger)', fontSize: 12, wordBreak: 'break-all' }}>

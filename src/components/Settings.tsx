@@ -15,7 +15,7 @@ export default function Settings() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: "24px", maxWidth: "600px" }}>
+      <div style={{ padding: "24px", maxWidth: "640px", margin: "0 auto" }}>
         {/* Keyboards Section */}
         <Section title="Keyboards">
           {ZMK_KEYBOARDS.map((kb) => (
@@ -48,7 +48,7 @@ export default function Settings() {
             <p>
               <strong style={{ color: "var(--text)" }}>Ultimate Keyboards</strong> v0.1.0
             </p>
-            <p>ZMK / QMK keymap editor and Karabiner-Elements configurator.</p>
+            <p>ZMK / QMK keymap editor, pointing-device tuner, and Karabiner-Elements configurator.</p>
             <p style={{ marginTop: "8px" }}>
               Built with Tauri v2 + React 19 + TypeScript.
             </p>
