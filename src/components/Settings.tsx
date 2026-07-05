@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useTrainingStore } from "@/stores/trainingStore";
 import { ZMK_KEYBOARDS } from "@/lib/keyboards";
 
 const IS_TAURI =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export default function Settings() {
-  // Chord window is live app state — wired straight to the training store
-  // (same value the Training section header slider edits).
-  const { chordWindowMs, setChordWindow } = useTrainingStore();
-
   return (
     <div style={{ height: "100%", overflow: "auto" }}>
       {/* Header */}
@@ -21,33 +16,6 @@ export default function Settings() {
 
       {/* Content */}
       <div style={{ padding: "24px", maxWidth: "600px" }}>
-        {/* Training Section */}
-        <Section title="Training">
-          <Field label="Chord Window (ms)" hint="Time window for chord detection (20–150ms)">
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <input
-                type="range"
-                min={20}
-                max={150}
-                value={chordWindowMs}
-                onChange={(e) => setChordWindow(Number(e.target.value))}
-                style={{ flex: 1, accentColor: "var(--accent)", cursor: "pointer" }}
-              />
-              <span
-                style={{
-                  minWidth: "40px",
-                  textAlign: "right",
-                  color: "var(--accent)",
-                  fontWeight: 600,
-                  fontSize: "13px",
-                }}
-              >
-                {chordWindowMs}ms
-              </span>
-            </div>
-          </Field>
-        </Section>
-
         {/* Keyboards Section */}
         <Section title="Keyboards">
           {ZMK_KEYBOARDS.map((kb) => (
@@ -80,7 +48,7 @@ export default function Settings() {
             <p>
               <strong style={{ color: "var(--text)" }}>Ultimate Keyboards</strong> v0.1.0
             </p>
-            <p>ZMK / QMK keymap editor, Karabiner-Elements configurator, and chord typing trainer.</p>
+            <p>ZMK / QMK keymap editor and Karabiner-Elements configurator.</p>
             <p style={{ marginTop: "8px" }}>
               Built with Tauri v2 + React 19 + TypeScript.
             </p>

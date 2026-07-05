@@ -1,11 +1,10 @@
 import type { CSSProperties } from 'react'
-import { Keyboard, Command, Dumbbell, Settings } from 'lucide-react'
+import { Keyboard, Command, Settings } from 'lucide-react'
 import type { Section } from '@/App'
 
 const NAV = [
   { id: 'zmk' as Section, label: 'ZMK / QMK', icon: Keyboard },
   { id: 'karabiner' as Section, label: 'MacBook Keys', icon: Command },
-  { id: 'training' as Section, label: 'Training', icon: Dumbbell },
   { id: 'settings' as Section, label: 'Settings', icon: Settings },
 ]
 

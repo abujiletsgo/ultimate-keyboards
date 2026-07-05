@@ -4,10 +4,9 @@ import { useZMKStore } from "@/stores/zmkStore";
 
 const ZMKEditor = lazy(() => import("@/components/ZMKEditor"));
 const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
-const Training = lazy(() => import("@/components/Training"));
 const Settings = lazy(() => import("@/components/Settings"));
 
-export type Section = "zmk" | "karabiner" | "training" | "settings";
+export type Section = "zmk" | "karabiner" | "settings";
 
 function LoadingFallback() {
   return (
@@ -71,7 +70,7 @@ class SectionErrorBoundary extends Component<
 }
 
 const SECTION_KEY = "uk.activeSection";
-const SECTIONS: Section[] = ["zmk", "karabiner", "training", "settings"];
+const SECTIONS: Section[] = ["zmk", "karabiner", "settings"];
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<Section>(() => {
@@ -105,7 +104,6 @@ export default function App() {
             <div key={activeSection} className="anim-fade-up" style={{ height: "100%" }}>
               {activeSection === "zmk" && <ZMKEditor />}
               {activeSection === "karabiner" && <KarabinerEditor />}
-              {activeSection === "training" && <Training />}
               {activeSection === "settings" && <Settings />}
             </div>
           </SectionErrorBoundary>
