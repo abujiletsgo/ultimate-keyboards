@@ -100,7 +100,7 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
             placeholder="Search key…"
             onKeyDown={e => {
               if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
-              if (e.key === 'Escape') setOpen(false)
+              if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
             }}
             style={{ margin: 6, height: 26, fontSize: 11 }}
           />
@@ -166,6 +166,15 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
   const { rules, addRule, removeRule } = useKarabinerStore()
   const [mode, setMode] = useState<Mode>('remap')
 
+  // Esc dismisses the popover (nested dropdowns stopPropagation their own Esc)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   // Remap state
   const [toKey, setToKey] = useState(KEY_CODES[0])
   const [toMods, setToMods] = useState<string[]>([])
@@ -191,6 +200,7 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
     if (r.type === 'combo') return r.fromKeys.includes(macKey.code)
     if (r.type === 'layer_activator') return r.fromKey === macKey.code
     if (r.type === 'layer_binding') return r.fromKey === macKey.code
+    if (r.type === 'homerow_mod') return r.fromKey === macKey.code
     return false
   })
 

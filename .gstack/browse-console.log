@@ -1,3 +1,45 @@
 [2026-07-05T06:46:27.035Z] [debug] [vite] connecting...
 [2026-07-05T06:46:27.038Z] [debug] [vite] connected.
 [2026-07-05T06:46:27.071Z] [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/index.tsx
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/RuleList.tsx
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/HomerowModEditor.tsx
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacComboEditor.tsx
+[2026-07-05T06:51:13.671Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacKeyEditor.tsx
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/index.tsx
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/RuleList.tsx
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/HomerowModEditor.tsx
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacComboEditor.tsx
+[2026-07-05T06:51:20.328Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacKeyEditor.tsx
+[2026-07-05T06:51:29.034Z] [debug] [vite] hot updated: /src/App.tsx
+[2026-07-05T06:51:29.034Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:51:44.389Z] [debug] [vite] hot updated: /src/App.tsx
+[2026-07-05T06:51:44.389Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:03.824Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:03.824Z] [debug] [vite] hot updated: /src/components/ZMKEditor/BindingEditor.tsx
+[2026-07-05T06:52:07.660Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:07.660Z] [debug] [vite] hot updated: /src/components/ZMKEditor/BindingEditor.tsx
+[2026-07-05T06:52:26.335Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:26.335Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacKeyEditor.tsx
+[2026-07-05T06:52:29.915Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:29.915Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacKeyEditor.tsx
+[2026-07-05T06:52:39.596Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:39.596Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/RuleList.tsx
+[2026-07-05T06:52:43.360Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:43.360Z] [debug] [vite] hot updated: /src/components/KarabinerEditor/MacKeyEditor.tsx
+[2026-07-05T06:52:45.045Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:53.089Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:53.089Z] [debug] [vite] hot updated: /src/components/ZMKEditor/index.tsx
+[2026-07-05T06:52:53.089Z] [debug] [vite] hot updated: /src/components/ZMKEditor/ComboEditor.tsx
+[2026-07-05T06:52:53.089Z] [debug] [vite] hot updated: /src/App.tsx
+[2026-07-05T06:52:55.917Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:52:55.917Z] [debug] [vite] hot updated: /src/components/ZMKEditor/index.tsx
+[2026-07-05T06:52:55.917Z] [debug] [vite] hot updated: /src/components/ZMKEditor/ComboEditor.tsx
+[2026-07-05T06:52:55.917Z] [debug] [vite] hot updated: /src/App.tsx
+[2026-07-05T06:53:23.819Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:53:23.819Z] [debug] [vite] hot updated: /src/components/ZMKEditor/index.tsx
+[2026-07-05T06:53:26.961Z] [debug] [vite] hot updated: /src/styles/globals.css
+[2026-07-05T06:53:26.961Z] [debug] [vite] hot updated: /src/components/ZMKEditor/index.tsx
+[2026-07-05T06:54:29.413Z] [debug] [vite] hot updated: /src/styles/globals.css

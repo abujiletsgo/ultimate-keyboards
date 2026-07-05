@@ -21,7 +21,7 @@
   /* ── Glass ──────────────────────────────────────────────────────────── */
   --glass-bg:           rgba(255, 255, 255, 0.045);
   --glass-bg-hover:     rgba(255, 255, 255, 0.075);
-  --glass-strong-bg:    rgba(17, 19, 33, 0.72);
+  --glass-strong-bg:    rgba(17, 19, 33, 0.88); /* readable even without backdrop-filter */
   --glass-border:       rgba(255, 255, 255, 0.09);
   --glass-border-hover: rgba(255, 255, 255, 0.16);
   --glass-highlight:    inset 0 1px 0 rgba(255, 255, 255, 0.07);

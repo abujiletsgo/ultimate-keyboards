@@ -216,7 +216,7 @@ function ParamPicker({
             placeholder="Search…"
             onKeyDown={e => {
               if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
-              if (e.key === 'Escape') setOpen(false)
+              if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
             }}
             style={{ margin: 6, fontSize: 11 }}
           />
@@ -369,6 +369,15 @@ function defaultQMKParams(type: string): string[] {
 
 export default function BindingEditor({ firmware, currentBinding, anchorX, anchorY, onUpdate, onCancel }: Props) {
   const behaviors = firmware === 'zmk' ? ZMK_BEHAVIORS : QMK_BEHAVIORS
+
+  // Esc dismisses the popover (nested dropdowns stopPropagation their own Esc)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onCancel])
 
   // Parse current binding
   const parsed = firmware === 'zmk' ? parseZMK(currentBinding) : parseQMK(currentBinding)

@@ -1,58 +1,22 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useTrainingStore } from "@/stores/trainingStore";
+import { ZMK_KEYBOARDS } from "@/lib/keyboards";
 
 const IS_TAURI =
   typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-interface SettingsState {
-  chordWindowMs: number;
-  theme: "dark";
-  autoSave: boolean;
-  zmkRepoPath: string;
-  karabinerConfigPath: string;
-}
-
-const DEFAULT_SETTINGS: SettingsState = {
-  chordWindowMs: 80,
-  theme: "dark",
-  autoSave: true,
-  zmkRepoPath: "",
-  karabinerConfigPath:
-    "~/.config/karabiner/assets/complex_modifications/ultimate-keyboards.json",
-};
-
 export default function Settings() {
-  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
-  const [saved, setSaved] = useState(false);
-
-  function handleChange<K extends keyof SettingsState>(
-    key: K,
-    value: SettingsState[K]
-  ) {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    setSaved(false);
-  }
-
-  function handleSave() {
-    // Persist to localStorage as a simple config store
-    localStorage.setItem("ultimate-keyboards-settings", JSON.stringify(settings));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
+  // Chord window is live app state — wired straight to the training store
+  // (same value the Training section header slider edits).
+  const { chordWindowMs, setChordWindow } = useTrainingStore();
 
   return (
     <div style={{ height: "100%", overflow: "auto" }}>
       {/* Header */}
       <div className="section-header">
         <span className="section-title">Settings</span>
-        <button
-          className="btn btn-primary"
-          onClick={handleSave}
-          style={saved ? { backgroundColor: "var(--success)" } : undefined}
-        >
-          {saved ? "Saved!" : "Save Settings"}
-        </button>
       </div>
 
       {/* Content */}
@@ -65,10 +29,8 @@ export default function Settings() {
                 type="range"
                 min={20}
                 max={150}
-                value={settings.chordWindowMs}
-                onChange={(e) =>
-                  handleChange("chordWindowMs", Number(e.target.value))
-                }
+                value={chordWindowMs}
+                onChange={(e) => setChordWindow(Number(e.target.value))}
                 style={{ flex: 1, accentColor: "var(--accent)", cursor: "pointer" }}
               />
               <span
@@ -80,77 +42,30 @@ export default function Settings() {
                   fontSize: "13px",
                 }}
               >
-                {settings.chordWindowMs}ms
+                {chordWindowMs}ms
               </span>
             </div>
           </Field>
         </Section>
 
-        {/* File Paths Section */}
-        <Section title="File Paths">
-          <Field
-            label="ZMK Repo Path"
-            hint="Local path to your ZMK config repository"
-          >
-            <input
-              type="text"
-              value={settings.zmkRepoPath}
-              onChange={(e) => handleChange("zmkRepoPath", e.target.value)}
-              placeholder="~/zmk-config"
-              style={{ width: "100%" }}
-            />
-          </Field>
-
-          <Field
-            label="Karabiner Config Path"
-            hint="Output path for Karabiner complex modifications JSON"
-          >
-            <input
-              type="text"
-              value={settings.karabinerConfigPath}
-              onChange={(e) => handleChange("karabinerConfigPath", e.target.value)}
-              style={{ width: "100%" }}
-            />
-          </Field>
+        {/* Keyboards Section */}
+        <Section title="Keyboards">
+          {ZMK_KEYBOARDS.map((kb) => (
+            <Field key={kb.id} label={`${kb.name} · ${kb.variant}`}>
+              <span className="mono" style={{ display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={kb.keymapPath}>
+                {kb.keymapPath}
+              </span>
+            </Field>
+          ))}
+          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+            Keymap files are read from and saved to these local git checkouts.
+            Switch boards from the ZMK editor toolbar.
+          </div>
         </Section>
 
         {/* MacBook Keyboard Section */}
         <Section title="MacBook Keyboard">
           <BuiltInKeyboardField />
-        </Section>
-
-        {/* General Section */}
-        <Section title="General">
-          <Field label="Auto Save" hint="Automatically save changes when switching sections">
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={settings.autoSave}
-                onChange={(e) => handleChange("autoSave", e.target.checked)}
-                style={{ accentColor: "var(--accent)", width: "16px", height: "16px" }}
-              />
-              <span style={{ fontSize: "13px" }}>
-                {settings.autoSave ? "Enabled" : "Disabled"}
-              </span>
-            </label>
-          </Field>
-
-          <Field label="Theme" hint="App color theme">
-            <select
-              value={settings.theme}
-              onChange={(e) => handleChange("theme", e.target.value as "dark")}
-              style={{ width: "140px" }}
-            >
-              <option value="dark">Dark</option>
-            </select>
-          </Field>
         </Section>
 
         {/* About Section */}

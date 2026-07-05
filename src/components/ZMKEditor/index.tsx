@@ -13,9 +13,8 @@ import QMKComboEditor from './QMKComboEditor';
 // ─── ZMK Tab ──────────────────────────────────────────────────────────────────
 
 const ZMKTab: React.FC = () => {
-  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey } = useZMKStore();
+  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey, selectedLayer, setSelectedLayer } = useZMKStore();
   const [keyboard, setKeyboard] = useState<ZMKKeyboardDef>(getSelectedKeyboard);
-  const [selectedLayer, setSelectedLayer] = useState(0);
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +91,8 @@ const ZMKTab: React.FC = () => {
 
   const handleBindingChange = (pos: number, newBinding: string) => {
     if (!keymap) return;
+    // No-op edits shouldn't mark the keymap dirty
+    if (keymap.layers[selectedLayer]?.keys[pos] === newBinding) return;
     updateLayerKey(selectedLayer, pos, newBinding);
   };
 

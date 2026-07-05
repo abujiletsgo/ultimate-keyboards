@@ -1,5 +1,6 @@
-import { useState, Suspense, lazy, Component, type ReactNode } from "react";
+import { useState, useEffect, Suspense, lazy, Component, type ReactNode } from "react";
 import Sidebar from "@/components/Sidebar";
+import { useZMKStore } from "@/stores/zmkStore";
 
 const ZMKEditor = lazy(() => import("@/components/ZMKEditor"));
 const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
@@ -69,12 +70,34 @@ class SectionErrorBoundary extends Component<
   }
 }
 
+const SECTION_KEY = "uk.activeSection";
+const SECTIONS: Section[] = ["zmk", "karabiner", "training", "settings"];
+
 export default function App() {
-  const [activeSection, setActiveSection] = useState<Section>("zmk");
+  const [activeSection, setActiveSection] = useState<Section>(() => {
+    const saved = localStorage.getItem(SECTION_KEY) as Section | null;
+    return saved && SECTIONS.includes(saved) ? saved : "zmk";
+  });
+
+  const navigate = (s: Section) => {
+    setActiveSection(s);
+    localStorage.setItem(SECTION_KEY, s);
+  };
+
+  // Guard against silently losing unsaved keymap edits on reload/close
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (useZMKStore.getState().isDirty) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   return (
     <div className="app-layout">
-      <Sidebar active={activeSection} onNavigate={setActiveSection} />
+      <Sidebar active={activeSection} onNavigate={navigate} />
       <main className="app-main">
         <Suspense fallback={<LoadingFallback />}>
           {/* key remounts the wrapper so each section animates in */}

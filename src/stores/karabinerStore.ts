@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { Rule, generateComplexModification } from '../lib/karabinerGenerator';
 
 interface KarabinerState {
@@ -60,24 +61,33 @@ const DEFAULT_RULES: Rule[] = [
   { type: 'combo', description: 'k+l → Enter', fromKeys: ['k', 'l'], toKey: 'return_or_enter' },
 ];
 
-export const useKarabinerStore = create<KarabinerState>((set, get) => ({
-  rules: DEFAULT_RULES,
-  profileTitle: 'Ultimate Keyboards',
+export const useKarabinerStore = create<KarabinerState>()(
+  persist(
+    (set, get) => ({
+      rules: DEFAULT_RULES,
+      profileTitle: 'Ultimate Keyboards',
 
-  addRule: (r) =>
-    set((state) => ({ rules: [...state.rules, r] })),
+      addRule: (r) =>
+        set((state) => ({ rules: [...state.rules, r] })),
 
-  removeRule: (idx) =>
-    set((state) => ({ rules: state.rules.filter((_, i) => i !== idx) })),
+      removeRule: (idx) =>
+        set((state) => ({ rules: state.rules.filter((_, i) => i !== idx) })),
 
-  updateRule: (idx, r) =>
-    set((state) => ({ rules: state.rules.map((rule, i) => i === idx ? r : rule) })),
+      updateRule: (idx, r) =>
+        set((state) => ({ rules: state.rules.map((rule, i) => i === idx ? r : rule) })),
 
-  setTitle: (t) => set({ profileTitle: t }),
+      setTitle: (t) => set({ profileTitle: t }),
 
-  exportJSON: () => {
-    const { rules, profileTitle } = get();
-    const mod = generateComplexModification(rules, profileTitle);
-    return JSON.stringify(mod, null, 2);
-  },
-}));
+      exportJSON: () => {
+        const { rules, profileTitle } = get();
+        const mod = generateComplexModification(rules, profileTitle);
+        return JSON.stringify(mod, null, 2);
+      },
+    }),
+    {
+      name: 'uk.karabiner',
+      // Rules are user work product — losing them on reload is data loss.
+      partialize: (s) => ({ rules: s.rules, profileTitle: s.profileTitle }),
+    },
+  ),
+);

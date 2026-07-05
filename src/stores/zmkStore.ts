@@ -5,9 +5,12 @@ interface ZMKState {
   keymap: ZMKKeymap | null;
   filePath: string | null;
   isDirty: boolean;
+  /** Persisted across section switches so returning users keep their place */
+  selectedLayer: number;
 
   // Actions
   setKeymap: (km: ZMKKeymap | null, path: string) => void;
+  setSelectedLayer: (idx: number) => void;
   addCombo: (combo: ZMKCombo) => void;
   updateCombo: (name: string, updated: ZMKCombo) => void;
   deleteCombo: (name: string) => void;
@@ -19,9 +22,12 @@ export const useZMKStore = create<ZMKState>((set) => ({
   keymap: null,
   filePath: null,
   isDirty: false,
+  selectedLayer: 0,
 
   setKeymap: (km, path) =>
     set({ keymap: km, filePath: path, isDirty: false }),
+
+  setSelectedLayer: (idx) => set({ selectedLayer: idx }),
 
   addCombo: (combo) =>
     set((state) => {

@@ -157,7 +157,9 @@ function RuleItem({
       {/* Delete */}
       <button
         className="btn btn-danger btn-sm"
-        onClick={() => onDelete(idx)}
+        onClick={() => {
+          if (window.confirm(`Delete rule "${rule.description}"?`)) onDelete(idx);
+        }}
         title="Delete rule"
       >
         <Trash2 size={12} />
