@@ -25,7 +25,8 @@ function devFsWritePlugin(): Plugin {
               typeof contents === "string" &&
               path.startsWith(homedir()) &&
               !path.includes("..") &&
-              (path.endsWith(".keymap") || path.endsWith(".json")) &&
+              (path.endsWith(".keymap") || path.endsWith(".json") ||
+                path.endsWith(".overlay") || path.endsWith(".conf") || path.endsWith(".dtsi")) &&
               existsSync(path); // only overwrite existing files, never create
             if (!ok) { res.statusCode = 403; res.end("forbidden"); return; }
             writeFileSync(path, contents, "utf8");
