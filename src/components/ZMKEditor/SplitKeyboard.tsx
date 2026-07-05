@@ -136,8 +136,8 @@ function getKeyVars(binding: string): { bg?: string; border?: string; text?: str
   }
 }
 
-// Divider x position: between left col 5 (x ends at ~6.1u) and right col 6 (x starts at ~6.8u)
-const DIVIDER_X = 6.35 * (KEY_UNIT + KEY_GAP)
+// Divider x position: centered in the split gap (left ends 6.2u, right starts 6.9u)
+const DIVIDER_X = 6.55 * (KEY_UNIT + KEY_GAP)
 
 const LEGEND = [
   { color: 'rgba(96,165,250,0.65)', label: 'Layer' },
