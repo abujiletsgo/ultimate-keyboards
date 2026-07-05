@@ -23,8 +23,9 @@ export interface PointingDevice {
     smartMode: boolean         // PMW3610 smart-mode
     scrollToggles: boolean     // Azoteq scroll + natural-scroll-x/y
     gestures: boolean          // Azoteq taps / press-and-hold
-    advancedAzoteq: boolean    // bottom-beta, stationary-threshold, flip-x
+    advancedAzoteq: boolean    // bottom-beta, stationary-threshold, flip-x/y, switch-xy
     snipe: boolean
+    scrollLayer: boolean       // xy->scroll on a held layer (listener child node)
   }
 }
 
@@ -49,6 +50,7 @@ export const POINTING_DEVICES: PointingDevice[] = [
       gestures: true,
       advancedAzoteq: true,
       snipe: true,
+      scrollLayer: false,
     },
   },
   {
@@ -70,6 +72,7 @@ export const POINTING_DEVICES: PointingDevice[] = [
       gestures: false,
       advancedAzoteq: false,
       snipe: true,
+      scrollLayer: true,
     },
   },
 ]

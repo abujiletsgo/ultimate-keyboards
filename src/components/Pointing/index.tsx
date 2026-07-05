@@ -10,6 +10,7 @@ import {
   findNode, getBoolProp, setBoolProp, getIntProp, setIntProp,
   getStringProp, setStringProp, getScaler, setScaler,
   getSnipe, setSnipe, type SnipeConfig,
+  getScrollLayer, setScrollLayer, type ScrollLayerConfig,
 } from '@/lib/pointingParser'
 
 // ── Value model ───────────────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ interface PointingValues {
   // listener
   speedPct: number            // zip_xy_scaler mul (div normalized to 100)
   snipe: SnipeConfig | null
+  scrollLayer: ScrollLayerConfig | null
   // Azoteq
   sensitivity: string | null  // "1x".."4x"
   scroll: boolean
@@ -28,6 +30,8 @@ interface PointingValues {
   pressAndHoldTime: number | null
   twoFingerTap: boolean
   flipX: boolean
+  flipY: boolean
+  switchXY: boolean
   bottomBeta: number | null
   stationaryThreshold: number | null
   // PMW3610
@@ -45,6 +49,7 @@ function parseValues(src: string, dev: PointingDevice): PointingValues {
   return {
     speedPct,
     snipe: getSnipe(src, new RegExp(dev.listenerNodeRe)),
+    scrollLayer: getScrollLayer(src, new RegExp(dev.listenerNodeRe)),
     sensitivity: sensor ? getStringProp(sensor, 'sensitivity') : null,
     scroll: sensor ? getBoolProp(sensor, 'scroll') : false,
     naturalScrollX: sensor ? getBoolProp(sensor, 'natural-scroll-x') : false,
@@ -54,6 +59,8 @@ function parseValues(src: string, dev: PointingDevice): PointingValues {
     pressAndHoldTime: sensor ? getIntProp(sensor, 'press-and-hold-time') : null,
     twoFingerTap: sensor ? getBoolProp(sensor, 'two-finger-tap') : false,
     flipX: sensor ? getBoolProp(sensor, 'flip-x') : false,
+    flipY: sensor ? getBoolProp(sensor, 'flip-y') : false,
+    switchXY: sensor ? getBoolProp(sensor, 'switch-xy') : false,
     bottomBeta: sensor ? getIntProp(sensor, 'bottom-beta') : null,
     stationaryThreshold: sensor ? getIntProp(sensor, 'stationary-threshold') : null,
     cpi: sensor ? getIntProp(sensor, 'res-cpi') : null,
@@ -97,6 +104,8 @@ function applyValues(src: string, dev: PointingDevice, orig: PointingValues, v: 
   }
   if (dev.supports.advancedAzoteq) {
     if (v.flipX !== orig.flipX) sensorOp((s2, n) => setBoolProp(s2, n, 'flip-x', v.flipX))
+    if (v.flipY !== orig.flipY) sensorOp((s2, n) => setBoolProp(s2, n, 'flip-y', v.flipY))
+    if (v.switchXY !== orig.switchXY) sensorOp((s2, n) => setBoolProp(s2, n, 'switch-xy', v.switchXY))
     if (v.bottomBeta !== orig.bottomBeta && v.bottomBeta != null)
       sensorOp((s2, n) => setIntProp(s2, n, 'bottom-beta', v.bottomBeta!))
     if (v.stationaryThreshold !== orig.stationaryThreshold && v.stationaryThreshold != null)
@@ -114,6 +123,9 @@ function applyValues(src: string, dev: PointingDevice, orig: PointingValues, v: 
   }
   if (dev.supports.snipe && JSON.stringify(v.snipe) !== JSON.stringify(orig.snipe)) {
     s = setSnipe(s, listenerRe, v.snipe)
+  }
+  if (dev.supports.scrollLayer && JSON.stringify(v.scrollLayer) !== JSON.stringify(orig.scrollLayer)) {
+    s = setScrollLayer(s, listenerRe, v.scrollLayer)
   }
   return s
 }
@@ -348,7 +360,11 @@ export default function Pointing() {
                 </>
               )}
               {dev.supports.advancedAzoteq && (
-                <Toggle label="Flip X" hint="Mirror horizontal axis for mounting orientation (flip-x)" value={values.flipX} onChange={v => set('flipX', v)} />
+                <>
+                  <Toggle label="Flip X" hint="Mirror horizontal axis for mounting orientation (flip-x)" value={values.flipX} onChange={v => set('flipX', v)} />
+                  <Toggle label="Flip Y" hint="Mirror vertical axis (flip-y)" value={values.flipY} onChange={v => set('flipY', v)} />
+                  <Toggle label="Swap X/Y" hint="Rotate 90° by swapping axes (switch-xy)" value={values.switchXY} onChange={v => set('switchXY', v)} />
+                </>
               )}
               {dev.supports.smartMode && (
                 <Toggle label="Smart mode" hint="Sensor's self-adjusting surface tuning (smart-mode)" value={values.smartMode} onChange={v => set('smartMode', v)} />
@@ -377,6 +393,38 @@ export default function Pointing() {
                     value={values.pressAndHoldTime} min={100} max={600} step={25} unit=" ms"
                     onChange={v => set('pressAndHoldTime', v)}
                   />
+                )}
+              </Group>
+            )}
+
+            {/* Scroll layer (trackball) */}
+            {dev.supports.scrollLayer && (
+              <Group title="Scroll mode">
+                <Toggle
+                  label="Scroll on layer"
+                  hint="Ball motion becomes scrolling while a chosen layer is held"
+                  value={values.scrollLayer !== null}
+                  onChange={on => set('scrollLayer', on ? { layer: 5, divisor: 4 } : null)}
+                />
+                {values.scrollLayer && (
+                  <>
+                    <SliderRow
+                      label="Scroll layer"
+                      hint="Layer number that turns motion into scrolling"
+                      value={values.scrollLayer.layer} min={0} max={15} step={1} unit=""
+                      onChange={v => set('scrollLayer', { ...values.scrollLayer!, layer: v })}
+                    />
+                    <SliderRow
+                      label="Scroll speed divisor"
+                      hint="Higher = slower, more controlled scrolling"
+                      value={values.scrollLayer.divisor} min={1} max={16} step={1} unit="÷"
+                      onChange={v => set('scrollLayer', { ...values.scrollLayer!, divisor: v })}
+                    />
+                    <div className="panel-inset" style={{ padding: '10px 12px', fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      Bind a key to <span className="mono">&mo {values.scrollLayer.layer}</span> in the keymap —
+                      holding it scrolls instead of moving the cursor.
+                    </div>
+                  </>
                 )}
               </Group>
             )}

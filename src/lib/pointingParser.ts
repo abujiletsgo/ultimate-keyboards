@@ -142,7 +142,8 @@ export function getSnipe(source: string, listenerRe: RegExp): SnipeConfig | null
 
 /** Enable/update or remove the snipe child node. Ensures processors include. */
 export function setSnipe(source: string, listenerRe: RegExp, cfg: SnipeConfig | null): string {
-  let result = ensureProcessorsInclude(source)
+  // Only pull in the processors include when we're actually adding content
+  let result = cfg !== null ? ensureProcessorsInclude(source) : source
   const listener = findNode(result, listenerRe)
   if (!listener) return source
 
@@ -172,6 +173,54 @@ function snipeNodeText(cfg: SnipeConfig): string {
     `        snipe {`,
     `            layers = <${cfg.layer}>;`,
     `            input-processors = <&zip_xy_scaler 1 ${cfg.divisor}>;`,
+    `        };`,
+  ].join('\n')
+}
+
+// ── Scroll-layer child node on a listener ────────────────────────────────────
+// Turns pointer motion into scrolling while a layer is held:
+//   scroll_mode { layers = <N>; input-processors =
+//     <&zip_xy_to_scroll_mapper>, <&zip_scroll_scaler 1 T>; };
+
+export interface ScrollLayerConfig { layer: number; divisor: number }
+
+export function getScrollLayer(source: string, listenerRe: RegExp): ScrollLayerConfig | null {
+  const listener = findNode(source, listenerRe)
+  if (!listener) return null
+  const child = findNode(listener.body, /\bscroll_mode\s*\{/)
+  if (!child) return null
+  const layerM = /layers\s*=\s*<(\d+)>/.exec(child.body)
+  const divM = /&zip_scroll_scaler\s+1\s+(\d+)/.exec(child.body)
+  if (!layerM) return null
+  return { layer: parseInt(layerM[1], 10), divisor: divM ? parseInt(divM[1], 10) : 1 }
+}
+
+export function setScrollLayer(source: string, listenerRe: RegExp, cfg: ScrollLayerConfig | null): string {
+  // Only pull in the processors include when we're actually adding content
+  let result = cfg !== null ? ensureProcessorsInclude(source) : source
+  const listener = findNode(result, listenerRe)
+  if (!listener) return source
+
+  const childRel = findNode(listener.body, /\bscroll_mode\s*\{/)
+  if (childRel) {
+    let end = listener.open + 1 + childRel.close + 1
+    const semi = result.slice(end).match(/^\s*;/)
+    if (semi) end += semi[0].length
+    let start = listener.open + 1 + listener.body.search(/\n[ \t]*scroll_mode\s*\{/)
+    if (start < listener.open + 1) start = listener.open + 1 + childRel.open
+    if (cfg === null) return result.slice(0, start) + result.slice(end)
+    return result.slice(0, start) + `\n${scrollNodeText(cfg)}` + result.slice(end)
+  }
+
+  if (cfg === null) return result
+  return result.slice(0, listener.close) + `\n${scrollNodeText(cfg)}\n    ` + result.slice(listener.close)
+}
+
+function scrollNodeText(cfg: ScrollLayerConfig): string {
+  return [
+    `        scroll_mode {`,
+    `            layers = <${cfg.layer}>;`,
+    `            input-processors = <&zip_xy_to_scroll_mapper>, <&zip_scroll_scaler 1 ${cfg.divisor}>;`,
     `        };`,
   ].join('\n')
 }
