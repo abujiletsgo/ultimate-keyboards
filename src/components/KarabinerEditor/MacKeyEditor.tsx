@@ -146,8 +146,8 @@ function ModPills({ selected, onChange }: { selected: string[]; onChange: (v: st
             onClick={() => toggle(mod)}
             style={{
               padding: '3px 8px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
-              background: active ? 'rgba(139,124,248,0.3)' : 'rgba(255,255,255,0.06)',
-              border: active ? '1px solid rgba(139,124,248,0.6)' : '1px solid rgba(255,255,255,0.1)',
+              background: active ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.06)',
+              border: active ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(255,255,255,0.1)',
               color: active ? 'var(--accent-hover)' : 'var(--text-muted)',
               transition: 'background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
             }}
@@ -392,8 +392,8 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
                           onClick={() => setBindLayerName(la.layerName)}
                           style={{
                             padding: '3px 8px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
-                            background: bindLayerName === la.layerName ? 'rgba(94,166,255,0.25)' : 'rgba(255,255,255,0.07)',
-                            border: bindLayerName === la.layerName ? '1px solid rgba(94,166,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                            background: bindLayerName === la.layerName ? 'rgba(34,211,238,0.25)' : 'rgba(255,255,255,0.07)',
+                            border: bindLayerName === la.layerName ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.1)',
                             color: bindLayerName === la.layerName ? 'var(--accent-2)' : 'var(--text-muted)',
                             transition: 'background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
                           }}

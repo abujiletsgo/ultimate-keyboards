@@ -6,7 +6,7 @@ import type { MacKey } from '@/lib/macbookLayout'
 import MacbookKeyboard from './MacbookKeyboard'
 
 const COMBO_COLORS = [
-  'rgba(124,106,255,0.7)',
+  'rgba(96,165,250,0.7)',
   'rgba(52,211,153,0.7)',
   'rgba(251,146,60,0.7)',
   'rgba(56,189,248,0.7)',
@@ -111,8 +111,8 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
             return (
               <button key={mod} onClick={() => toggleMod(mod)} style={{
                 padding: '3px 8px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
-                background: active ? 'rgba(139,124,248,0.3)' : 'rgba(255,255,255,0.06)',
-                border: active ? '1px solid rgba(139,124,248,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                background: active ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.06)',
+                border: active ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(255,255,255,0.1)',
                 color: active ? 'var(--accent-hover)' : 'var(--text-muted)',
                 transition: 'background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
               }}>{sym[mod] ?? mod}</button>

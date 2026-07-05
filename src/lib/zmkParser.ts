@@ -346,6 +346,42 @@ export function updateLayerBindingsInSource(source: string, layers: ZMKLayer[]):
   return result;
 }
 
+/**
+ * Insert a new all-transparent layer node at the end of the keymap block.
+ * Bindings are formatted in rows of 12 to roughly mirror the board shape.
+ */
+export function addLayerToSource(source: string, name: string, keyCount: number): string {
+  const keymapStart = source.search(/keymap\s*\{/);
+  if (keymapStart === -1) return source;
+
+  let depth = 0;
+  let i = source.indexOf('{', keymapStart);
+  while (i < source.length) {
+    if (source[i] === '{') depth++;
+    else if (source[i] === '}') {
+      depth--;
+      if (depth === 0) break;
+    }
+    i++;
+  }
+  const closeBrace = i; // keymap block's closing '}'
+
+  const rows: string[] = [];
+  for (let k = 0; k < keyCount; k += 12) {
+    rows.push(Array(Math.min(12, keyCount - k)).fill('&trans').join('  '));
+  }
+  const node = [
+    `        ${name} {`,
+    `            display-name = "${name}";`,
+    `            bindings = <`,
+    ...rows.map(r => `                ${r}`),
+    `            >;`,
+    `        };`,
+  ].join('\n');
+
+  return source.slice(0, closeBrace) + `\n${node}\n    ` + source.slice(closeBrace);
+}
+
 function generateComboNode(combo: ZMKCombo): string {
   const lines: string[] = [];
   lines.push(`${combo.name} {`);

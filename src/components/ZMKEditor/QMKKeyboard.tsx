@@ -6,6 +6,7 @@ import {
   BOARD_HEIGHT,
   DIVIDER_X,
 } from '@/lib/corneProcyonLayout'
+import ScaledBoard from '@/components/ScaledBoard'
 import BindingEditor from './BindingEditor'
 
 // ── Behavior type detection ───────────────────────────────────────────────────
@@ -106,9 +107,9 @@ function getKeyVars(behavior: QMKBehavior): { bg?: string; border?: string; text
   switch (behavior) {
     case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
     case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
-    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.30), rgba(139,124,248,0.16))', border: 'rgba(139,124,248,0.50)', text: '#c9c0ff' }
+    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.16))', border: 'rgba(96,165,250,0.50)', text: '#bfdbfe' }
     case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
-    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.18), rgba(139,124,248,0.08))', border: 'rgba(139,124,248,0.35)', text: '#b0a6ff' }
+    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.18), rgba(96,165,250,0.08))', border: 'rgba(96,165,250,0.35)', text: '#93c5fd' }
     case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
     case 'shifted':   return { bg: 'linear-gradient(180deg, rgba(52,211,153,0.20), rgba(52,211,153,0.09))', border: 'rgba(52,211,153,0.40)', text: '#6ee7b7' }
     default:          return {}
@@ -122,7 +123,8 @@ export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, on
   const highlighted = highlightedPositions ?? new Set<number>()
 
   return (
-    <div style={{ overflowX: 'auto', padding: '16px 0' }}>
+    <div style={{ padding: '16px 0' }}>
+      <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div
         className="glass"
         style={{
@@ -180,6 +182,7 @@ export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, on
           )
         })}
       </div>
+      </ScaledBoard>
       {editing !== null && (
         <BindingEditor
           firmware="qmk"

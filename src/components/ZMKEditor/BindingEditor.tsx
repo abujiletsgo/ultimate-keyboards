@@ -23,8 +23,8 @@ interface Props {
 
 const ZMK_BEHAVIORS = [
   { code: '&kp',       label: 'Key',        title: 'Regular keypress',                        color: 'rgba(255,255,255,0.09)',  params: ['keycode'] },
-  { code: '&mo',       label: 'Hold Layer', title: 'Layer active while key is held (&mo)',    color: 'rgba(124,106,255,0.25)', params: ['layer'] },
-  { code: '&lt',       label: 'Tap/Hold',   title: 'Tap=key, Hold=layer (&lt)',               color: 'rgba(124,106,255,0.18)', params: ['layer', 'keycode'] },
+  { code: '&mo',       label: 'Hold Layer', title: 'Layer active while key is held (&mo)',    color: 'rgba(96,165,250,0.25)', params: ['layer'] },
+  { code: '&lt',       label: 'Tap/Hold',   title: 'Tap=key, Hold=layer (&lt)',               color: 'rgba(96,165,250,0.18)', params: ['layer', 'keycode'] },
   { code: '&mt',       label: 'Mod-tap',    title: 'Tap=key, Hold=modifier (&mt)',            color: 'rgba(251,146,60,0.2)',   params: ['modifier', 'keycode'] },
   { code: '&tog',      label: 'Toggle',     title: 'Toggle layer on/off (&tog)',              color: 'rgba(245,158,11,0.2)',   params: ['layer'] },
   { code: '&sl',       label: 'One-shot L', title: 'Next keypress uses this layer (&sl)',     color: 'rgba(251,191,36,0.18)', params: ['layer'] },
@@ -38,8 +38,8 @@ const ZMK_BEHAVIORS = [
 
 const QMK_BEHAVIORS = [
   { code: 'key',   label: 'Key',        title: 'Regular keypress',                      color: 'rgba(255,255,255,0.09)',  params: ['keycode'] },
-  { code: 'mo',    label: 'Hold Layer', title: 'Layer active while held (MO)',          color: 'rgba(124,106,255,0.25)', params: ['layer'] },
-  { code: 'lt',    label: 'Tap/Hold',   title: 'Tap=key, Hold=layer (LT)',              color: 'rgba(124,106,255,0.18)', params: ['layer', 'keycode'] },
+  { code: 'mo',    label: 'Hold Layer', title: 'Layer active while held (MO)',          color: 'rgba(96,165,250,0.25)', params: ['layer'] },
+  { code: 'lt',    label: 'Tap/Hold',   title: 'Tap=key, Hold=layer (LT)',              color: 'rgba(96,165,250,0.18)', params: ['layer', 'keycode'] },
   { code: 'mt',    label: 'Mod-tap',    title: 'Tap=key, Hold=modifier (MT)',           color: 'rgba(251,146,60,0.2)',   params: ['modifier', 'keycode'] },
   { code: 'tg',    label: 'Toggle',     title: 'Toggle layer on/off (TG)',              color: 'rgba(245,158,11,0.2)',   params: ['layer'] },
   { code: 'osl',   label: 'One-shot L', title: 'Next keypress uses this layer (OSL)',  color: 'rgba(251,191,36,0.18)', params: ['layer'] },
@@ -50,7 +50,22 @@ const QMK_BEHAVIORS = [
 
 // ── Param options ─────────────────────────────────────────────────────────────
 
-const LAYERS = ['0','1','2','3','4']
+import { useZMKStore } from '@/stores/zmkStore'
+import { useQMKStore } from '@/stores/qmkStore'
+
+/** Live layer list from the loaded keymap — labels show "N · name" */
+function useLayerOptions(firmware: Firmware): { value: string; label: string }[] {
+  const zmkLayers = useZMKStore(s => s.keymap?.layers)
+  const qmkLayers = useQMKStore(s => s.keymap?.layers)
+  const layers = firmware === 'zmk' ? zmkLayers : qmkLayers
+  if (!layers || layers.length === 0) {
+    return ['0', '1', '2', '3', '4'].map(v => ({ value: v, label: v }))
+  }
+  return layers.map((l, i) => ({
+    value: String(i),
+    label: `${i} · ${(l as { displayName?: string; name: string }).displayName ?? l.name}`,
+  }))
+}
 
 const ZMK_KEYCODES = [
   ...('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')),
@@ -247,16 +262,19 @@ function ParamPicker({
 
 // ── Layer number pills ────────────────────────────────────────────────────────
 
-function LayerPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function LayerPicker({ firmware, value, onChange }: { firmware: Firmware; value: string; onChange: (v: string) => void }) {
+  const layers = useLayerOptions(firmware)
   return (
-    <div className="seg-ctrl">
-      {LAYERS.map(l => (
+    <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
+      {layers.map(l => (
         <button
-          key={l}
-          onClick={() => onChange(l)}
-          className={`seg-btn${value === l ? ' active' : ''}`}
+          key={l.value}
+          onClick={() => onChange(l.value)}
+          className={`seg-btn${value === l.value ? ' active' : ''}`}
+          title={l.label}
+          style={{ paddingLeft: 9, paddingRight: 9 }}
         >
-          {l}
+          {l.label}
         </button>
       ))}
     </div>
@@ -285,7 +303,7 @@ function ZMKParamEditor({
             {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : pType === 'modifier' ? 'Mod' : pType === 'bt_action' ? 'Action' : 'Button'}
           </span>
           {pType === 'layer' ? (
-            <LayerPicker value={params[i] ?? '0'} onChange={v => setParam(i, v)} />
+            <LayerPicker firmware="zmk" value={params[i] ?? '0'} onChange={v => setParam(i, v)} />
           ) : pType === 'keycode' ? (
             <ParamPicker options={ZMK_KEYCODES} value={params[i] ?? ''} onChange={v => setParam(i, v)} />
           ) : pType === 'modifier' ? (
@@ -323,7 +341,7 @@ function QMKParamEditor({
             {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : 'Mod'}
           </span>
           {pType === 'layer' ? (
-            <LayerPicker value={params[i] ?? '0'} onChange={v => setParam(i, v)} />
+            <LayerPicker firmware="qmk" value={params[i] ?? '0'} onChange={v => setParam(i, v)} />
           ) : pType === 'keycode' ? (
             <ParamPicker options={QMK_KEYCODES} value={params[i] ?? 'KC_A'} onChange={v => setParam(i, v)} />
           ) : (

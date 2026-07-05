@@ -6,7 +6,7 @@ import SplitKeyboard from './SplitKeyboard'
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const COMBO_COLORS = [
-  'rgba(124,106,255,0.7)',
+  'rgba(96,165,250,0.7)',
   'rgba(52,211,153,0.7)',
   'rgba(251,146,60,0.7)',
   'rgba(56,189,248,0.7)',

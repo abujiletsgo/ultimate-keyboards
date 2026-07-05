@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { MACBOOK_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, type MacKey } from '@/lib/macbookLayout'
 import type { Rule } from '@/lib/karabinerGenerator'
+import ScaledBoard from '@/components/ScaledBoard'
 import MacKeyEditor from './MacKeyEditor'
 
 interface Props {
@@ -78,7 +79,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
   }
 
   return (
-    <div style={{ overflowX: 'auto', padding: '24px 0' }}>
+    <div style={{ padding: '24px 0' }}>
       {/* Legend */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -98,7 +99,8 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
         </span>
       </div>
 
-      {/* Keyboard body */}
+      {/* Keyboard body — scales with its container */}
+      <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div
         className="glass"
         style={{
@@ -142,6 +144,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           )
         })}
       </div>
+      </ScaledBoard>
       {editing && (
         <MacKeyEditor
           macKey={editing.key}

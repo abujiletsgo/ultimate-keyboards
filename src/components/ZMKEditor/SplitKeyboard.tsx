@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import type { ZMKLayer } from '@/lib/zmkParser'
 import { CROSSES_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, KEY_UNIT, KEY_GAP } from '@/lib/crossesLayout'
+import ScaledBoard from '@/components/ScaledBoard'
 import BindingEditor from './BindingEditor'
 
 interface Props {
@@ -123,12 +124,12 @@ function getKeyVars(binding: string): { bg?: string; border?: string; text?: str
   switch (b) {
     case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
     case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
-    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.30), rgba(139,124,248,0.16))', border: 'rgba(139,124,248,0.50)', text: '#c9c0ff' }
+    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.16))', border: 'rgba(96,165,250,0.50)', text: '#bfdbfe' }
     case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
-    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.18), rgba(139,124,248,0.08))', border: 'rgba(139,124,248,0.35)', text: '#b0a6ff' }
+    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(45,212,191,0.18), rgba(45,212,191,0.08))', border: 'rgba(45,212,191,0.35)', text: '#a5f3fc' }
     case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
     case 'sticky':    return { bg: 'linear-gradient(180deg, rgba(251,191,36,0.20), rgba(251,191,36,0.09))', border: 'rgba(251,191,36,0.40)', text: '#fde68a' }
-    case 'bluetooth': return { bg: 'linear-gradient(180deg, rgba(94,166,255,0.22), rgba(94,166,255,0.10))', border: 'rgba(94,166,255,0.42)', text: '#93c5fd' }
+    case 'bluetooth': return { bg: 'linear-gradient(180deg, rgba(34,211,238,0.22), rgba(34,211,238,0.10))', border: 'rgba(34,211,238,0.42)', text: '#a5f3fc' }
     case 'mouse':     return { bg: 'linear-gradient(180deg, rgba(244,114,182,0.20), rgba(244,114,182,0.09))', border: 'rgba(244,114,182,0.40)', text: '#f9a8d4' }
     case 'caps':      return { bg: 'linear-gradient(180deg, rgba(74,222,128,0.20), rgba(74,222,128,0.09))', border: 'rgba(74,222,128,0.40)', text: '#86efac' }
     default:          return {}
@@ -139,11 +140,11 @@ function getKeyVars(binding: string): { bg?: string; border?: string; text?: str
 const DIVIDER_X = 6.35 * (KEY_UNIT + KEY_GAP)
 
 const LEGEND = [
-  { color: 'rgba(139,124,248,0.65)', label: 'Layer' },
+  { color: 'rgba(96,165,250,0.65)', label: 'Layer' },
   { color: 'rgba(245,158,11,0.60)', label: 'Toggle' },
   { color: 'rgba(251,146,60,0.55)', label: 'Mod-tap' },
   { color: 'rgba(251,191,36,0.55)', label: 'Sticky' },
-  { color: 'rgba(94,166,255,0.60)', label: 'BT' },
+  { color: 'rgba(34,211,238,0.60)', label: 'BT' },
   { color: 'rgba(244,114,182,0.55)', label: 'Mouse' },
 ]
 
@@ -152,7 +153,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
   const highlighted = highlightedPositions ?? new Set<number>()
 
   return (
-    <div style={{ overflowX: 'auto', padding: '16px 0' }}>
+    <div style={{ padding: '16px 0' }}>
       {/* Legend */}
       {onBindingChange && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 10, color: 'var(--text-muted)', flexWrap: 'wrap', paddingLeft: 2 }}>
@@ -173,7 +174,8 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
         </div>
       )}
 
-      {/* Keyboard body */}
+      {/* Keyboard body — scales with its container */}
+      <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div
         className="glass"
         style={{
@@ -235,6 +237,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
           )
         })}
       </div>
+      </ScaledBoard>
       {editing !== null && (
         <BindingEditor
           firmware="zmk"

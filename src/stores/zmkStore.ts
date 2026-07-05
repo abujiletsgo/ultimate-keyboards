@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 import type { ZMKCombo, ZMKKeymap } from '../lib/zmkParser';
+import {
+  addLayerToSource,
+  parseKeymapText,
+  updateCombosInSource,
+  updateLayerBindingsInSource,
+} from '../lib/zmkParser';
 
 interface ZMKState {
   keymap: ZMKKeymap | null;
@@ -11,6 +17,8 @@ interface ZMKState {
   // Actions
   setKeymap: (km: ZMKKeymap | null, path: string) => void;
   setSelectedLayer: (idx: number) => void;
+  /** Append a new all-&trans layer; returns its index, or -1 on failure */
+  addLayer: (name: string) => number;
   addCombo: (combo: ZMKCombo) => void;
   updateCombo: (name: string, updated: ZMKCombo) => void;
   deleteCombo: (name: string) => void;
@@ -18,7 +26,7 @@ interface ZMKState {
   updateLayerKey: (layerIndex: number, keyPos: number, newBinding: string) => void;
 }
 
-export const useZMKStore = create<ZMKState>((set) => ({
+export const useZMKStore = create<ZMKState>((set, get) => ({
   keymap: null,
   filePath: null,
   isDirty: false,
@@ -28,6 +36,21 @@ export const useZMKStore = create<ZMKState>((set) => ({
     set({ keymap: km, filePath: path, isDirty: false }),
 
   setSelectedLayer: (idx) => set({ selectedLayer: idx }),
+
+  addLayer: (name) => {
+    const { keymap } = get();
+    if (!keymap) return -1;
+    // Bake any unsaved edits into the source first so nothing is lost,
+    // then append the new layer node and re-parse.
+    const keyCount = keymap.layers[0]?.keys.length ?? 42;
+    let src = updateLayerBindingsInSource(keymap.rawSource, keymap.layers);
+    src = updateCombosInSource(src, keymap.combos);
+    src = addLayerToSource(src, name, keyCount);
+    const km = parseKeymapText(src);
+    const newIndex = km.layers.length - 1;
+    set({ keymap: km, isDirty: true, selectedLayer: newIndex });
+    return newIndex;
+  },
 
   addCombo: (combo) =>
     set((state) => {

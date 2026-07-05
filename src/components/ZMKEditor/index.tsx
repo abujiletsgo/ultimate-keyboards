@@ -13,8 +13,10 @@ import QMKComboEditor from './QMKComboEditor';
 // ─── ZMK Tab ──────────────────────────────────────────────────────────────────
 
 const ZMKTab: React.FC = () => {
-  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey, selectedLayer, setSelectedLayer } = useZMKStore();
+  const { keymap, filePath, isDirty, setKeymap, setDirty, updateLayerKey, selectedLayer, setSelectedLayer, addLayer } = useZMKStore();
   const [keyboard, setKeyboard] = useState<ZMKKeyboardDef>(getSelectedKeyboard);
+  const [addingLayer, setAddingLayer] = useState(false);
+  const [newLayerName, setNewLayerName] = useState('');
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -190,11 +192,56 @@ const ZMKTab: React.FC = () => {
                   key={layer.name}
                   className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
                   onClick={() => setSelectedLayer(idx)}
+                  title={`Layer ${idx} — ${layer.name}`}
                 >
+                  <span style={{
+                    fontSize: 9.5,
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 700,
+                    opacity: selectedLayer === idx ? 0.9 : 0.45,
+                    marginRight: 5,
+                  }}>{idx}</span>
                   {layer.displayName ?? layer.name}
                 </button>
               ))}
             </div>
+            {/* New layer */}
+            {addingLayer ? (
+              <form
+                style={{ display: 'flex', gap: 6, alignItems: 'center' }}
+                onSubmit={e => {
+                  e.preventDefault();
+                  const name = newLayerName.trim().replace(/[^\w+]/g, '_');
+                  if (!name) return;
+                  if (keymap.layers.some(l => l.name === name || l.displayName === name)) {
+                    setStatus({ msg: `Layer "${name}" already exists`, ok: false });
+                    return;
+                  }
+                  const idx = addLayer(name);
+                  if (idx >= 0) {
+                    setStatus({ msg: `Layer ${idx} "${name}" created — all keys transparent`, ok: true });
+                    setTimeout(() => setStatus(null), 2500);
+                  }
+                  setNewLayerName('');
+                  setAddingLayer(false);
+                }}
+              >
+                <input
+                  autoFocus
+                  value={newLayerName}
+                  onChange={e => setNewLayerName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') { setAddingLayer(false); setNewLayerName(''); } }}
+                  placeholder="layer_name"
+                  style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }}
+                />
+                <button type="submit" className="btn btn-primary btn-sm">Create</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAddingLayer(false); setNewLayerName(''); }}>Cancel</button>
+              </form>
+            ) : (
+              <button className="btn btn-secondary btn-sm" onClick={() => setAddingLayer(true)} title="Add a new empty layer">
+                + Layer
+              </button>
+            )}
           </div>
 
           {/* Keyboard */}
@@ -303,7 +350,15 @@ const QMKTab: React.FC = () => {
                   key={layer.name}
                   className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
                   onClick={() => setSelectedLayer(idx)}
+                  title={`Layer ${idx} — ${layer.name}`}
                 >
+                  <span style={{
+                    fontSize: 9.5,
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 700,
+                    opacity: selectedLayer === idx ? 0.9 : 0.45,
+                    marginRight: 5,
+                  }}>{idx}</span>
                   {layer.name}
                 </button>
               ))}
