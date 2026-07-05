@@ -70,38 +70,26 @@ export default function KarabinerEditor() {
       </div>
 
       {showInstall && (
-        <div style={{
-          margin: '0 20px 0',
+        <div className="panel-inset anim-fade-up" style={{
+          margin: '0 20px',
           padding: '12px 16px',
-          background: 'rgba(52,211,153,0.08)',
-          border: '1px solid rgba(52,211,153,0.25)',
-          borderRadius: 8,
+          background: 'rgba(74,222,128,0.08)',
+          borderColor: 'rgba(74,222,128,0.25)',
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 13, color: '#6ee7b7', fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
               Downloaded! Run this in Terminal to install:
             </span>
             <button
               onClick={() => setShowInstall(false)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted, #666)', fontSize: 16, lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1 }}
             >×</button>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <code style={{
-              flex: 1,
-              fontSize: 11,
-              fontFamily: 'monospace',
-              background: 'var(--bg-tertiary, #1a1a1a)',
-              border: '1px solid var(--border, #333)',
-              borderRadius: 6,
-              padding: '6px 10px',
-              color: '#e2e8f0',
-              userSelect: 'all',
-              wordBreak: 'break-all',
-            }}>
+            <code className="mono" style={{ flex: 1, userSelect: 'all', wordBreak: 'break-all' }}>
               cp ~/Downloads/ultimate-keyboards.json ~/.config/karabiner/assets/complex_modifications/
             </code>
             <button
@@ -117,14 +105,14 @@ export default function KarabinerEditor() {
               Copy
             </button>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted, #888)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             Then open Karabiner-Elements → Complex Modifications → Add rule → enable "Ultimate Keyboards"
           </span>
         </div>
       )}
 
       {/* MacBook keyboard visual — click any key to open binding popover */}
-      <div style={{
+      <div className="anim-fade-up" style={{
         padding: '20px 28px 0',
         borderBottom: '.5px solid var(--border)',
         background: 'var(--bg-grouped)',
@@ -135,20 +123,14 @@ export default function KarabinerEditor() {
       </div>
 
       {/* Rule list + editors */}
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
-        <RuleList />
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          padding: '16px 20px',
-          background: 'var(--bg)',
-        }}>
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 20px 20px' }}>
+        <div className="glass anim-fade-up" style={{ overflow: 'hidden' }}>
+          <RuleList />
+        </div>
+        <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}>
           <HomerowModEditor />
         </div>
-        <div style={{
-          borderTop: '1px solid var(--border)',
-          padding: '16px 20px',
-          background: 'var(--bg)',
-        }}>
+        <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}>
           <MacComboEditor />
         </div>
       </div>

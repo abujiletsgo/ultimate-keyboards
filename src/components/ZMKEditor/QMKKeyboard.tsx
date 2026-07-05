@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import {
   CORNE_PROCYON_LAYOUT,
   getKeyStyle as getCPKeyStyle,
@@ -101,62 +101,60 @@ interface Props {
   onBindingChange?: (pos: number, newKeycode: string) => void
 }
 
-function getColors(
-  pos: number,
-  behavior: QMKBehavior,
-  isEncoder: boolean,
-  highlighted: Set<number>,
-  hovered: number | null,
-) {
-  if (isEncoder) return { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.2)', shadow: 'none', opacity: 1, dashed: true }
-  if (highlighted.has(pos)) return { bg: 'var(--accent, #7c6aff)', border: 'rgba(255,255,255,0.3)', text: '#fff', shadow: '0 0 0 2px var(--accent, #7c6aff)', opacity: 1 }
-  if (hovered === pos) return { bg: 'rgba(255,255,255,0.16)', border: 'rgba(255,255,255,0.2)', text: 'var(--text-primary, #eee)', shadow: '0 2px 6px rgba(0,0,0,0.4)', opacity: 1 }
-
+/** Per-behavior key colors, injected into .keycap via CSS custom props */
+function getKeyVars(behavior: QMKBehavior): { bg?: string; border?: string; text?: string; dashed?: boolean } {
   switch (behavior) {
-    case 'trans': return { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.18)', text: 'rgba(255,255,255,0.3)', shadow: 'none', opacity: 1, dashed: true }
-    case 'none':  return { bg: 'rgba(255,0,0,0.05)', border: 'rgba(255,80,80,0.2)', text: 'rgba(255,80,80,0.4)', shadow: 'none', opacity: 1, dashed: true }
-    case 'layer': return { bg: 'rgba(124,106,255,0.22)', border: 'rgba(124,106,255,0.5)', text: '#c4baff', shadow: '0 0 0 1px rgba(124,106,255,0.3)', opacity: 1 }
-    case 'toggle':    return { bg: 'rgba(245,158,11,0.2)', border: 'rgba(245,158,11,0.45)', text: '#fcd34d', shadow: '0 0 0 1px rgba(245,158,11,0.25)', opacity: 1 }
-    case 'layer-tap': return { bg: 'rgba(124,106,255,0.12)', border: 'rgba(124,106,255,0.35)', text: '#a99fff', shadow: 'none', opacity: 1 }
-    case 'mod-tap':   return { bg: 'rgba(251,146,60,0.15)', border: 'rgba(251,146,60,0.4)', text: '#fdba74', shadow: 'none', opacity: 1 }
-    case 'shifted':   return { bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.35)', text: '#6ee7b7', shadow: 'none', opacity: 1 }
-    default: return { bg: 'rgba(255,255,255,0.09)', border: 'rgba(255,255,255,0.10)', text: 'var(--text-secondary, #aaa)', shadow: '0 1px 3px rgba(0,0,0,0.35)', opacity: 1 }
+    case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
+    case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
+    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.30), rgba(139,124,248,0.16))', border: 'rgba(139,124,248,0.50)', text: '#c9c0ff' }
+    case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
+    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.18), rgba(139,124,248,0.08))', border: 'rgba(139,124,248,0.35)', text: '#b0a6ff' }
+    case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
+    case 'shifted':   return { bg: 'linear-gradient(180deg, rgba(52,211,153,0.20), rgba(52,211,153,0.09))', border: 'rgba(52,211,153,0.40)', text: '#6ee7b7' }
+    default:          return {}
   }
 }
 
+const ENCODER_VARS = { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.2)', dashed: true }
+
 export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, onBindingChange }: Props) {
-  const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
 
   return (
     <div style={{ overflowX: 'auto', padding: '16px 0' }}>
-      <div style={{
-        position: 'relative',
-        width: BOARD_WIDTH,
-        height: BOARD_HEIGHT,
-        background: 'rgba(255,255,255,0.02)',
-        borderRadius: 14,
-        border: '.5px solid rgba(255,255,255,0.07)',
-        boxShadow: 'var(--shadow-card, 0 4px 24px rgba(0,0,0,0.5))',
-        flexShrink: 0,
-      }}>
+      <div
+        className="glass"
+        style={{
+          position: 'relative',
+          width: BOARD_WIDTH,
+          height: BOARD_HEIGHT,
+          borderRadius: 16,
+          flexShrink: 0,
+        }}
+      >
         {/* Half divider line */}
-        <div style={{ position: 'absolute', left: DIVIDER_X, top: 0, width: 1, height: '100%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', left: DIVIDER_X, top: 0, width: 1, height: '100%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
 
         {CORNE_PROCYON_LAYOUT.map(key => {
           const fullKc = keys[key.pos] ?? 'KC_TRNS'
           const isEncoder = key.isEncoder ?? false
           const behavior = getBehavior(fullKc)
           const label = isEncoder ? '◎' : abbreviateQMK(fullKc)
-          const colors = getColors(key.pos, behavior, isEncoder, highlighted, hovered)
+          const vars = isEncoder ? ENCODER_VARS : getKeyVars(behavior)
           const keyStyle = getCPKeyStyle(key)
+          const isSelected = highlighted.has(key.pos)
           const labelLen = label.length
 
           return (
             <div
               key={key.pos}
               title={isEncoder ? 'Encoder' : fullKc}
+              className={[
+                'keycap',
+                isSelected ? 'selected' : '',
+                vars.dashed && !isSelected ? 'dashed' : '',
+              ].filter(Boolean).join(' ')}
               onClick={(e) => {
                 if (isEncoder) return
                 onKeyClick?.(key.pos)
@@ -165,28 +163,17 @@ export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, on
                   setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4 })
                 }
               }}
-              onMouseEnter={() => setHovered(key.pos)}
-              onMouseLeave={() => setHovered(null)}
               style={{
                 ...keyStyle,
-                background: colors.bg,
-                border: (colors as any).dashed
-                  ? `1px dashed ${colors.border}`
-                  : `.5px solid ${colors.border}`,
-                boxShadow: colors.shadow,
-                color: colors.text,
-                opacity: colors.opacity,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                ...(isSelected ? {} : {
+                  '--key-bg': vars.bg,
+                  '--key-border': vars.border,
+                  '--key-text': vars.text,
+                }),
                 fontSize: labelLen <= 2 ? 12 : labelLen <= 4 ? 10 : 8,
-                fontWeight: 500,
-                fontFamily: '-apple-system, sans-serif',
-                userSelect: 'none',
                 cursor: (!isEncoder && (onKeyClick || onBindingChange)) ? 'pointer' : 'default',
-                transition: 'background 0.1s, box-shadow 0.1s, color 0.1s, opacity 0.1s',
                 overflow: 'hidden',
-              }}
+              } as CSSProperties}
             >
               {label}
             </div>

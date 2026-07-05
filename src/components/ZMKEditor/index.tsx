@@ -10,38 +10,6 @@ import QMKKeyboard from './QMKKeyboard';
 import ComboEditor from './ComboEditor'
 import QMKComboEditor from './QMKComboEditor';
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
-
-const btnStyle = (active = false): React.CSSProperties => ({
-  padding: '5px 16px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 12,
-  fontWeight: active ? 700 : 400,
-  backgroundColor: active ? 'var(--accent, #7c6aff)' : 'var(--bg-secondary, #2a2a2a)',
-  color: active ? '#fff' : 'var(--text-secondary, #aaa)',
-  transition: 'background-color 0.15s',
-  whiteSpace: 'nowrap' as const,
-});
-
-const actionBtnStyle: React.CSSProperties = {
-  padding: '5px 12px',
-  borderRadius: 6,
-  border: '1px solid var(--border, #3a3a3a)',
-  cursor: 'pointer',
-  fontSize: 12,
-  backgroundColor: 'var(--bg-secondary, #2a2a2a)',
-  color: 'var(--text-primary, #eee)',
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  ...actionBtnStyle,
-  backgroundColor: 'var(--accent, #7c6aff)',
-  color: '#fff',
-  border: 'none',
-};
-
 // ─── ZMK Tab ──────────────────────────────────────────────────────────────────
 
 const ZMKTab: React.FC = () => {
@@ -132,11 +100,11 @@ const ZMKTab: React.FC = () => {
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {/* Keyboard switcher */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="seg-ctrl">
           {ZMK_KEYBOARDS.map(kb => (
             <button
               key={kb.id}
-              style={btnStyle(keyboard.id === kb.id)}
+              className={`seg-btn${keyboard.id === kb.id ? ' active' : ''}`}
               onClick={() => switchKeyboard(kb)}
               title={kb.keymapPath}
             >
@@ -144,57 +112,56 @@ const ZMKTab: React.FC = () => {
             </button>
           ))}
         </div>
-        <button style={actionBtnStyle} onClick={openFile}>Open…</button>
+        <button className="btn btn-secondary btn-sm" onClick={openFile}>Open…</button>
         {keymap && (
           <>
             <span style={{
-              fontSize: 11, color: 'var(--text-secondary, #aaa)',
+              fontSize: 11, color: 'var(--text-secondary)',
               fontFamily: 'monospace', maxWidth: 260,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }} title={filePath ?? ''}>
               {(filePath ?? '').split('/').pop()}
             </span>
             {isDirty && (
-              <span style={{ fontSize: 11, color: '#f5a623', background: 'rgba(245,166,35,0.12)', borderRadius: 4, padding: '2px 7px' }}>
+              <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>
                 Unsaved
               </span>
             )}
-            <button style={{ ...primaryBtnStyle, opacity: isDirty ? 1 : 0.5 }} onClick={saveFile} disabled={!isDirty}>
+            <button className="btn btn-primary btn-sm" onClick={saveFile} disabled={!isDirty}>
               Save
             </button>
           </>
         )}
         {status && (
-          <span style={{ fontSize: 12, color: status.ok ? '#6fcf97' : '#ff6b6b' }}>{status.msg}</span>
+          <span style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>
         )}
       </div>
 
       {/* Unsaved-changes guard when switching keyboards */}
       {pendingSwitch && (
-        <div style={{
+        <div className="glass anim-fade-up" style={{
           display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          padding: '8px 12px', borderRadius: 8,
-          background: 'rgba(245,166,35,0.10)', border: '1px solid rgba(245,166,35,0.35)',
-          fontSize: 12, color: 'var(--text, #eee)',
+          padding: '10px 14px', borderColor: 'rgba(251,191,36,0.35)',
+          fontSize: 12, color: 'var(--text)',
         }}>
           <span>
             Unsaved changes on <strong>{keyboard.name}</strong> — switch to{' '}
             <strong>{pendingSwitch.name}</strong> and discard them?
           </span>
-          <button style={{ ...actionBtnStyle, fontSize: 11 }} onClick={() => switchKeyboard(pendingSwitch, true)}>
+          <button className="btn btn-secondary btn-sm" onClick={() => switchKeyboard(pendingSwitch, true)}>
             Discard &amp; switch
           </button>
-          <button style={{ ...actionBtnStyle, fontSize: 11 }} onClick={async () => { await saveFile(); switchKeyboard(pendingSwitch, true); }}>
+          <button className="btn btn-secondary btn-sm" onClick={async () => { await saveFile(); switchKeyboard(pendingSwitch, true); }}>
             Save, then switch
           </button>
-          <button style={{ ...actionBtnStyle, fontSize: 11 }} onClick={() => setPendingSwitch(null)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setPendingSwitch(null)}>
             Cancel
           </button>
         </div>
       )}
 
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--text-secondary, #aaa)', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--text-secondary)', gap: 12 }}>
           <div style={{ fontSize: 40 }}>⌨️</div>
           <div style={{ fontSize: 14 }}>Loading {keyboard.name} keymap…</div>
         </div>
@@ -202,39 +169,36 @@ const ZMKTab: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: 12 }}>
           <div style={{ fontSize: 40 }}>⌨️</div>
           {loadError && (
-            <div style={{ fontSize: 12, color: '#ff6b6b', background: 'rgba(255,80,80,0.08)', borderRadius: 6, padding: '8px 12px', maxWidth: 500, wordBreak: 'break-all' }}>
+            <div className="panel-inset" style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(251,113,133,0.08)', padding: '8px 12px', maxWidth: 500, wordBreak: 'break-all' }}>
               {loadError}
             </div>
           )}
-          <div style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
             Could not auto-load <code style={{ fontFamily: 'monospace' }}>{keyboard.keymapPath}</code>
           </div>
-          <button style={primaryBtnStyle} onClick={openFile}>Open .keymap manually</button>
+          <button className="btn btn-primary" onClick={openFile}>Open .keymap manually</button>
         </div>
       ) : (
         <>
           {/* Layer tabs */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)', marginRight: 4 }}>Layer:</span>
-            {keymap.layers.map((layer, idx) => (
-              <button
-                key={layer.name}
-                style={btnStyle(selectedLayer === idx)}
-                onClick={() => setSelectedLayer(idx)}
-              >
-                {layer.displayName ?? layer.name}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 4 }}>Layer:</span>
+            <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
+              {keymap.layers.map((layer, idx) => (
+                <button
+                  key={layer.name}
+                  className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
+                  onClick={() => setSelectedLayer(idx)}
+                >
+                  {layer.displayName ?? layer.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Keyboard */}
-          <div style={{
-            background: 'var(--bg-secondary, #1e1e1e)',
-            border: '1px solid var(--border, #3a3a3a)',
-            borderRadius: 10,
-            padding: '12px 16px',
-          }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               Layer {selectedLayer}: {keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name}
               <span style={{ fontWeight: 400, marginLeft: 8 }}>— click key to edit</span>
             </div>
@@ -245,12 +209,7 @@ const ZMKTab: React.FC = () => {
           </div>
 
           {/* Combo editor — full width below keyboard */}
-          <div style={{
-            background: 'var(--bg-secondary, #1e1e1e)',
-            border: '1px solid var(--border, #3a3a3a)',
-            borderRadius: 10,
-            padding: '12px 16px',
-          }}>
+          <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
             <ComboEditor />
           </div>
         </>
@@ -299,64 +258,61 @@ const QMKTab: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
           corne_procyon.layout.json
         </span>
         {isDirty && (
-          <span style={{ fontSize: 11, color: '#f5a623', background: 'rgba(245,166,35,0.12)', borderRadius: 4, padding: '2px 7px' }}>
+          <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>
             Unsaved
           </span>
         )}
-        <button style={{ ...primaryBtnStyle, opacity: isDirty ? 1 : 0.5 }} onClick={handleSave} disabled={!isDirty}>
+        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!isDirty}>
           Save
         </button>
-        <button style={actionBtnStyle} onClick={() => load()}>Reload</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => load()}>Reload</button>
         {status && (
-          <span style={{ fontSize: 12, color: status.ok ? '#6fcf97' : '#ff6b6b' }}>{status.msg}</span>
+          <span style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>
         )}
       </div>
 
       {loadError ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12 }}>
           <div style={{ fontSize: 40 }}>⌨️</div>
-          <div style={{ fontSize: 12, color: '#ff6b6b', background: 'rgba(255,80,80,0.08)', borderRadius: 6, padding: '8px 12px', maxWidth: 500, wordBreak: 'break-all' }}>
+          <div className="panel-inset" style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(251,113,133,0.08)', padding: '8px 12px', maxWidth: 500, wordBreak: 'break-all' }}>
             {loadError}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary, #aaa)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
             Could not auto-load <code style={{ fontFamily: 'monospace' }}>corne_procyon.layout.json</code>
           </div>
-          <button style={primaryBtnStyle} onClick={() => load()}>Retry</button>
+          <button className="btn btn-primary" onClick={() => load()}>Retry</button>
         </div>
       ) : !keymap ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--text-secondary, #aaa)', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: 'var(--text-secondary)', gap: 12 }}>
           <div style={{ fontSize: 40 }}>⌨️</div>
           <div style={{ fontSize: 14 }}>Loading QMK keymap…</div>
         </div>
       ) : (
         <>
           {/* Layer tabs */}
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)', marginRight: 4 }}>Layer:</span>
-            {keymap.layers.map((layer, idx) => (
-              <button
-                key={layer.name}
-                style={btnStyle(selectedLayer === idx)}
-                onClick={() => setSelectedLayer(idx)}
-              >
-                {layer.name}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 4 }}>Layer:</span>
+            <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
+              {keymap.layers.map((layer, idx) => (
+                <button
+                  key={layer.name}
+                  className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
+                  onClick={() => setSelectedLayer(idx)}
+                >
+                  {layer.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Keyboard */}
           {currentLayer && (
-            <div style={{
-              background: 'var(--bg-secondary, #1e1e1e)',
-              border: '1px solid var(--border, #3a3a3a)',
-              borderRadius: 10,
-              padding: '12px 16px',
-            }}>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 Layer {selectedLayer}: {currentLayer.name}
                 <span style={{ fontWeight: 400, marginLeft: 8 }}>— click key to edit</span>
               </div>
@@ -368,12 +324,7 @@ const QMKTab: React.FC = () => {
           )}
 
           {/* Combo editor — full width below keyboard */}
-          <div style={{
-            background: 'var(--bg-secondary, #1e1e1e)',
-            border: '1px solid var(--border, #3a3a3a)',
-            borderRadius: 10,
-            padding: '12px 16px',
-          }}>
+          <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
             <QMKComboEditor />
           </div>
         </>
@@ -399,18 +350,18 @@ const ZMKEditor: React.FC = () => {
       overflow: 'auto',
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="anim-fade-up" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <div>
-          <h2 style={{ margin: '0 0 2px', fontSize: 18, fontWeight: 700, color: 'var(--text-primary, #eee)' }}>
+          <h2 style={{ margin: '0 0 2px', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
             Keymap Editor
           </h2>
-          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary, #aaa)' }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
             Visual editor for your ZMK keyboards (Corne · Crosses) and QMK (corne_procyon)
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
-          <button style={btnStyle(activeTab === 'zmk')} onClick={() => setActiveTab('zmk')}>ZMK</button>
-          <button style={btnStyle(activeTab === 'qmk')} onClick={() => setActiveTab('qmk')}>QMK</button>
+        <div className="seg-ctrl" style={{ marginLeft: 'auto' }}>
+          <button className={`seg-btn${activeTab === 'zmk' ? ' active' : ''}`} onClick={() => setActiveTab('zmk')}>ZMK</button>
+          <button className={`seg-btn${activeTab === 'qmk' ? ' active' : ''}`} onClick={() => setActiveTab('qmk')}>QMK</button>
         </div>
       </div>
 

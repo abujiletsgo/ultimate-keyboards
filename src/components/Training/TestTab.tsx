@@ -188,31 +188,29 @@ export default function TestTab() {
         }}
       >
         <div
+          className="glass anim-scale-in"
           style={{
             padding: '48px 64px',
-            borderRadius: '16px',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
             textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
           }}
         >
-          <div style={{ fontSize: '14px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>
             Results — {mode}s test
           </div>
 
           <div style={{ display: 'flex', gap: '48px', justifyContent: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-              <div style={{ fontSize: '64px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace', lineHeight: 1 }}>
+              <div style={{ fontSize: '64px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                 {wpm}
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>WPM</div>
             </div>
             <div style={{ width: '1px', background: 'var(--border)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-              <div style={{ fontSize: '64px', fontWeight: 800, color: 'var(--success)', fontFamily: 'monospace', lineHeight: 1 }}>
+              <div style={{ fontSize: '64px', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                 {accuracy}%
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Accuracy</div>
@@ -223,20 +221,7 @@ export default function TestTab() {
             {correctChars} correct / {totalChars} total chars
           </div>
 
-          <button
-            onClick={handleReset}
-            tabIndex={-1}
-            style={{
-              padding: '12px 36px',
-              borderRadius: '8px',
-              background: 'var(--accent)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 600,
-            }}
-          >
+          <button onClick={handleReset} tabIndex={-1} className="btn btn-primary btn-lg">
             Try Again
           </button>
         </div>
@@ -248,23 +233,14 @@ export default function TestTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top bar: timer + mode */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="seg-ctrl">
           {([30, 60, 120] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => handleModeChange(m)}
               disabled={status === 'running'}
               tabIndex={-1}
-              style={{
-                padding: '6px 16px',
-                borderRadius: '6px',
-                border: '1px solid var(--border)',
-                background: mode === m ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: mode === m ? 'white' : 'var(--text-muted)',
-                cursor: status === 'running' ? 'not-allowed' : 'pointer',
-                fontSize: '13px',
-                fontWeight: mode === m ? 600 : 400,
-              }}
+              className={`seg-btn${mode === m ? ' active' : ''}`}
             >
               {m}s
             </button>
@@ -275,7 +251,7 @@ export default function TestTab() {
           style={{
             fontSize: '32px',
             fontWeight: 700,
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
             color: timeLeft <= 10 && status === 'running' ? 'var(--danger)' : 'var(--text)',
             minWidth: '60px',
             textAlign: 'right',
@@ -287,19 +263,19 @@ export default function TestTab() {
 
       {/* Word display */}
       <div
+        className="glass"
         style={{
           padding: '24px',
-          borderRadius: '10px',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
           fontSize: '20px',
           lineHeight: '2',
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           maxHeight: '200px',
           overflow: 'hidden',
           position: 'relative',
           cursor: 'text',
           userSelect: 'none',
+          boxShadow: status === 'running' ? 'var(--shadow-card), var(--glass-highlight), var(--accent-glow)' : undefined,
+          transition: 'box-shadow var(--dur-2) var(--ease-out)',
         }}
       >
         {status === 'idle' && (
@@ -310,10 +286,10 @@ export default function TestTab() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--text-muted)',
+              color: 'var(--text-secondary)',
               fontSize: '16px',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '10px',
+              background: 'rgba(3,4,12,0.35)',
+              borderRadius: 'var(--r-xl)',
               backdropFilter: 'blur(2px)',
             }}
           >
@@ -333,11 +309,11 @@ export default function TestTab() {
                       color:
                         startChar - 1 < typed.length
                           ? typed[startChar - 1] === ' '
-                            ? 'var(--text-muted)'
+                            ? 'var(--text-secondary)'
                             : 'var(--danger)'
                           : startChar - 1 === typed.length
                           ? 'var(--accent)'
-                          : 'var(--text-muted)',
+                          : 'var(--text-secondary)',
                     }}
                   >
                     &nbsp;
@@ -345,26 +321,26 @@ export default function TestTab() {
                 )}
                 <span
                   style={{
-                    background: isCurrentWord ? 'rgba(99,102,241,0.12)' : 'transparent',
+                    background: isCurrentWord ? 'var(--accent-soft)' : 'transparent',
                     borderRadius: '3px',
                     padding: '0 1px',
                   }}
                 >
                   {word.split('').map((char, cIdx) => {
                     const absIdx = startChar + cIdx
-                    let color = 'var(--text-muted)'
+                    let color = 'var(--text-secondary)'
                     let bg = 'transparent'
 
                     if (absIdx < typed.length) {
                       if (typed[absIdx] === char) {
-                        color = 'rgba(134,239,172,0.7)' // muted green
+                        color = 'var(--text)'
                       } else {
                         color = 'var(--danger)'
-                        bg = 'rgba(239,68,68,0.15)'
+                        bg = 'rgba(251,113,133,0.15)'
                       }
                     } else if (absIdx === typed.length) {
                       color = 'var(--text)'
-                      bg = 'rgba(99,102,241,0.3)' // cursor highlight
+                      bg = 'var(--accent-soft)'
                     }
 
                     return (
@@ -393,29 +369,20 @@ export default function TestTab() {
       </div>
 
       {/* Debug key log */}
-      <div
-        style={{
-          padding: '10px 14px',
-          borderRadius: '8px',
-          background: '#111',
-          border: '1px solid #333',
-          fontFamily: 'monospace',
-          fontSize: '13px',
-        }}
-      >
-        <div style={{ color: '#666', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+      <div className="panel-inset" style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+        <div style={{ color: 'var(--text-muted)', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px' }}>
           Key events received (last 20) — space shows as ·SPACE·
         </div>
-        <div style={{ color: '#0f0', wordBreak: 'break-all', lineHeight: '1.8' }}>
+        <div style={{ color: 'var(--success)', wordBreak: 'break-all', lineHeight: '1.8' }}>
           {keyLog.length === 0
-            ? <span style={{ color: '#444' }}>nothing yet — start typing</span>
+            ? <span style={{ color: 'var(--text-muted)' }}>nothing yet — start typing</span>
             : keyLog.map((k, i) => (
               <span
                 key={i}
                 style={{
                   marginRight: '6px',
-                  color: k === '·SPACE·' ? '#ff0' : '#0f0',
-                  background: k === '·SPACE·' ? 'rgba(255,255,0,0.1)' : 'transparent',
+                  color: k === '·SPACE·' ? 'var(--warning)' : 'var(--success)',
+                  background: k === '·SPACE·' ? 'rgba(251,191,36,0.1)' : 'transparent',
                   borderRadius: '3px',
                   padding: '0 2px',
                 }}

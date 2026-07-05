@@ -40,22 +40,12 @@ export default function TrainingView() {
         }}
       >
         {/* Tab buttons */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="seg-ctrl">
           {TAB_LABELS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === id ? 'var(--accent)' : 'transparent',
-                color: activeTab === id ? 'white' : 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === id ? 600 : 400,
-                transition: 'background 0.15s, color 0.15s',
-              }}
+              className={`seg-btn${activeTab === id ? ' active' : ''}`}
             >
               {label}
             </button>
@@ -64,7 +54,7 @@ export default function TrainingView() {
 
         {/* Chord window slider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
             Chord Window:
           </span>
           <input
@@ -96,9 +86,12 @@ export default function TrainingView() {
 
       {/* Tab content */}
       <div
+        key={activeTab}
+        className="glass anim-fade-up"
         style={{
           flex: 1,
           overflow: 'auto',
+          margin: '20px 24px',
           padding: '28px 32px',
         }}
       >

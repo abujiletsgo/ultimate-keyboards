@@ -117,10 +117,10 @@ function ComboKeyPicker({
                 borderRadius: 5,
                 fontSize: 12,
                 fontWeight: 600,
-                background: active ? 'var(--accent)' : 'var(--bg-tertiary)',
+                background: active ? 'var(--accent-grad)' : 'var(--bg-tertiary)',
                 color: active ? '#fff' : 'var(--text)',
                 border: '1px solid var(--border)',
-                transition: 'background 0.1s',
+                transition: 'background var(--dur-1) var(--ease-out)',
                 cursor: active ? 'default' : 'pointer',
                 opacity: active ? 0.7 : 1,
               }}
@@ -149,7 +149,7 @@ function ComboKeyPicker({
                 padding: '4px 10px',
                 borderRadius: 5,
                 fontSize: 12,
-                background: active ? 'var(--accent)' : 'var(--bg-tertiary)',
+                background: active ? 'var(--accent-grad)' : 'var(--bg-tertiary)',
                 color: active ? '#fff' : 'var(--text)',
                 border: '1px solid var(--border)',
                 cursor: active ? 'default' : 'pointer',
@@ -191,7 +191,7 @@ function ChipRow({
             alignItems: 'center',
             gap: 4,
             padding: '3px 8px',
-            background: 'var(--accent)',
+            background: 'var(--accent-grad)',
             color: '#fff',
             borderRadius: 20,
             fontSize: 12,
@@ -243,11 +243,9 @@ function RemapTab({ prefilledFromKey }: { prefilledFromKey?: string }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* From row */}
       <div
+        className="panel-inset"
         style={{
-          background: 'var(--bg-tertiary)',
-          borderRadius: 8,
           padding: 12,
-          border: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -268,11 +266,9 @@ function RemapTab({ prefilledFromKey }: { prefilledFromKey?: string }) {
 
       {/* To row */}
       <div
+        className="panel-inset"
         style={{
-          background: 'var(--bg-tertiary)',
-          borderRadius: 8,
           padding: 12,
-          border: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -344,11 +340,9 @@ function ComboTab() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* From combo keys */}
       <div
+        className="panel-inset"
         style={{
-          background: 'var(--bg-tertiary)',
-          borderRadius: 8,
           padding: 12,
-          border: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -368,11 +362,9 @@ function ComboTab() {
 
       {/* To row */}
       <div
+        className="panel-inset"
         style={{
-          background: 'var(--bg-tertiary)',
-          borderRadius: 8,
           padding: 12,
-          border: '1px solid var(--border)',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -421,32 +413,24 @@ export function RuleEditor({ prefilledFromKey }: { prefilledFromKey?: string }) 
   const [activeTab, setActiveTab] = useState<'remap' | 'combo'>('remap');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'var(--bg)',
-      }}
-    >
+    <div className="glass anim-fade-up" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Tab bar header */}
       <div
         style={{
-          padding: '12px 16px 0',
+          padding: '12px 16px',
           borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-secondary)',
           flexShrink: 0,
         }}
       >
-        <div className="tab-bar" style={{ display: 'inline-flex' }}>
+        <div className="seg-ctrl">
           <button
-            className={`tab-btn${activeTab === 'remap' ? ' active' : ''}`}
+            className={`seg-btn${activeTab === 'remap' ? ' active' : ''}`}
             onClick={() => setActiveTab('remap')}
           >
             Remap Key
           </button>
           <button
-            className={`tab-btn${activeTab === 'combo' ? ' active' : ''}`}
+            className={`seg-btn${activeTab === 'combo' ? ' active' : ''}`}
             onClick={() => setActiveTab('combo')}
           >
             Combo Keys

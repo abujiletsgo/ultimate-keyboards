@@ -105,23 +105,20 @@ export default function KeyPicker({
   const dialogContent = (
     <div
       ref={dialogRef}
+      className="glass-strong anim-scale-in"
       style={{
-        background: 'var(--bg-secondary, #1e1e1e)',
-        border: '1px solid var(--border, #444)',
-        borderRadius: 10,
         width: 320,
         maxHeight: 340,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)',
       }}
       onClick={e => e.stopPropagation()}
       onKeyDown={handleKeyDown}
     >
       {/* Header */}
-      <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid var(--border, #3a3a3a)' }}>
-        <div style={{ fontSize: 10, color: 'var(--text-secondary, #888)', marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+      <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           {title}
         </div>
         <input
@@ -129,19 +126,14 @@ export default function KeyPicker({
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search…"
-          style={{
-            width: '100%', background: 'var(--bg-tertiary, #2a2a2a)',
-            border: '1px solid var(--border, #3a3a3a)', borderRadius: 5,
-            color: 'var(--text-primary, #eee)', padding: '5px 8px',
-            fontSize: 12, outline: 'none', boxSizing: 'border-box',
-          }}
+          style={{ width: '100%', fontSize: 12, boxSizing: 'border-box' }}
         />
       </div>
 
       {/* Results */}
       <ul ref={listRef} style={{ margin: 0, padding: '3px 0', overflowY: 'auto', flex: 1, listStyle: 'none' }}>
         {filtered.length === 0 && (
-          <li style={{ padding: '10px 12px', fontSize: 11, color: 'var(--text-secondary, #888)' }}>
+          <li style={{ padding: '10px 12px', fontSize: 11, color: 'var(--text-secondary)' }}>
             No results
           </li>
         )}
@@ -157,20 +149,16 @@ export default function KeyPicker({
               style={{
                 padding: '5px 12px', cursor: 'pointer',
                 display: 'flex', alignItems: 'baseline', gap: 7,
-                background: isActive ? 'rgba(124,106,255,0.18)' : 'transparent',
-                borderLeft: isCurrent ? '2px solid var(--accent, #7c6aff)' : '2px solid transparent',
+                background: isActive ? 'var(--accent-soft)' : 'transparent',
+                borderLeft: isCurrent ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: 'background var(--dur-1) var(--ease-out)',
               }}
             >
-              <code style={{
-                background: 'var(--bg-tertiary, #2a2a2a)', borderRadius: 3,
-                padding: '1px 5px', fontSize: 10, flexShrink: 0,
-                color: isActive ? '#a99fff' : 'var(--text-secondary, #777)',
-                fontFamily: 'monospace',
-              }}>
+              <code className="mono" style={{ flexShrink: 0, color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)' }}>
                 {choice.label}
               </code>
               {choice.description && (
-                <span style={{ fontSize: 10, color: isActive ? 'var(--text-primary, #eee)' : 'var(--text-secondary, #777)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 10, color: isActive ? 'var(--text)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {choice.description}
                 </span>
               )}
@@ -180,7 +168,7 @@ export default function KeyPicker({
       </ul>
 
       {/* Footer */}
-      <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border, #333)', fontSize: 10, color: 'var(--text-muted, #555)', display: 'flex', gap: 10 }}>
+      <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-muted)', display: 'flex', gap: 10 }}>
         <span>↑↓</span><span>↵ select</span><span>Esc</span>
         <span style={{ marginLeft: 'auto' }}>{filtered.length}/{choices.length}</span>
       </div>

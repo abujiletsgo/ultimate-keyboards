@@ -54,26 +54,6 @@ const PRESETS: { label: string; desc: string; mods: Record<string, string> }[] =
   },
 ]
 
-const s = {
-  btn: (active = false, danger = false): React.CSSProperties => ({
-    padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12,
-    backgroundColor: danger
-      ? 'rgba(255,80,80,0.15)'
-      : active ? 'var(--accent, #7c6aff)' : 'var(--bg-secondary, #2a2a2a)',
-    color: danger ? '#ff6b6b' : active ? '#fff' : 'var(--text-secondary, #aaa)',
-  }),
-  select: {
-    background: 'var(--bg-tertiary, #2a2a2a)',
-    border: '1px solid var(--border, #3a3a3a)',
-    borderRadius: 6,
-    color: 'var(--text-primary, #eee)',
-    padding: '3px 6px',
-    fontSize: 11,
-    cursor: 'pointer',
-    outline: 'none',
-  } as React.CSSProperties,
-}
-
 export const HomerowModEditor: React.FC = () => {
   const { rules, addRule, removeRule, updateRule } = useKarabinerStore()
 
@@ -147,24 +127,24 @@ export const HomerowModEditor: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text-primary, #eee)' }}>
-            Homerow Mods {enabledCount > 0 && <span style={{ color: 'var(--accent,#7c6aff)', fontSize: 12 }}>({enabledCount} active)</span>}
+          <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text)' }}>
+            Homerow Mods {enabledCount > 0 && <span style={{ color: 'var(--accent)', fontSize: 12 }}>({enabledCount} active)</span>}
           </h3>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted, #666)' }}>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
             Hold a homerow key to send a modifier. Tap it normally to type the letter.
           </p>
         </div>
         {enabledCount > 0 && (
-          <button style={s.btn(false, true)} onClick={clearAll}>Clear all</button>
+          <button className="btn btn-danger btn-sm" onClick={clearAll}>Clear all</button>
         )}
       </div>
 
       {/* Presets */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Presets</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Presets</span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {PRESETS.map(p => (
-            <button key={p.label} style={s.btn()} onClick={() => applyPreset(p)}
+            <button key={p.label} className="btn btn-secondary btn-sm" onClick={() => applyPreset(p)}
               title={p.desc}>
               {p.label}
             </button>
@@ -175,14 +155,12 @@ export const HomerowModEditor: React.FC = () => {
       {/* Per-key controls */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {['left', 'right'].map(hand => (
-          <div key={hand} style={{
+          <div key={hand} className="panel-inset" style={{
             flex: 1, minWidth: 200,
-            background: 'var(--bg-secondary, #1e1e1e)',
-            border: '1px solid var(--border, #3a3a3a)',
-            borderRadius: 8, padding: '10px 12px',
+            padding: '10px 12px',
             display: 'flex', flexDirection: 'column', gap: 6,
           }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted, #666)', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
               {hand} hand
             </span>
             {HOMEROW_KEYS.filter(hk => hk.hand === hand).map(hk => {
@@ -195,39 +173,39 @@ export const HomerowModEditor: React.FC = () => {
                 <div key={hk.key} style={{
                   display: 'flex', alignItems: 'center', gap: 8,
                   opacity: active ? 1 : 0.5,
-                  transition: 'opacity 0.15s',
+                  transition: 'opacity var(--dur-1) var(--ease-out)',
                 }}>
                   {/* Toggle */}
                   <div
                     onClick={() => toggle(hk)}
                     style={{
                       width: 32, height: 20, borderRadius: 10, cursor: 'pointer',
-                      background: active ? 'var(--accent, #7c6aff)' : 'var(--bg-tertiary, #333)',
-                      position: 'relative', transition: 'background 0.15s', flexShrink: 0,
+                      background: active ? 'var(--accent-grad)' : 'var(--bg-tertiary)',
+                      position: 'relative', transition: 'background var(--dur-1) var(--ease-out)', flexShrink: 0,
                     }}
                   >
                     <div style={{
                       position: 'absolute', top: 2, left: active ? 14 : 2,
                       width: 16, height: 16, borderRadius: 8,
-                      background: '#fff', transition: 'left 0.15s',
+                      background: '#fff', transition: 'left var(--dur-1) var(--ease-out)',
                     }} />
                   </div>
 
                   {/* Key label */}
                   <span style={{
-                    fontSize: 13, fontFamily: 'monospace', fontWeight: 600,
-                    color: active ? 'var(--text-primary, #eee)' : 'var(--text-muted, #666)',
+                    fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600,
+                    color: active ? 'var(--text)' : 'var(--text-muted)',
                     width: 16, textAlign: 'center',
                   }}>
                     {hk.label}
                   </span>
 
-                  <span style={{ fontSize: 11, color: 'var(--text-muted, #555)' }}>hold →</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>hold →</span>
 
                   {/* Modifier picker */}
                   <select
                     disabled={!active}
-                    style={{ ...s.select, opacity: active ? 1 : 0.3 }}
+                    style={{ height: 26, fontSize: 11, opacity: active ? 1 : 0.3 }}
                     value={modKey}
                     onChange={e => setMod(hk, e.target.value)}
                   >
@@ -244,7 +222,7 @@ export const HomerowModEditor: React.FC = () => {
       </div>
 
       {/* Hint */}
-      <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted, #555)', lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
         Tap threshold: 120ms — typing normally won't trigger mods.
         Works best with touch-typing. Conflicts with combos that use the same keys.
       </p>

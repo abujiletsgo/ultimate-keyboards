@@ -1,51 +1,45 @@
-import { ArrowRight, Zap, Trash2 } from 'lucide-react';
+import { ArrowRight, Zap, Layers, Command, Trash2 } from 'lucide-react';
 import { useKarabinerStore } from '../../stores/karabinerStore';
-import type { Rule, SimpleRemapRule, ComboRule } from '../../lib/karabinerGenerator';
+import type { Rule } from '../../lib/karabinerGenerator';
+
+function joinMods(mods?: string[]): string {
+  return mods && mods.length > 0 ? `${mods.join('+')}+` : '';
+}
 
 function getRuleSummary(rule: Rule): string {
-  if (rule.type === 'simple') {
-    const r = rule as SimpleRemapRule;
-    const fromMods = r.fromModifiers && r.fromModifiers.length > 0
-      ? `${r.fromModifiers.join('+')}+`
-      : '';
-    const toMods = r.toModifiers && r.toModifiers.length > 0
-      ? `${r.toModifiers.join('+')}+`
-      : '';
-    return `${fromMods}${r.fromKey} → ${toMods}${r.toKey}`;
+  switch (rule.type) {
+    case 'simple':
+      return `${joinMods(rule.fromModifiers)}${rule.fromKey} → ${joinMods(rule.toModifiers)}${rule.toKey}`;
+    case 'combo':
+      return `${rule.fromKeys.join('+')} → ${joinMods(rule.toModifiers)}${rule.toKey}`;
+    case 'layer_activator':
+      return `hold ${rule.fromKey} → ${rule.layerName}${rule.tapKey ? ` · tap → ${rule.tapKey}` : ''}`;
+    case 'layer_binding':
+      return `${rule.layerName}: ${rule.fromKey} → ${joinMods(rule.toModifiers)}${rule.toKey}`;
+    case 'homerow_mod':
+      return `${rule.fromKey}: tap → ${rule.tapKey} · hold → ${rule.modKey}`;
   }
-  // combo
-  const r = rule as ComboRule;
-  const toMods = r.toModifiers && r.toModifiers.length > 0
-    ? `${r.toModifiers.join('+')}+`
-    : '';
-  return `${r.fromKeys.join('+')} → ${toMods}${r.toKey}`;
+}
+
+/** Per-rule-type presentation: icon, tag label, and tint */
+function getRuleKind(rule: Rule): { label: string; icon: 'arrow' | 'zap' | 'layers' | 'command'; tint: 'accent' | 'warning' | 'blue' | 'pink' } {
+  switch (rule.type) {
+    case 'simple':          return { label: 'remap', icon: 'arrow', tint: 'accent' };
+    case 'combo':           return { label: 'combo', icon: 'zap', tint: 'warning' };
+    case 'layer_activator': return { label: 'layer', icon: 'layers', tint: 'blue' };
+    case 'layer_binding':   return { label: 'layer key', icon: 'layers', tint: 'blue' };
+    case 'homerow_mod':     return { label: 'homerow', icon: 'command', tint: 'pink' };
+  }
 }
 
 export function RuleList() {
   const { rules, removeRule } = useKarabinerStore();
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'var(--bg)',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div
-        style={{
-          padding: '10px 14px',
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-secondary)',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+      <div className="section-header">
+        <span className="section-title">
           {rules.length} {rules.length === 1 ? 'rule' : 'rules'} configured
         </span>
       </div>
@@ -61,13 +55,12 @@ export function RuleList() {
               justifyContent: 'center',
               height: '100%',
               gap: 10,
-              color: 'var(--text-muted)',
               padding: 24,
               textAlign: 'center',
             }}
           >
-            <ArrowRight size={32} strokeWidth={1.5} style={{ opacity: 0.4 }} />
-            <p style={{ fontSize: 13, lineHeight: 1.6 }}>
+            <ArrowRight size={32} strokeWidth={1.5} style={{ opacity: 0.4, color: 'var(--text-muted)' }} />
+            <p className="panel-inset" style={{ margin: 0, padding: '10px 16px', fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)' }}>
               No rules yet. Create your first key rebinding →
             </p>
           </div>
@@ -91,35 +84,34 @@ function RuleItem({
   onDelete: (idx: number) => void;
 }) {
   const summary = getRuleSummary(rule);
-  const isCombo = rule.type === 'combo';
+  const kind = getRuleKind(rule);
+  const tintColor = {
+    accent: 'var(--accent)',
+    warning: 'var(--warning)',
+    blue: 'var(--accent-2)',
+    pink: '#f9a8d4',
+  }[kind.tint];
+  const tagStyle = {
+    accent: undefined,
+    warning: { background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' },
+    blue: { background: 'rgba(94,166,255,0.14)', borderColor: 'rgba(94,166,255,0.25)', color: 'var(--accent-2)' },
+    pink: { background: 'rgba(244,114,182,0.14)', borderColor: 'rgba(244,114,182,0.25)', color: '#f9a8d4' },
+  }[kind.tint];
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '10px 14px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--bg)',
-        transition: 'background 0.1s',
-      }}
-      onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLDivElement).style.background = 'var(--bg-secondary)')
-      }
-      onMouseLeave={(e) =>
-        ((e.currentTarget as HTMLDivElement).style.background = 'var(--bg)')
-      }
-    >
+    <div className="list-row" style={{ height: 'auto', minHeight: 54, padding: '10px 14px', gap: 10 }}>
       {/* Icon */}
       <div
         style={{
           flexShrink: 0,
-          color: isCombo ? '#f59e0b' : 'var(--accent)',
+          color: tintColor,
           display: 'flex',
         }}
       >
-        {isCombo ? <Zap size={16} /> : <ArrowRight size={16} />}
+        {kind.icon === 'zap' ? <Zap size={16} />
+          : kind.icon === 'layers' ? <Layers size={16} />
+          : kind.icon === 'command' ? <Command size={16} />
+          : <ArrowRight size={16} />}
       </div>
 
       {/* Text */}
@@ -138,14 +130,15 @@ function RuleItem({
           {rule.description}
         </div>
         <div
+          className="mono"
           style={{
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            fontFamily: 'monospace',
+            marginTop: 2,
+            display: 'inline-block',
+            maxWidth: '100%',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            marginTop: 2,
+            verticalAlign: 'top',
           }}
           title={summary}
         >
@@ -153,29 +146,21 @@ function RuleItem({
         </div>
       </div>
 
+      {/* Type tag */}
+      <span
+        className={`tag${kind.tint === 'accent' ? ' tag-accent' : ''}`}
+        style={tagStyle}
+      >
+        {kind.label}
+      </span>
+
       {/* Delete */}
       <button
+        className="btn btn-danger btn-sm"
         onClick={() => onDelete(idx)}
-        style={{
-          flexShrink: 0,
-          padding: 5,
-          borderRadius: 6,
-          color: 'var(--text-muted)',
-          transition: 'color 0.15s, background 0.15s',
-          display: 'flex',
-          alignItems: 'center',
-        }}
         title="Delete rule"
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = 'var(--danger)';
-          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(224,90,90,0.1)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-        }}
       >
-        <Trash2 size={14} />
+        <Trash2 size={12} />
       </button>
     </div>
   );

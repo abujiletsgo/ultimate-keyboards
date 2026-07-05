@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { Keyboard, Command, Dumbbell, Settings } from 'lucide-react'
 import type { Section } from '@/App'
 
@@ -19,11 +20,13 @@ export default function Sidebar({ active, onNavigate }: Props) {
       background: 'var(--bg-sidebar)',
       backdropFilter: 'var(--blur-sidebar)',
       WebkitBackdropFilter: 'var(--blur-sidebar)',
-      boxShadow: '1px 0 0 var(--border)',
+      borderRight: '1px solid var(--glass-border)',
+      boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.02)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       flexShrink: 0,
+      zIndex: 20,
     }}>
       {/* Drag region for native traffic lights */}
       <div
@@ -33,12 +36,14 @@ export default function Sidebar({ active, onNavigate }: Props) {
 
       {/* App name */}
       <div style={{
-        padding: '10px 14px 8px',
+        padding: '10px 14px 10px',
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
+        gap: 10,
       }}>
-        <Keyboard size={15} strokeWidth={1.5} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <span className="logo-mark">
+          <Keyboard size={14} strokeWidth={2} />
+        </span>
         <span style={{
           fontSize: 'var(--text-13)',
           fontWeight: 600,
@@ -51,10 +56,10 @@ export default function Sidebar({ active, onNavigate }: Props) {
 
       {/* Section label */}
       <div style={{
-        padding: '12px 14px 4px',
+        padding: '14px 16px 6px',
         fontSize: 'var(--text-11)',
         fontWeight: 600,
-        letterSpacing: '0.07em',
+        letterSpacing: '0.08em',
         textTransform: 'uppercase',
         color: 'var(--text-muted)',
       }}>
@@ -62,66 +67,37 @@ export default function Sidebar({ active, onNavigate }: Props) {
       </div>
 
       {/* Nav items */}
-      <nav style={{ padding: '2px 8px', display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
-        {NAV.map(({ id, label, icon: Icon }) => {
-          const isActive = id === active
-          return (
-            <button
-              key={id}
-              onClick={() => onNavigate(id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                height: '28px',
-                padding: '0 8px',
-                borderRadius: 'var(--r-sm)',
-                fontSize: 'var(--text-13)',
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? 'var(--text)' : 'var(--text-secondary)',
-                background: isActive
-                  ? 'rgba(255,255,255,0.10)'
-                  : 'transparent',
-                boxShadow: isActive
-                  ? '0 0 0 .5px rgba(255,255,255,0.07)'
-                  : 'none',
-                letterSpacing: '-0.01em',
-                width: '100%',
-                textAlign: 'left',
-                transition: 'background 0.1s, color 0.1s',
-              }}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-                  e.currentTarget.style.color = 'var(--text)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--text-secondary)'
-                }
-              }}
-            >
-              <Icon
-                size={14}
-                strokeWidth={isActive ? 1.75 : 1.5}
-                style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }}
-              />
-              {label}
-            </button>
-          )
-        })}
+      <nav className="anim-stagger" style={{ padding: '2px 10px', display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+        {NAV.map(({ id, label, icon: Icon }, i) => (
+          <button
+            key={id}
+            onClick={() => onNavigate(id)}
+            className={`nav-item${id === active ? ' active' : ''}`}
+            style={{ '--i': i } as CSSProperties}
+          >
+            <Icon size={15} strokeWidth={id === active ? 1.9 : 1.6} />
+            {label}
+          </button>
+        ))}
       </nav>
 
       {/* Footer */}
       <div style={{
-        padding: '10px 14px',
+        padding: '12px 16px',
         fontSize: 'var(--text-11)',
         color: 'var(--text-muted)',
-        borderTop: '.5px solid var(--border)',
+        borderTop: '1px solid var(--border)',
         letterSpacing: '0.01em',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
       }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: 3,
+          background: 'var(--success)',
+          boxShadow: '0 0 6px rgba(74,222,128,0.6)',
+          display: 'inline-block',
+        }} />
         v0.1.0
       </div>
     </aside>

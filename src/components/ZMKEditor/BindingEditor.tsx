@@ -191,11 +191,9 @@ function ParamPicker({
       <button
         ref={btnRef}
         onClick={handleOpen}
+        className="btn btn-secondary btn-sm"
         style={{
-          padding: '3px 8px', borderRadius: 5,
-          background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)',
-          color: 'var(--text-primary, #eee)', cursor: 'pointer', fontSize: 11,
-          fontFamily: 'monospace', whiteSpace: 'nowrap', maxWidth: 160,
+          fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', maxWidth: 160,
           overflow: 'hidden', textOverflow: 'ellipsis',
         }}
         title={value}
@@ -205,11 +203,10 @@ function ParamPicker({
       {open && (
         <div
           ref={ref}
+          className="glass-strong anim-scale-in"
           style={{
             position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 2000,
-            background: 'var(--bg-secondary, #1e1e1e)', border: '1px solid var(--border, #444)',
-            borderRadius: 8, width: 220, maxHeight: 260, display: 'flex', flexDirection: 'column',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+            width: 220, maxHeight: 260, display: 'flex', flexDirection: 'column',
           }}
         >
           <input
@@ -221,11 +218,7 @@ function ParamPicker({
               if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
               if (e.key === 'Escape') setOpen(false)
             }}
-            style={{
-              margin: 6, padding: '4px 8px', background: 'rgba(255,255,255,0.07)',
-              border: '1px solid var(--border, #3a3a3a)', borderRadius: 5,
-              color: 'var(--text-primary, #eee)', fontSize: 11, outline: 'none',
-            }}
+            style={{ margin: 6, fontSize: 11 }}
           />
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {filtered.map(opt => (
@@ -234,12 +227,13 @@ function ParamPicker({
                 onClick={() => { onChange(opt); setOpen(false); setQuery('') }}
                 style={{
                   padding: '5px 10px', cursor: 'pointer', fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: opt === value ? 'var(--accent, #7c6aff)' : 'var(--text-secondary, #aaa)',
-                  background: opt === value ? 'rgba(124,106,255,0.12)' : 'transparent',
+                  fontFamily: 'var(--font-mono)',
+                  color: opt === value ? 'var(--accent-hover)' : 'var(--text-secondary)',
+                  background: opt === value ? 'var(--accent-soft)' : 'transparent',
+                  transition: 'background var(--dur-1) var(--ease-out)',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-                onMouseLeave={e => (e.currentTarget.style.background = opt === value ? 'rgba(124,106,255,0.12)' : 'transparent')}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-bg-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = opt === value ? 'var(--accent-soft)' : 'transparent')}
               >
                 {opt}
               </div>
@@ -255,18 +249,12 @@ function ParamPicker({
 
 function LayerPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div className="seg-ctrl">
       {LAYERS.map(l => (
         <button
           key={l}
           onClick={() => onChange(l)}
-          style={{
-            width: 28, height: 24, borderRadius: 5,
-            background: value === l ? 'var(--accent, #7c6aff)' : 'rgba(255,255,255,0.08)',
-            border: value === l ? 'none' : '1px solid rgba(255,255,255,0.12)',
-            color: value === l ? '#fff' : 'var(--text-secondary, #aaa)',
-            cursor: 'pointer', fontSize: 11, fontWeight: 600,
-          }}
+          className={`seg-btn${value === l ? ' active' : ''}`}
         >
           {l}
         </button>
@@ -293,7 +281,7 @@ function ZMKParamEditor({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {bDef.params.map((pType, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-muted, #666)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : pType === 'modifier' ? 'Mod' : pType === 'bt_action' ? 'Action' : 'Button'}
           </span>
           {pType === 'layer' ? (
@@ -331,7 +319,7 @@ function QMKParamEditor({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {bDef.params.map((pType, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-muted, #666)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {pType === 'keycode' ? 'Key' : pType === 'layer' ? 'Layer' : 'Mod'}
           </span>
           {pType === 'layer' ? (
@@ -386,6 +374,7 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
   const parsed = firmware === 'zmk' ? parseZMK(currentBinding) : parseQMK(currentBinding)
   const [selBehavior, setSelBehavior] = useState('behavior' in parsed ? parsed.behavior : parsed.type)
   const [params, setParams] = useState<string[]>(parsed.params)
+  const [hoveredBehavior, setHoveredBehavior] = useState<string | null>(null)
 
   // When behavior changes, reset params to sensible defaults
   function handleBehaviorChange(code: string) {
@@ -424,38 +413,35 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
         style={{ position: 'fixed', left, top, zIndex: 1000, width: W }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{
-          background: 'var(--bg-secondary, #1a1a1a)',
-          border: '1px solid var(--border, #3a3a3a)',
-          borderRadius: 12,
-          boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
-          overflow: 'hidden',
-        }}>
+        <div className="glass-strong anim-scale-in" style={{ overflow: 'hidden' }}>
           {/* Header */}
           <div style={{
             padding: '10px 12px 8px',
-            borderBottom: '1px solid var(--border, #2a2a2a)',
+            borderBottom: '1px solid var(--border)',
             background: 'rgba(255,255,255,0.02)',
           }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted, #555)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Binding Type
             </div>
             {/* Behavior pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {behaviors.map(b => {
                 const isActive = b.code === selBehavior
+                const isHovered = hoveredBehavior === b.code
                 return (
                   <button
                     key={b.code}
                     onClick={() => handleBehaviorChange(b.code)}
+                    onMouseEnter={() => setHoveredBehavior(b.code)}
+                    onMouseLeave={() => setHoveredBehavior(null)}
                     title={(b as any).title ?? b.label}
                     style={{
                       padding: '3px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 10,
                       fontWeight: isActive ? 700 : 500,
-                      background: isActive ? b.color : 'rgba(255,255,255,0.05)',
-                      border: isActive ? `1px solid ${b.color.replace(/[\d.]+\)$/, '0.6)')}` : '1px solid rgba(255,255,255,0.08)',
-                      color: isActive ? '#fff' : 'var(--text-muted, #888)',
-                      transition: 'all 0.1s',
+                      background: isActive ? b.color : isHovered ? 'var(--glass-bg-hover)' : 'rgba(255,255,255,0.05)',
+                      border: isActive ? `1px solid ${b.color.replace(/[\d.]+\)$/, '0.6)')}` : '1px solid var(--glass-border)',
+                      color: isActive ? '#fff' : isHovered ? 'var(--text)' : 'var(--text-muted)',
+                      transition: 'background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
                     }}
                   >
                     {b.label}
@@ -468,7 +454,7 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
           {/* Param area */}
           <div style={{ padding: '12px 12px 10px' }}>
             {selDef.params.length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--text-muted, #666)', fontStyle: 'italic' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
                 No parameters needed
               </div>
             ) : firmware === 'zmk' ? (
@@ -480,24 +466,14 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
 
           {/* Preview + Apply */}
           <div style={{
-            padding: '8px 12px', borderTop: '1px solid var(--border, #2a2a2a)',
+            padding: '8px 12px', borderTop: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8,
             background: 'rgba(255,255,255,0.02)',
           }}>
-            <code style={{
-              flex: 1, fontSize: 10, color: 'var(--text-secondary, #aaa)',
-              background: 'rgba(255,255,255,0.05)', padding: '3px 7px',
-              borderRadius: 4, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
+            <code className="mono" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {firmware === 'zmk' ? serializeZMK(selBehavior, params) : serializeQMK(selBehavior, params)}
             </code>
-            <button
-              onClick={handleApply}
-              style={{
-                padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: 'var(--accent, #7c6aff)', color: '#fff', fontSize: 11, fontWeight: 600,
-              }}
-            >
+            <button onClick={handleApply} className="btn btn-primary btn-sm">
               Apply
             </button>
           </div>

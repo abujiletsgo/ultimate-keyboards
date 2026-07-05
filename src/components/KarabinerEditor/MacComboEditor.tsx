@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { Plus } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { MODIFIER_NAMES, type ComboRule } from '@/lib/karabinerGenerator'
 import type { MacKey } from '@/lib/macbookLayout'
@@ -33,25 +34,6 @@ const KEY_LABELS: Record<string, string> = {
 }
 
 function displayKey(k: string) { return KEY_LABELS[k] ?? k }
-
-const s = {
-  input: {
-    background: 'var(--bg-tertiary, #2a2a2a)',
-    border: '1px solid var(--border, #3a3a3a)',
-    borderRadius: 6,
-    color: 'var(--text-primary, #eee)',
-    padding: '4px 8px',
-    fontSize: 12,
-    outline: 'none',
-  } as React.CSSProperties,
-  btn: (primary = false, danger = false): React.CSSProperties => ({
-    padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12,
-    backgroundColor: danger
-      ? 'rgba(255,80,80,0.15)'
-      : primary ? 'var(--accent, #7c6aff)' : 'var(--bg-secondary, #333)',
-    color: danger ? '#ff6b6b' : primary ? '#fff' : 'var(--text-secondary, #aaa)',
-  }),
-}
 
 // ── Add / Edit form ────────────────────────────────────────────────────────────
 
@@ -94,26 +76,22 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
   }
 
   return (
-    <div style={{
-      background: 'var(--bg-secondary, #222)', border: '1px solid var(--border, #3a3a3a)',
-      borderRadius: 8, padding: 14, display: 'flex', flexDirection: 'column', gap: 12,
-    }}>
-      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary, #eee)' }}>
+    <div className="glass-strong anim-scale-in" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
         {editing ? 'Edit Combo' : 'Add Combo'}
       </div>
 
       {/* Output key */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Output key</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Output key</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
-            style={{ ...s.input, width: 140 }}
+            style={{ width: 140 }}
             value={toKey}
             onChange={e => setToKey(e.target.value)}
             placeholder="escape"
           />
           <select
-            style={{ ...s.input, cursor: 'pointer' }}
             value=""
             onChange={e => { if (e.target.value) setToKey(e.target.value) }}
           >
@@ -125,7 +103,7 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 
       {/* Modifiers */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Output modifiers (optional)</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Output modifiers (optional)</span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {MODIFIER_NAMES.map(mod => {
             const active = toMods.includes(mod)
@@ -133,9 +111,10 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
             return (
               <button key={mod} onClick={() => toggleMod(mod)} style={{
                 padding: '3px 8px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
-                background: active ? 'rgba(124,106,255,0.3)' : 'rgba(255,255,255,0.06)',
-                border: active ? '1px solid rgba(124,106,255,0.6)' : '1px solid rgba(255,255,255,0.1)',
-                color: active ? '#c4baff' : 'var(--text-muted, #888)',
+                background: active ? 'rgba(139,124,248,0.3)' : 'rgba(255,255,255,0.06)',
+                border: active ? '1px solid rgba(139,124,248,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                color: active ? 'var(--accent-hover)' : 'var(--text-muted)',
+                transition: 'background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
               }}>{sym[mod] ?? mod}</button>
             )
           })}
@@ -144,16 +123,16 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 
       {/* Trigger keys summary */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
           Trigger keys — click keys on keyboard ({fromKeys.length} selected, need ≥ 2)
         </span>
         {fromKeys.length > 0 && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {fromKeys.map(kc => (
               <span key={kc} style={{
-                fontSize: 11, background: 'var(--accent, #7c6aff)', color: '#fff',
+                fontSize: 11, background: 'var(--accent-grad)', color: '#fff',
                 borderRadius: 4, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4,
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
               }}>
                 {displayKey(kc)}
                 <span style={{ cursor: 'pointer', opacity: 0.7 }}
@@ -165,11 +144,8 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
       </div>
 
       {/* Keyboard picker */}
-      <div style={{
-        background: 'var(--bg-primary, #1a1a1a)', border: '1px solid var(--border, #3a3a3a)',
-        borderRadius: 8, padding: '8px 12px', overflowX: 'auto',
-      }}>
-        <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', marginBottom: 6 }}>
+      <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
           Click keys to add/remove from trigger — highlighted = selected
         </div>
         <MacbookKeyboard
@@ -180,11 +156,11 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
         />
       </div>
 
-      {error && <div style={{ fontSize: 11, color: '#ff6b6b' }}>{error}</div>}
+      {error && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button style={s.btn(true)} onClick={handleSave}>{editing ? 'Save Changes' : 'Add Combo'}</button>
-        <button style={s.btn()} onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary btn-sm" onClick={handleSave}>{editing ? 'Save Changes' : 'Add Combo'}</button>
+        <button className="btn btn-secondary btn-sm" onClick={onCancel}>Cancel</button>
       </div>
     </div>
   )
@@ -232,21 +208,19 @@ const MacComboEditor: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text-primary, #eee)' }}>
+        <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text)' }}>
           Combos ({combos.length})
         </h3>
-        <button style={s.btn(true)} onClick={() => { setShowForm(true); setEditing(null) }}>
-          + Add
+        <button className="btn btn-primary btn-sm" onClick={() => { setShowForm(true); setEditing(null) }}>
+          <Plus size={13} />
+          Add
         </button>
       </div>
 
       {/* Keyboard preview — hover a combo to see its keys lit up */}
       {combos.length > 0 && !showForm && !editing && (
-        <div style={{
-          background: 'var(--bg-primary, #1a1a1a)', border: '1px solid var(--border, #3a3a3a)',
-          borderRadius: 8, padding: '8px 12px', overflowX: 'auto',
-        }}>
-          <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', marginBottom: 6 }}>
+        <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
             {hoveredCombo
               ? `${hoveredCombo.fromKeys.map(k => displayKey(k)).join(' + ')} — highlighted trigger keys`
               : 'Hover a combo below to preview its trigger keys'}
@@ -269,7 +243,7 @@ const MacComboEditor: React.FC = () => {
 
       {/* Combo list */}
       {combos.length === 0 && !showForm ? (
-        <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>
+        <div className="panel-inset" style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)', fontSize: 13 }}>
           No combos yet. Add one to get started.
         </div>
       ) : (
@@ -283,43 +257,38 @@ const MacComboEditor: React.FC = () => {
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 style={{
-                  background: isHov ? 'rgba(255,255,255,0.05)' : 'var(--bg-secondary, #1e1e1e)',
-                  border: `1px solid ${isHov ? color : 'var(--border, #3a3a3a)'}`,
+                  background: isHov ? 'var(--glass-bg-hover)' : 'var(--glass-bg)',
+                  border: `1px solid ${isHov ? color : 'var(--glass-border)'}`,
                   borderRadius: 8, padding: '7px 10px',
                   display: 'flex', alignItems: 'center', gap: 8, cursor: 'default',
-                  transition: 'border-color 0.15s, background 0.15s',
+                  transition: 'border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out)',
                 }}
               >
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
 
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flex: 1, alignItems: 'center' }}>
                   {rule.fromKeys.map(kc => (
-                    <span key={kc} style={{
-                      fontSize: 11,
-                      background: isHov ? color : 'rgba(255,255,255,0.08)',
-                      color: isHov ? '#fff' : 'var(--text-secondary, #aaa)',
-                      borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace',
-                      transition: 'background 0.15s, color 0.15s',
-                    }}>{displayKey(kc)}</span>
+                    <span
+                      key={kc}
+                      className="tag"
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        ...(isHov ? { background: color, color: '#fff', borderColor: color } : {}),
+                      }}
+                    >{displayKey(kc)}</span>
                   ))}
-                  <span style={{ fontSize: 11, color: 'var(--text-muted, #666)' }}>→</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>→</span>
                   {rule.toModifiers && rule.toModifiers.length > 0 && (
-                    <span style={{
-                      fontSize: 11, background: 'rgba(124,106,255,0.18)', color: '#a78bfa',
-                      borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace',
-                    }}>{rule.toModifiers.join('+')}</span>
+                    <span className="tag tag-accent" style={{ fontFamily: 'var(--font-mono)' }}>{rule.toModifiers.join('+')}</span>
                   )}
-                  <span style={{
-                    fontSize: 11, background: 'rgba(52,211,153,0.15)', color: '#6ee7b7',
-                    borderRadius: 4, padding: '1px 6px', fontFamily: 'monospace',
-                  }}>{displayKey(rule.toKey)}</span>
+                  <span className="tag tag-success" style={{ fontFamily: 'var(--font-mono)' }}>{displayKey(rule.toKey)}</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                  <button style={s.btn()} onClick={() => { setEditing({ combo: rule, idx }); setShowForm(false) }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditing({ combo: rule, idx }); setShowForm(false) }}>
                     Edit
                   </button>
-                  <button style={s.btn(false, true)} onClick={() => handleDelete(idx)}>×</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(idx)}>×</button>
                 </div>
               </div>
             )

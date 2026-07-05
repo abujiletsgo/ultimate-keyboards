@@ -187,20 +187,11 @@ function Section({
 }) {
   return (
     <div style={{ marginBottom: "32px" }}>
-      <h2
-        style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: "12px",
-        }}
-      >
+      <h2 className="section-title" style={{ marginBottom: "12px" }}>
         {title}
       </h2>
       <div
-        className="panel"
+        className="glass anim-fade-up"
         style={{
           padding: "16px",
           display: "flex",
@@ -303,18 +294,46 @@ function BuiltInKeyboardField() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "8px",
+          gap: "10px",
           cursor: busy ? "wait" : "pointer",
           opacity: busy ? 0.6 : 1,
         }}
       >
-        <input
-          type="checkbox"
-          checked={disabled}
-          disabled={busy}
-          onChange={(e) => toggle(e.target.checked)}
-          style={{ accentColor: "var(--accent)", width: "16px", height: "16px" }}
-        />
+        <span style={{ position: "relative", width: "40px", height: "22px", flexShrink: 0 }}>
+          <input
+            type="checkbox"
+            checked={disabled}
+            disabled={busy}
+            onChange={(e) => toggle(e.target.checked)}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", margin: 0, opacity: 0, cursor: "inherit" }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 9999,
+              background: disabled ? "var(--accent-grad)" : "var(--glass-bg)",
+              border: `1px solid ${disabled ? "transparent" : "var(--glass-border)"}`,
+              boxShadow: disabled ? "var(--accent-glow)" : "none",
+              transition: "background var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out)",
+              pointerEvents: "none",
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              top: "2px",
+              left: disabled ? "20px" : "2px",
+              width: "18px",
+              height: "18px",
+              borderRadius: "50%",
+              background: "#fff",
+              boxShadow: "0 1px 3px rgba(3,4,12,0.45)",
+              transition: "left var(--dur-2) var(--ease-spring)",
+              pointerEvents: "none",
+            }}
+          />
+        </span>
         <span style={{ fontSize: "13px" }}>
           {disabled
             ? "MacBook keyboard is disabled"
@@ -326,7 +345,10 @@ function BuiltInKeyboardField() {
         quit the app.
       </div>
       {error && (
-        <div style={{ fontSize: "11px", color: "var(--danger, #e5484d)", marginTop: "6px" }}>
+        <div
+          className="panel-inset"
+          style={{ fontSize: "11px", color: "var(--danger)", background: "rgba(251,113,133,0.08)", padding: "6px 10px", marginTop: "6px" }}
+        >
           {error}
         </div>
       )}

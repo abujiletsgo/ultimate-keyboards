@@ -15,6 +15,11 @@ export async function readTextFile(path: string): Promise<string> {
   }
   const roFile = getFile(path)
   if (roFile) return roFile.text()
+  // Dev server: vite serves absolute paths through /@fs/ (fs.allow gated)
+  if (import.meta.env.DEV && path.startsWith('/')) {
+    const res = await fetch(`/@fs${path}`)
+    if (res.ok) return res.text()
+  }
   throw new Error(
     'Browser mode can’t auto-load files from disk paths. Click “Open” to pick the file — editing and saving will work from there. (The desktop app auto-loads.)',
   )
@@ -27,6 +32,16 @@ export async function writeTextFile(path: string, contents: string): Promise<voi
     await writable.write(contents)
     await writable.close()
     return
+  }
+  // Dev server: write back to disk via the dev-only /__fs/write endpoint
+  if (import.meta.env.DEV && path.startsWith('/')) {
+    const res = await fetch('/__fs/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, contents }),
+    })
+    if (res.ok) return
+    throw new Error(`Dev save failed: ${res.status} ${await res.text()}`)
   }
   // No live handle (e.g. picked via <input type=file> fallback) — download instead
   const name = path.replace(/^web(-ro)?:\/\//, '').split('/').pop() || 'keymap.keymap'

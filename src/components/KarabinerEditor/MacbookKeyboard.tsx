@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { MACBOOK_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, type MacKey } from '@/lib/macbookLayout'
 import type { Rule } from '@/lib/karabinerGenerator'
 import MacKeyEditor from './MacKeyEditor'
@@ -16,7 +16,6 @@ interface Props {
 }
 
 export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, selectedKeys, comboHighlights, selectorMode }: Props) {
-  const [hovered, setHovered] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number } | null>(null)
 
   // Build set of mapped key codes for highlighting
@@ -46,43 +45,27 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
     }
   }
 
-  function getKeyColors(key: MacKey) {
+  /** Per-state key colors, injected into .keycap via CSS custom props */
+  function getKeyVars(key: MacKey) {
     const code = key.code
-    const isSelected      = selectedKey?.code === code || selectedKeys?.has(code)
-    const isHovered       = hovered === code
     const isComboHighlit  = comboHighlights?.has(code)
     const isMappedFrom    = mappedFrom.has(code)
     const isMappedTo      = mappedTo.has(code)
 
-    if (isSelected) return {
-      bg: 'var(--accent)',
-      border: 'rgba(255,255,255,0.3)',
-      text: '#fff',
-      shadow: '0 0 0 2px var(--accent), 0 2px 8px rgba(124,106,255,0.5)',
-    }
     if (isComboHighlit) return {
       bg: 'rgba(251,146,60,0.25)',
       border: 'rgba(251,146,60,0.5)',
       text: '#fb923c',
-      shadow: '0 0 0 1px rgba(251,146,60,0.35)',
-    }
-    if (isHovered) return {
-      bg: 'rgba(255,255,255,0.14)',
-      border: 'rgba(255,255,255,0.18)',
-      text: 'var(--text)',
-      shadow: '0 2px 6px rgba(0,0,0,0.4)',
     }
     if (isMappedFrom) return {
       bg: 'rgba(255,69,58,0.18)',
       border: 'rgba(255,69,58,0.4)',
       text: 'var(--danger)',
-      shadow: '0 0 0 1px rgba(255,69,58,0.3)',
     }
     if (isMappedTo) return {
       bg: 'rgba(50,215,75,0.15)',
       border: 'rgba(50,215,75,0.35)',
       text: 'var(--success)',
-      shadow: '0 0 0 1px rgba(50,215,75,0.25)',
     }
     // Default
     return {
@@ -91,7 +74,6 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
         : 'rgba(255,255,255,0.08)',
       border: 'rgba(255,255,255,0.09)',
       text: 'var(--text-secondary)',
-      shadow: '0 1px 3px rgba(0,0,0,0.35), 0 0 0 .5px rgba(255,255,255,0.07)',
     }
   }
 
@@ -117,23 +99,25 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
       </div>
 
       {/* Keyboard body */}
-      <div style={{
-        position: 'relative',
-        width: BOARD_WIDTH,
-        height: BOARD_HEIGHT,
-        background: 'rgba(255,255,255,0.03)',
-        borderRadius: 12,
-        border: '.5px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 0 0 .5px rgba(255,255,255,0.06)',
-        padding: 4,
-        flexShrink: 0,
-      }}>
+      <div
+        className="glass"
+        style={{
+          position: 'relative',
+          width: BOARD_WIDTH,
+          height: BOARD_HEIGHT,
+          borderRadius: 16,
+          padding: 4,
+          flexShrink: 0,
+        }}
+      >
         {MACBOOK_LAYOUT.map(key => {
-          const colors = getKeyColors(key)
+          const vars = getKeyVars(key)
           const style = getKeyStyle(key)
+          const isSelected = selectedKey?.code === key.code || selectedKeys?.has(key.code)
           return (
             <div
               key={key.code}
+              className={['keycap', isSelected ? 'selected' : ''].filter(Boolean).join(' ')}
               onClick={(e) => {
                 onKeyClick?.(key)
                 if (!selectorMode) {
@@ -141,26 +125,17 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
                   setEditing({ key, x: rect.left, y: rect.bottom + 4 })
                 }
               }}
-              onMouseEnter={() => setHovered(key.code)}
-              onMouseLeave={() => setHovered(null)}
               title={key.code}
               style={{
                 ...style,
-                background: colors.bg,
-                boxShadow: colors.shadow,
-                border: `.5px solid ${colors.border}`,
-                color: colors.text,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                ...(isSelected ? {} : {
+                  '--key-bg': vars.bg,
+                  '--key-border': vars.border,
+                  '--key-text': vars.text,
+                }),
                 fontSize: key.small ? 9 : (key.label.length > 2 ? 10 : 12),
-                fontWeight: 500,
-                fontFamily: '-apple-system, sans-serif',
-                userSelect: 'none',
-                transition: 'background 0.1s, box-shadow 0.1s, color 0.1s',
                 letterSpacing: key.small ? '0.02em' : 0,
-              }}
+              } as CSSProperties}
             >
               {key.label}
             </div>

@@ -143,34 +143,32 @@ export default function PracticeTab() {
       ? 'var(--success)'
       : feedback === 'wrong'
       ? 'var(--danger)'
-      : 'var(--border)'
+      : undefined
 
   const feedbackBg =
     feedback === 'correct'
-      ? 'rgba(34,197,94,0.08)'
+      ? 'rgba(74,222,128,0.08)'
       : feedback === 'wrong'
-      ? 'rgba(239,68,68,0.08)'
-      : 'transparent'
+      ? 'rgba(251,113,133,0.08)'
+      : undefined
+
+  const feedbackGlow =
+    feedback === 'correct'
+      ? '0 0 24px rgba(74,222,128,0.30)'
+      : feedback === 'wrong'
+      ? '0 0 24px rgba(251,113,133,0.30)'
+      : undefined
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Difficulty selector */}
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+      <div className="seg-ctrl" style={{ margin: '0 auto' }}>
         {(['beginner', 'intermediate', 'advanced'] as Difficulty[]).map((d) => (
           <button
             key={d}
             onClick={() => handleDifficultyChange(d)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: '1px solid var(--border)',
-              background: difficulty === d ? 'var(--accent)' : 'var(--bg-secondary)',
-              color: difficulty === d ? 'white' : 'var(--text-muted)',
-              cursor: 'pointer',
-              fontSize: '13px',
-              textTransform: 'capitalize',
-              transition: 'background 0.15s',
-            }}
+            className={`seg-btn${difficulty === d ? ' active' : ''}`}
+            style={{ textTransform: 'capitalize' }}
           >
             {d.charAt(0).toUpperCase() + d.slice(1)}
           </button>
@@ -179,17 +177,18 @@ export default function PracticeTab() {
 
       {/* Word display */}
       <div
+        className="glass"
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '12px',
           padding: '32px',
-          borderRadius: '12px',
-          border: `2px solid ${feedbackBorderColor}`,
-          background: feedbackBg,
-          transition: 'border-color 0.1s, background 0.1s',
           minHeight: '140px',
+          borderColor: feedbackBorderColor,
+          background: feedbackBg,
+          boxShadow: feedbackGlow ? `var(--shadow-card), var(--glass-highlight), ${feedbackGlow}` : undefined,
+          transition: 'border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out)',
         }}
       >
         <div
@@ -198,16 +197,16 @@ export default function PracticeTab() {
             fontWeight: 700,
             color: 'var(--text)',
             letterSpacing: '4px',
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {currentWord}
         </div>
 
         {/* Hint */}
-        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
           Press:{' '}
-          <span style={{ letterSpacing: '4px', fontFamily: 'monospace', color: 'var(--text)' }}>
+          <span style={{ letterSpacing: '4px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
             {[...targetLetters].sort().join(' ')}
           </span>
         </div>
@@ -220,18 +219,20 @@ export default function PracticeTab() {
                 <span style={{ color: 'var(--text-muted)', alignSelf: 'center' }}>+</span>
               )}
               <span
+                className="anim-pop"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   width: '32px',
                   height: '32px',
-                  borderRadius: '6px',
-                  background: 'var(--accent)',
-                  color: 'white',
+                  borderRadius: 'var(--r-md)',
+                  background: 'var(--accent-grad)',
+                  boxShadow: 'var(--accent-glow)',
+                  color: '#fff',
                   fontWeight: 700,
                   fontSize: '16px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                 }}
               >
                 {key}
@@ -251,14 +252,12 @@ export default function PracticeTab() {
 
       {/* Stats bar */}
       <div
+        className="glass"
         style={{
           display: 'flex',
           gap: '32px',
           justifyContent: 'center',
           padding: '12px 24px',
-          borderRadius: '8px',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
         }}
       >
         <StatItem label="Accuracy" value={`${accuracy}%`} />
@@ -273,7 +272,7 @@ export default function PracticeTab() {
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontFamily: 'monospace' }}>
+      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
         {value}
       </div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>

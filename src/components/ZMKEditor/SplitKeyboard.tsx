@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { ZMKLayer } from '@/lib/zmkParser'
 import { CROSSES_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, KEY_UNIT, KEY_GAP } from '@/lib/crossesLayout'
 import BindingEditor from './BindingEditor'
@@ -117,28 +117,21 @@ function getZMKBehavior(binding: string): ZMKBehavior {
   return 'normal'
 }
 
-function getColors(
-  pos: number,
-  binding: string,
-  highlighted: Set<number>,
-  hovered: number | null,
-) {
-  if (highlighted.has(pos)) return { bg: 'var(--accent)', border: 'rgba(255,255,255,0.3)', text: '#fff', shadow: '0 0 0 2px var(--accent)', opacity: 1 }
-  if (hovered === pos) return { bg: 'rgba(255,255,255,0.16)', border: 'rgba(255,255,255,0.2)', text: 'var(--text-primary, #eee)', shadow: '0 2px 6px rgba(0,0,0,0.4)', opacity: 1 }
-
+/** Per-behavior key colors, injected into .keycap via CSS custom props */
+function getKeyVars(binding: string): { bg?: string; border?: string; text?: string; dashed?: boolean } {
   const b = getZMKBehavior(binding)
   switch (b) {
-    case 'trans':     return { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.12)', text: 'rgba(255,255,255,0.25)', shadow: 'none', opacity: 1, dashed: true }
-    case 'none':      return { bg: 'rgba(255,0,0,0.05)', border: 'rgba(255,80,80,0.15)', text: 'rgba(255,80,80,0.35)', shadow: 'none', opacity: 1, dashed: true }
-    case 'layer':     return { bg: 'rgba(124,106,255,0.22)', border: 'rgba(124,106,255,0.5)', text: '#c4baff', shadow: '0 0 0 1px rgba(124,106,255,0.3)', opacity: 1 }
-    case 'toggle':    return { bg: 'rgba(245,158,11,0.2)', border: 'rgba(245,158,11,0.45)', text: '#fcd34d', shadow: '0 0 0 1px rgba(245,158,11,0.25)', opacity: 1 }
-    case 'layer-tap': return { bg: 'rgba(124,106,255,0.12)', border: 'rgba(124,106,255,0.35)', text: '#a99fff', shadow: 'none', opacity: 1 }
-    case 'mod-tap':   return { bg: 'rgba(251,146,60,0.15)', border: 'rgba(251,146,60,0.4)', text: '#fdba74', shadow: 'none', opacity: 1 }
-    case 'sticky':    return { bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.4)', text: '#fde68a', shadow: 'none', opacity: 1 }
-    case 'bluetooth': return { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', text: '#7dd3fc', shadow: 'none', opacity: 1 }
-    case 'mouse':     return { bg: 'rgba(244,114,182,0.15)', border: 'rgba(244,114,182,0.4)', text: '#f9a8d4', shadow: 'none', opacity: 1 }
-    case 'caps':      return { bg: 'rgba(52,211,153,0.15)', border: 'rgba(52,211,153,0.4)', text: '#6ee7b7', shadow: 'none', opacity: 1 }
-    default:          return { bg: 'rgba(255,255,255,0.09)', border: 'rgba(255,255,255,0.10)', text: 'var(--text-secondary)', shadow: '0 1px 3px rgba(0,0,0,0.35)', opacity: 1 }
+    case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
+    case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
+    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.30), rgba(139,124,248,0.16))', border: 'rgba(139,124,248,0.50)', text: '#c9c0ff' }
+    case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
+    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(139,124,248,0.18), rgba(139,124,248,0.08))', border: 'rgba(139,124,248,0.35)', text: '#b0a6ff' }
+    case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
+    case 'sticky':    return { bg: 'linear-gradient(180deg, rgba(251,191,36,0.20), rgba(251,191,36,0.09))', border: 'rgba(251,191,36,0.40)', text: '#fde68a' }
+    case 'bluetooth': return { bg: 'linear-gradient(180deg, rgba(94,166,255,0.22), rgba(94,166,255,0.10))', border: 'rgba(94,166,255,0.42)', text: '#93c5fd' }
+    case 'mouse':     return { bg: 'linear-gradient(180deg, rgba(244,114,182,0.20), rgba(244,114,182,0.09))', border: 'rgba(244,114,182,0.40)', text: '#f9a8d4' }
+    case 'caps':      return { bg: 'linear-gradient(180deg, rgba(74,222,128,0.20), rgba(74,222,128,0.09))', border: 'rgba(74,222,128,0.40)', text: '#86efac' }
+    default:          return {}
   }
 }
 
@@ -146,16 +139,15 @@ function getColors(
 const DIVIDER_X = 6.35 * (KEY_UNIT + KEY_GAP)
 
 const LEGEND = [
-  { color: 'rgba(124,106,255,0.5)', label: 'Layer' },
-  { color: 'rgba(245,158,11,0.45)', label: 'Toggle' },
-  { color: 'rgba(251,146,60,0.4)', label: 'Mod-tap' },
-  { color: 'rgba(251,191,36,0.4)', label: 'Sticky' },
-  { color: 'rgba(56,189,248,0.4)', label: 'BT' },
-  { color: 'rgba(244,114,182,0.4)', label: 'Mouse' },
+  { color: 'rgba(139,124,248,0.65)', label: 'Layer' },
+  { color: 'rgba(245,158,11,0.60)', label: 'Toggle' },
+  { color: 'rgba(251,146,60,0.55)', label: 'Mod-tap' },
+  { color: 'rgba(251,191,36,0.55)', label: 'Sticky' },
+  { color: 'rgba(94,166,255,0.60)', label: 'BT' },
+  { color: 'rgba(244,114,182,0.55)', label: 'Mouse' },
 ]
 
 export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick, onBindingChange }: Props) {
-  const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
 
@@ -163,10 +155,13 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
     <div style={{ overflowX: 'auto', padding: '16px 0' }}>
       {/* Legend */}
       {onBindingChange && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 10, color: 'var(--text-muted)', flexWrap: 'wrap', paddingLeft: 2 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 10, color: 'var(--text-muted)', flexWrap: 'wrap', paddingLeft: 2 }}>
           {LEGEND.map(({ color, label }) => (
-            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />
+            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{
+                width: 9, height: 9, borderRadius: 3, background: color,
+                boxShadow: `0 0 6px ${color}`, display: 'inline-block',
+              }} />
               {label}
             </span>
           ))}
@@ -179,37 +174,43 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
       )}
 
       {/* Keyboard body */}
-      <div style={{
-        position: 'relative',
-        width: BOARD_WIDTH,
-        height: BOARD_HEIGHT,
-        background: 'rgba(255,255,255,0.02)',
-        borderRadius: 14,
-        border: '.5px solid rgba(255,255,255,0.07)',
-        boxShadow: 'var(--shadow-card, 0 4px 24px rgba(0,0,0,0.5))',
-        flexShrink: 0,
-      }}>
+      <div
+        className="glass"
+        style={{
+          position: 'relative',
+          width: BOARD_WIDTH,
+          height: BOARD_HEIGHT,
+          borderRadius: 16,
+          flexShrink: 0,
+        }}
+      >
         {/* Half divider line */}
         <div style={{
           position: 'absolute',
           left: DIVIDER_X,
-          top: 0,
+          top: '8%',
           width: 1,
-          height: '100%',
-          background: 'rgba(255,255,255,0.06)',
+          height: '84%',
+          background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.10) 20%, rgba(255,255,255,0.10) 80%, transparent)',
           pointerEvents: 'none',
         }} />
 
         {CROSSES_LAYOUT.map(key => {
           const binding = layer?.keys[key.pos] ?? '&trans'
           const label = abbreviate(binding)
-          const colors = getColors(key.pos, binding, highlighted, hovered)
+          const vars = getKeyVars(binding)
           const keyStyle = getKeyStyle(key)
+          const isSelected = highlighted.has(key.pos)
 
           return (
             <div
               key={key.pos}
               title={binding}
+              className={[
+                'keycap',
+                isSelected ? 'selected' : '',
+                vars.dashed && !isSelected ? 'dashed' : '',
+              ].filter(Boolean).join(' ')}
               onClick={(e) => {
                   onKeyClick?.(key.pos)
                   if (onBindingChange) {
@@ -217,28 +218,17 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
                     setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4 })
                   }
                 }}
-              onMouseEnter={() => setHovered(key.pos)}
-              onMouseLeave={() => setHovered(null)}
               style={{
                 ...keyStyle,
-                background: colors.bg,
-                border: (colors as any).dashed
-                  ? `1px dashed ${colors.border}`
-                  : `.5px solid ${colors.border}`,
-                boxShadow: colors.shadow,
-                color: colors.text,
-                opacity: colors.opacity,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                ...(isSelected ? {} : {
+                  '--key-bg': vars.bg,
+                  '--key-border': vars.border,
+                  '--key-text': vars.text,
+                }),
                 fontSize: label.length <= 3 ? 11 : label.length <= 5 ? 9 : 8,
-                fontWeight: 500,
-                fontFamily: '-apple-system, sans-serif',
-                userSelect: 'none',
                 cursor: (onKeyClick || onBindingChange) ? 'pointer' : 'default',
-                transition: 'background 0.1s, box-shadow 0.1s, color 0.1s, opacity 0.1s',
                 overflow: 'hidden',
-              }}
+              } as CSSProperties}
             >
               {label}
             </div>

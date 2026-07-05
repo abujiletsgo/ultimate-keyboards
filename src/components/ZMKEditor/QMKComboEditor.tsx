@@ -27,28 +27,8 @@ const COMBO_COLORS = [
 ]
 
 const inputStyle: React.CSSProperties = {
-  background: 'var(--bg-tertiary, #2a2a2a)',
-  border: '1px solid var(--border, #3a3a3a)',
-  borderRadius: 6,
-  color: 'var(--text-primary, #eee)',
-  padding: '4px 8px',
   fontSize: 12,
-  outline: 'none',
 }
-
-const btnStyle = (primary = false, danger = false): React.CSSProperties => ({
-  padding: '4px 12px',
-  borderRadius: 6,
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: 12,
-  backgroundColor: danger
-    ? 'rgba(255,80,80,0.15)'
-    : primary
-    ? 'var(--accent, #7c6aff)'
-    : 'var(--bg-secondary, #333)',
-  color: danger ? '#ff6b6b' : primary ? '#fff' : 'var(--text-secondary, #aaa)',
-})
 
 /** Convert fromKeys array to highlighted key positions using the layer key list */
 function fromKeysToPositions(layerKeys: string[], fromKeys: string[]): Set<number> {
@@ -98,22 +78,14 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
   const fallbackKeys = Array.from({ length: 44 }, (_, i) => `KC_${i}`)
 
   return (
-    <div style={{
-      background: 'var(--bg-secondary, #222)',
-      border: '1px solid var(--border, #3a3a3a)',
-      borderRadius: 8,
-      padding: 14,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12,
-    }}>
-      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary, #eee)' }}>
+    <div className="glass" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
         {editing ? `Edit: ${editing.name}` : 'Add Combo'}
       </div>
 
       {/* Output key */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>Output key (what gets sent)</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Output key (what gets sent)</span>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             style={{ ...inputStyle, width: 130 }}
@@ -134,19 +106,13 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
 
       {/* From keys summary */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary, #aaa)' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
           Trigger keys — click keys on keyboard ({fromKeys.length} selected)
         </span>
         {fromKeys.length > 0 && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {fromKeys.map((kc) => (
-              <span
-                key={kc}
-                style={{
-                  fontSize: 11, background: 'var(--accent, #7c6aff)', color: '#fff',
-                  borderRadius: 4, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4,
-                }}
-              >
+              <span key={kc} className="tag tag-accent" style={{ gap: 4 }}>
                 {kc}
                 <span
                   style={{ cursor: 'pointer', opacity: 0.7 }}
@@ -159,14 +125,8 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
       </div>
 
       {/* Keyboard picker */}
-      <div style={{
-        background: 'var(--bg-primary, #1a1a1a)',
-        border: '1px solid var(--border, #3a3a3a)',
-        borderRadius: 8,
-        padding: '8px 12px',
-        overflowX: 'auto',
-      }}>
-        <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', marginBottom: 6 }}>
+      <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
           Click keys to add/remove from trigger — highlighted = selected
         </div>
         <QMKKeyboard
@@ -176,11 +136,11 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
         />
       </div>
 
-      {error && <div style={{ fontSize: 11, color: '#ff6b6b' }}>{error}</div>}
+      {error && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button style={btnStyle(true)} onClick={handleSave}>{editing ? 'Save Changes' : 'Add Combo'}</button>
-        <button style={btnStyle()} onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={handleSave}>{editing ? 'Save Changes' : 'Add Combo'}</button>
+        <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
       </div>
     </div>
   )
@@ -249,7 +209,7 @@ const QMKComboEditor: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>
+      <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)', fontSize: 13 }}>
         Loading keymap.c…
       </div>
     )
@@ -258,13 +218,13 @@ const QMKComboEditor: React.FC = () => {
   if (loadError) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center', padding: '24px 0' }}>
-        <div style={{ fontSize: 12, color: '#ff6b6b', background: 'rgba(255,80,80,0.08)', borderRadius: 6, padding: '8px 12px', maxWidth: 420, wordBreak: 'break-all' }}>
+        <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(251,113,133,0.08)', borderRadius: 6, padding: '8px 12px', maxWidth: 420, wordBreak: 'break-all' }}>
           {loadError}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary, #aaa)' }}>
-          Could not load <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{KEYMAP_C_PATH}</code>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          Could not load <code className="mono">{KEYMAP_C_PATH}</code>
         </div>
-        <button style={btnStyle(true)} onClick={loadSource}>Retry</button>
+        <button className="btn btn-primary" onClick={loadSource}>Retry</button>
       </div>
     )
   }
@@ -273,15 +233,15 @@ const QMKComboEditor: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text-primary, #eee)' }}>
+        <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text)' }}>
           Combos ({combos.length})
         </h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {status && (
-            <span style={{ fontSize: 12, color: status.ok ? '#6fcf97' : '#ff6b6b' }}>{status.msg}</span>
+            <span style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>
           )}
-          <button style={btnStyle()} onClick={loadSource}>Reload</button>
-          <button style={btnStyle(true)} onClick={() => { setShowAddForm(true); setEditingCombo(null) }}>
+          <button className="btn btn-secondary" onClick={loadSource}>Reload</button>
+          <button className="btn btn-primary" onClick={() => { setShowAddForm(true); setEditingCombo(null) }}>
             + Add
           </button>
         </div>
@@ -289,14 +249,8 @@ const QMKComboEditor: React.FC = () => {
 
       {/* Keyboard preview — hover a combo to see its keys lit up */}
       {combos.length > 0 && !showAddForm && !editingCombo && (
-        <div style={{
-          background: 'var(--bg-primary, #1a1a1a)',
-          border: '1px solid var(--border, #3a3a3a)',
-          borderRadius: 8,
-          padding: '8px 12px',
-          overflowX: 'auto',
-        }}>
-          <div style={{ fontSize: 10, color: 'var(--text-muted, #666)', marginBottom: 6 }}>
+        <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
             {hoveredCombo
               ? `${hoveredCombo} — highlighted keys are the trigger`
               : 'Hover a combo to see its keys'}
@@ -329,7 +283,7 @@ const QMKComboEditor: React.FC = () => {
 
       {/* Combo list */}
       {combos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary, #aaa)', fontSize: 13 }}>
+        <div className="panel-inset" style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)', fontSize: 13 }}>
           No combos found in keymap.c
         </div>
       ) : (
@@ -340,18 +294,18 @@ const QMKComboEditor: React.FC = () => {
             return (
               <div
                 key={combo.name}
+                className="panel-inset"
                 onMouseEnter={() => setHoveredCombo(combo.name)}
                 onMouseLeave={() => setHoveredCombo(null)}
                 style={{
-                  background: isHovered ? 'rgba(255,255,255,0.05)' : 'var(--bg-secondary, #1e1e1e)',
-                  border: `1px solid ${isHovered ? color : 'var(--border, #3a3a3a)'}`,
-                  borderRadius: 8,
+                  background: isHovered ? 'rgba(255,255,255,0.05)' : undefined,
+                  borderColor: isHovered ? color : undefined,
                   padding: '7px 10px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                   cursor: 'default',
-                  transition: 'border-color 0.15s, background 0.15s',
+                  transition: 'border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out)',
                 }}
               >
                 {/* Color swatch */}
@@ -362,40 +316,30 @@ const QMKComboEditor: React.FC = () => {
                   {combo.fromKeys.map((kc) => (
                     <span
                       key={kc}
+                      className="tag"
                       style={{
-                        fontSize: 11,
-                        background: isHovered ? color : 'rgba(255,255,255,0.08)',
-                        color: isHovered ? '#fff' : 'var(--text-secondary, #aaa)',
-                        borderRadius: 4,
-                        padding: '1px 6px',
-                        fontFamily: 'monospace',
-                        transition: 'background 0.15s, color 0.15s',
+                        background: isHovered ? color : undefined,
+                        color: isHovered ? '#fff' : undefined,
+                        fontFamily: 'var(--font-mono)',
                       }}
                     >{kc}</span>
                   ))}
-                  <span style={{ fontSize: 11, color: 'var(--text-muted, #666)' }}>→</span>
-                  <span style={{
-                    fontSize: 11,
-                    background: 'rgba(52,211,153,0.15)',
-                    color: '#6ee7b7',
-                    borderRadius: 4,
-                    padding: '1px 6px',
-                    fontFamily: 'monospace',
-                  }}>{combo.toKey}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>→</span>
+                  <span className="tag tag-success" style={{ fontFamily: 'var(--font-mono)' }}>{combo.toKey}</span>
                 </div>
 
                 {/* Internal name */}
-                <span style={{ fontSize: 10, color: 'var(--text-muted, #555)', fontFamily: 'monospace', flexShrink: 0 }}>
+                <span className="mono" style={{ flexShrink: 0 }}>
                   {combo.name}
                 </span>
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                   <button
-                    style={btnStyle()}
+                    className="btn btn-secondary btn-sm"
                     onClick={() => { setEditingCombo(combo); setShowAddForm(false) }}
                   >Edit</button>
-                  <button style={btnStyle(false, true)} onClick={() => handleDelete(combo.name)}>×</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(combo.name)}>×</button>
                 </div>
               </div>
             )

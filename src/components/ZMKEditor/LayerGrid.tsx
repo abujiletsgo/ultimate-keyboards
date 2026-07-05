@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type CSSProperties } from 'react';
 
 interface LayerGridProps {
   keys: string[];
@@ -81,42 +81,17 @@ export const LayerGrid: React.FC<LayerGridProps> = ({
         key={pos}
         title={label}
         onClick={() => onKeyClick?.(pos)}
+        className={`keycap${isHighlighted ? ' selected' : ''}`}
         style={{
           width: KEY_SIZE,
           height: KEY_SIZE,
-          borderRadius: 6,
-          border: '1px solid var(--border, #3a3a3a)',
-          backgroundColor: isHighlighted
-            ? 'var(--accent, #7c6aff)'
-            : 'var(--bg-tertiary, #2a2a2a)',
-          color: isHighlighted ? '#fff' : 'var(--text-secondary, #aaa)',
           fontSize: 10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           cursor: clickable ? 'pointer' : 'default',
-          userSelect: 'none',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           flexShrink: 0,
-          transition: 'background-color 0.1s, color 0.1s',
-          boxShadow: isHighlighted
-            ? '0 0 0 2px var(--accent, #7c6aff)'
-            : undefined,
-        }}
-        onMouseEnter={(e) => {
-          if (clickable && !isHighlighted) {
-            (e.currentTarget as HTMLDivElement).style.backgroundColor =
-              'var(--bg-secondary, #333)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (clickable && !isHighlighted) {
-            (e.currentTarget as HTMLDivElement).style.backgroundColor =
-              'var(--bg-tertiary, #2a2a2a)';
-          }
-        }}
+        } as CSSProperties}
       >
         {abbreviate(label)}
       </div>

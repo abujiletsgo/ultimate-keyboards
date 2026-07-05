@@ -101,18 +101,16 @@ export default function CalibrateTab() {
 
       {/* Pangram display */}
       <div
+        className="glass"
         style={{
           padding: '24px',
-          borderRadius: '10px',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border)',
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
           Type this sentence to calibrate:
         </div>
-        <div style={{ fontSize: '22px', fontFamily: 'monospace', letterSpacing: '1px', lineHeight: 1.6 }}>
+        <div style={{ fontSize: '22px', fontFamily: 'var(--font-mono)', letterSpacing: '1px', lineHeight: 1.6 }}>
           {PANGRAM.split('').map((char, i) => {
             let color: string
             if (i < typedCount) {
@@ -129,10 +127,10 @@ export default function CalibrateTab() {
                   color,
                   background:
                     i === typedCount && status === 'typing'
-                      ? 'rgba(99,102,241,0.18)'
+                      ? 'var(--accent-soft)'
                       : 'transparent',
                   borderRadius: '2px',
-                  transition: 'color 0.05s',
+                  transition: 'color var(--dur-1) var(--ease-out)',
                 }}
               >
                 {char === ' ' ? '\u00a0' : char}
@@ -143,26 +141,14 @@ export default function CalibrateTab() {
 
         {status === 'idle' && (
           <div style={{ marginTop: '16px' }}>
-            <button
-              onClick={handleStart}
-              style={{
-                padding: '10px 28px',
-                borderRadius: '8px',
-                background: 'var(--accent)',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '15px',
-                fontWeight: 600,
-              }}
-            >
+            <button onClick={handleStart} className="btn btn-primary btn-lg">
               Start Typing
             </button>
           </div>
         )}
 
         {status === 'typing' && (
-          <div style={{ marginTop: '12px', color: 'var(--text-muted)', fontSize: '13px' }}>
+          <div style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '13px' }}>
             {typedCount} / {PANGRAM.length} characters
           </div>
         )}
@@ -171,27 +157,25 @@ export default function CalibrateTab() {
       {/* Results */}
       {status === 'done' && medianMs !== null && suggested !== null && (
         <div
+          className="glass anim-scale-in"
           style={{
             padding: '24px',
-            borderRadius: '10px',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
           }}
         >
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
               Your median keystroke interval
             </div>
-            <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text)', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
               {medianMs}ms
             </div>
-            <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>
               Suggested chord window (median × 0.7):
             </div>
-            <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
               {suggested}ms
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -217,9 +201,9 @@ export default function CalibrateTab() {
                         style={{
                           height: '12px',
                           width: `${pct}%`,
-                          background: interval < suggested ? 'var(--success)' : 'var(--accent)',
+                          background: interval < suggested ? 'var(--success)' : 'var(--accent-grad)',
                           borderRadius: '2px',
-                          transition: 'width 0.3s',
+                          transition: 'width var(--dur-2) var(--ease-out)',
                           minWidth: '2px',
                         }}
                       />
@@ -235,31 +219,11 @@ export default function CalibrateTab() {
             <button
               onClick={handleApply}
               disabled={applied}
-              style={{
-                padding: '10px 28px',
-                borderRadius: '8px',
-                background: applied ? 'var(--bg-tertiary)' : 'var(--accent)',
-                color: applied ? 'var(--text-muted)' : 'white',
-                border: 'none',
-                cursor: applied ? 'not-allowed' : 'pointer',
-                fontSize: '15px',
-                fontWeight: 600,
-              }}
+              className="btn btn-primary btn-lg"
             >
               {applied ? `Applied (${suggested}ms)` : `Apply ${suggested}ms`}
             </button>
-            <button
-              onClick={handleStart}
-              style={{
-                padding: '10px 28px',
-                borderRadius: '8px',
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text)',
-                border: '1px solid var(--border)',
-                cursor: 'pointer',
-                fontSize: '15px',
-              }}
-            >
+            <button onClick={handleStart} className="btn btn-secondary btn-lg">
               Reset
             </button>
           </div>
