@@ -238,9 +238,60 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Normalize a binding snippet: strip comments, collapse whitespace. */
+function normalizeBinding(s: string): string {
+  return s
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .join(' ');
+}
+
 /**
- * Write updated layer bindings back into the source, replacing each layer's
- * bindings = <...>; block with the current keys from the store.
+ * Tokenize a bindings-block body into per-binding spans, skipping comments.
+ * Each span covers one `&behavior [params...]` run in the ORIGINAL text, so
+ * edits can be spliced in place without touching formatting or comments.
+ */
+function tokenizeBindingSpans(body: string): Array<{ start: number; end: number; text: string }> {
+  const spans: Array<{ start: number; end: number; text: string }> = [];
+  let cur: { start: number; end: number } | null = null;
+  const flush = () => {
+    if (cur) {
+      spans.push({ start: cur.start, end: cur.end, text: normalizeBinding(body.slice(cur.start, cur.end)) });
+      cur = null;
+    }
+  };
+  let i = 0;
+  while (i < body.length) {
+    if (body.startsWith('//', i)) {
+      const nl = body.indexOf('\n', i);
+      i = nl === -1 ? body.length : nl;
+      continue;
+    }
+    if (body.startsWith('/*', i)) {
+      const close = body.indexOf('*/', i + 2);
+      i = close === -1 ? body.length : close + 2;
+      continue;
+    }
+    const ch = body[i];
+    if (ch === '&') {
+      flush();
+      cur = { start: i, end: i + 1 };
+    }
+    if (cur && !/\s/.test(ch)) cur.end = i + 1;
+    i++;
+  }
+  flush();
+  return spans;
+}
+
+/**
+ * Write updated layer bindings back into the source with MINIMAL edits:
+ * only bindings that actually changed are spliced in place, preserving the
+ * file's original formatting, alignment, and comments byte-for-byte
+ * everywhere else. Falls back to a full block rewrite only if the original
+ * block can't be tokenized to the same key count.
  */
 export function updateLayerBindingsInSource(source: string, layers: ZMKLayer[]): string {
   let result = source;
@@ -264,22 +315,63 @@ export function updateLayerBindingsInSource(source: string, layers: ZMKLayer[]):
     }
 
     const bodySlice = result.slice(openBraceIdx + 1, closeIdx);
-    const bindingsPattern = /bindings\s*=\s*<[\s\S]*?>\s*;/;
+    const bindingsPattern = /(bindings\s*=\s*<)([\s\S]*?)(>\s*;)/;
     const bindMatch = bindingsPattern.exec(bodySlice);
     if (!bindMatch) continue;
 
-    const newBindings = layer.keys.join('\n            ');
-    const replacement = `bindings = <\n            ${newBindings}\n        >;`;
+    const blockBody = bindMatch[2];
+    const spans = tokenizeBindingSpans(blockBody);
 
-    const bindAbsStart = openBraceIdx + 1 + bindMatch.index;
-    const bindAbsEnd = bindAbsStart + bindMatch[0].length;
+    let newBody: string;
+    if (spans.length === layer.keys.length) {
+      // Surgical path: splice only changed bindings (right-to-left)
+      newBody = blockBody;
+      for (let k = spans.length - 1; k >= 0; k--) {
+        if (spans[k].text !== layer.keys[k]) {
+          newBody = newBody.slice(0, spans[k].start) + layer.keys[k] + newBody.slice(spans[k].end);
+        }
+      }
+    } else {
+      // Structure changed unexpectedly — full rewrite fallback
+      newBody = '\n            ' + layer.keys.join('\n            ') + '\n        ';
+    }
 
-    result = result.slice(0, bindAbsStart) + replacement + result.slice(bindAbsEnd);
+    if (newBody === blockBody) continue; // untouched layer stays byte-identical
+
+    const bodyAbsStart = openBraceIdx + 1 + bindMatch.index + bindMatch[1].length;
+    const bodyAbsEnd = bodyAbsStart + blockBody.length;
+    result = result.slice(0, bodyAbsStart) + newBody + result.slice(bodyAbsEnd);
   }
 
   return result;
 }
 
+function generateComboNode(combo: ZMKCombo): string {
+  const lines: string[] = [];
+  lines.push(`${combo.name} {`);
+  lines.push(`            bindings = <${combo.bindings}>;`);
+  lines.push(`            key-positions = <${combo.keyPositions.join(' ')}>;`);
+  if (combo.layers && combo.layers.length > 0) {
+    lines.push(`            layers = <${combo.layers.join(' ')}>;`);
+  }
+  lines.push('        };');
+  return lines.join('\n');
+}
+
+function combosEqual(a: ZMKCombo, b: ZMKCombo): boolean {
+  return (
+    a.bindings === b.bindings &&
+    a.keyPositions.join(' ') === b.keyPositions.join(' ') &&
+    (a.layers?.join(' ') ?? '') === (b.layers?.join(' ') ?? '')
+  );
+}
+
+/**
+ * Write combos back into the source with MINIMAL edits: untouched combo
+ * nodes (and their comments/formatting) stay byte-identical; modified nodes
+ * are regenerated in place; new nodes are appended before the block close;
+ * removed nodes are deleted. Only creates a whole new block when none exists.
+ */
 export function updateCombosInSource(source: string, combos: ZMKCombo[]): string {
   // Find the start of the combos block
   const startMatch = source.search(/\s*combos\s*\{/);
@@ -291,7 +383,7 @@ export function updateCombosInSource(source: string, combos: ZMKCombo[]): string
     return source.slice(0, keymapIdx) + newBlock + source.slice(keymapIdx);
   }
 
-  // Find the actual opening brace of the combos block
+  // Find the opening/closing braces of the combos block
   const openBrace = source.indexOf('{', startMatch);
   let depth = 0;
   let i = openBrace;
@@ -303,17 +395,85 @@ export function updateCombosInSource(source: string, combos: ZMKCombo[]): string
     }
     i++;
   }
+  const closeBrace = i; // index of the block's closing '}'
 
-  // Consume the node's trailing semicolon (`};`) so regeneration doesn't
-  // accumulate an extra `;` on every save — generateCombosBlock emits `};`.
-  let end = i + 1;
-  const semiMatch = source.slice(end).match(/^\s*;/);
-  if (semiMatch) end += semiMatch[0].length;
+  // Scan child nodes (NAME { ... };) inside the block, with absolute spans
+  interface NodeSpan { name: string; start: number; end: number; combo: ZMKCombo | null }
+  const nodes: NodeSpan[] = [];
+  let p = openBrace + 1;
+  while (p < closeBrace) {
+    if (source.startsWith('//', p)) {
+      const nl = source.indexOf('\n', p);
+      p = nl === -1 || nl > closeBrace ? closeBrace : nl;
+      continue;
+    }
+    if (source.startsWith('/*', p)) {
+      const c = source.indexOf('*/', p + 2);
+      p = c === -1 || c > closeBrace ? closeBrace : c + 2;
+      continue;
+    }
+    const nodeMatch = /^(\w+)\s*\{/.exec(source.slice(p, closeBrace));
+    if (nodeMatch && /\w/.test(source[p])) {
+      const nameStart = p;
+      const nodeOpen = source.indexOf('{', p);
+      let d = 0;
+      let q = nodeOpen;
+      while (q < closeBrace) {
+        if (source[q] === '{') d++;
+        else if (source[q] === '}') {
+          d--;
+          if (d === 0) break;
+        }
+        q++;
+      }
+      let nodeEnd = q + 1;
+      const semi = source.slice(nodeEnd).match(/^\s*;/);
+      if (semi) nodeEnd += semi[0].length;
+      const body = source.slice(nodeOpen + 1, q);
+      nodes.push({
+        name: nodeMatch[1],
+        start: nameStart,
+        end: nodeEnd,
+        combo: body.includes('bindings') ? parseComboBlock(nodeMatch[1], body) : null,
+      });
+      p = nodeEnd;
+      continue;
+    }
+    p++;
+  }
 
-  // Replace from combos { ... }; (including leading whitespace)
-  const beforeBlock = source.slice(0, startMatch);
-  const afterBlock = source.slice(end);
-  const newBlock = '\n' + generateCombosBlock(combos);
+  const newByName = new Map(combos.map(c => [c.name, c]));
+  const oldNames = new Set(nodes.filter(n => n.combo).map(n => n.name));
 
-  return beforeBlock + newBlock + afterBlock;
+  // Build splice edits (right-to-left application)
+  const edits: Array<{ start: number; end: number; text: string }> = [];
+  for (const node of nodes) {
+    if (!node.combo) continue; // property/non-combo node (e.g. compatible) — leave alone
+    const replacement = newByName.get(node.name);
+    if (!replacement) {
+      // Deleted combo: remove the node plus its leading indentation/newline
+      let s = node.start;
+      while (s > 0 && (source[s - 1] === ' ' || source[s - 1] === '\t')) s--;
+      if (s > 0 && source[s - 1] === '\n') s--;
+      edits.push({ start: s, end: node.end, text: '' });
+    } else if (!combosEqual(node.combo, replacement)) {
+      edits.push({ start: node.start, end: node.end, text: generateComboNode(replacement) });
+    }
+  }
+
+  // Added combos: insert before the closing brace, matching block indentation
+  const added = combos.filter(c => !oldNames.has(c.name));
+  if (added.length > 0) {
+    const insertText = added.map(c => `\n        ${generateComboNode(c)}\n`).join('');
+    edits.push({ start: closeBrace, end: closeBrace, text: insertText + '    ' });
+  }
+
+  if (edits.length === 0) return source; // nothing changed — byte-identical
+
+  edits.sort((a, b) => b.start - a.start);
+  let result = source;
+  for (const e of edits) {
+    result = result.slice(0, e.start) + e.text + result.slice(e.end);
+  }
+  return result;
 }
