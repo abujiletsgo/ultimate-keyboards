@@ -6,3 +6,4 @@ src-tauri/gen/schemas/
 *.tsbuildinfo
 .gstack/
 .qa/
+logs/
