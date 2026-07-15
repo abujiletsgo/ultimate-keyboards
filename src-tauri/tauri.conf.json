@@ -5,7 +5,7 @@
   "identifier": "com.ultimatekeyboards.app",
   "build": {
     "beforeDevCommand": "bun run dev --port 5173",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "bunx vite build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
