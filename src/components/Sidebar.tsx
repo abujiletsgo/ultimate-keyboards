@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react'
-import { Keyboard, Command, Mouse, Settings } from 'lucide-react'
+import { Keyboard, Command, Mouse, MousePointer2, Settings } from 'lucide-react'
 import type { Section } from '@/App'
 
 const NAV = [
   { id: 'zmk' as Section, label: 'ZMK / QMK', icon: Keyboard },
   { id: 'karabiner' as Section, label: 'MacBook Keys', icon: Command },
   { id: 'pointing' as Section, label: 'Pointing', icon: Mouse },
+  { id: 'mouse' as Section, label: 'Mouse', icon: MousePointer2 },
   { id: 'settings' as Section, label: 'Settings', icon: Settings },
 ]
 

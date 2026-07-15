@@ -1,6 +1,8 @@
 use std::process::Command;
 use std::sync::Mutex;
 
+mod mouse_engine;
+
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder},
     tray::TrayIconBuilder,
@@ -223,6 +225,37 @@ fn set_builtin_keyboard_disabled(app: tauri::AppHandle, disabled: bool) -> Resul
     set_builtin_state(&app, disabled)
 }
 
+// ── Mouse / scroll engine ───────────────────────────────────────────────────
+
+/// Frontend-facing mouse-engine config (mirrors mouse_engine's atomics).
+#[derive(serde::Serialize, serde::Deserialize)]
+struct MouseConfig {
+    enabled: bool,
+    reverse: bool,
+    speed: f64,
+}
+
+/// Push new config to the live engine. Starts the tap thread on first enable;
+/// returns an error (e.g. missing Accessibility permission) the UI can surface.
+#[tauri::command]
+fn set_mouse_config(config: MouseConfig) -> Result<(), String> {
+    if config.enabled {
+        mouse_engine::start()?;
+    }
+    mouse_engine::set_config(config.enabled, config.reverse, config.speed);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_mouse_config() -> MouseConfig {
+    let (enabled, reverse, speed) = mouse_engine::get_config();
+    MouseConfig {
+        enabled,
+        reverse,
+        speed,
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -232,7 +265,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             run_shell_command,
             is_builtin_keyboard_disabled,
-            set_builtin_keyboard_disabled
+            set_builtin_keyboard_disabled,
+            set_mouse_config,
+            get_mouse_config
         ])
         .setup(|app| {
             // ── Status-bar (menu-bar) item ──────────────────────────────────
