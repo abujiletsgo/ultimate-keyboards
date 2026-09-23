@@ -3,109 +3,13 @@ import type { ZMKLayer } from '@/lib/zmkParser'
 import { CROSSES_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, KEY_UNIT, KEY_GAP } from '@/lib/crossesLayout'
 import ScaledBoard from '@/components/ScaledBoard'
 import BindingEditor from './BindingEditor'
+import { bindingLabel } from '@/lib/keyLabel'
 
 interface Props {
   layer: ZMKLayer | null
   highlightedPositions?: Set<number>
   onKeyClick?: (pos: number) => void
   onBindingChange?: (pos: number, newBinding: string) => void
-}
-
-function abbreviate(binding: string): string {
-  if (binding === '&trans') return '···'
-  if (binding === '&none') return '·'
-  if (binding === '&kp SPACE') return 'SPC'
-  if (binding === '&kp BACKSPACE' || binding === '&kp BSPC') return 'BSPC'
-  if (binding === '&kp LEFT_SHIFT' || binding === '&kp RIGHT_SHIFT') return 'SFT'
-  if (binding === '&kp CAPSLOCK' || binding === '&kp CAPS_LOCK') return 'CAPS'
-  if (binding === '&kp ENTER' || binding === '&kp RETURN_OR_ENTER') return 'ENT'
-  if (binding === '&kp TAB') return 'TAB'
-  if (binding === '&kp ESC' || binding === '&kp ESCAPE') return 'ESC'
-  if (binding === '&kp DELETE') return 'DEL'
-  if (binding === '&kp LEFT_ALT' || binding === '&kp RIGHT_ALT') return 'ALT'
-  if (binding === '&kp LEFT_COMMAND' || binding === '&kp RIGHT_COMMAND') return 'CMD'
-  if (binding === '&kp LEFT_CONTROL' || binding === '&kp RIGHT_CONTROL') return 'CTL'
-  if (binding === '&kp SEMI' || binding === '&kp SEMICOLON') return ';'
-  if (binding === '&kp SQT' || binding === '&kp QUOTE') return "'"
-  if (binding === '&kp COMMA') return ','
-  if (binding === '&kp DOT' || binding === '&kp PERIOD') return '.'
-  if (binding === '&kp FSLH' || binding === '&kp SLASH') return '/'
-  if (binding === '&kp MINUS' || binding === '&kp HYPHEN') return '-'
-  if (binding === '&kp EQUAL' || binding === '&kp EQUAL_SIGN') return '='
-  if (binding === '&bt BT_CLR') return 'CLR'
-  if (binding === '&bt BT_CLR_ALL') return 'CLR!'
-  if (binding === '&soft_off') return 'OFF'
-  if (binding === '&sys_reset') return 'RST'
-  if (binding === '&bootloader') return 'BOOT'
-  if (binding === '&out OUT_TOG') return 'OUT⇄'
-  if (binding === '&out OUT_USB') return 'USB'
-  if (binding === '&out OUT_BLE') return 'BLE'
-  if (binding === '&mkp LCLK') return 'LC'
-  if (binding === '&mkp RCLK') return 'RC'
-  if (binding === '&mkp MCLK') return 'MC'
-  if (binding === '&kp C_VOL_UP' || binding === '&kp C_VOLUME_UP') return 'VOL+'
-  if (binding === '&kp C_VOL_DN' || binding === '&kp C_VOL_DOWN') return 'VOL-'
-  if (binding === '&kp K_MUTE') return 'MUTE'
-  if (binding === '&kp C_PLAY_PAUSE' || binding === 'C_PP') return 'PLAY'
-  if (binding === '&kp C_NEXT') return 'NEXT'
-  if (binding === '&kp C_PREV' || binding === 'C_RW') return 'PREV'
-
-  // &kp N0..N9
-  const nMatch = binding.match(/^&kp N([0-9])$/)
-  if (nMatch) return nMatch[1]
-
-  // &kp NUMBER_0..NUMBER_9
-  const numMatch = binding.match(/^&kp NUMBER_([0-9])$/)
-  if (numMatch) return numMatch[1]
-
-  // &kp F1..F12
-  const fMatch = binding.match(/^&kp (F(?:1[0-2]|[1-9]))$/)
-  if (fMatch) return fMatch[1]
-
-  // &kp UP_ARROW, DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
-  if (binding === '&kp UP_ARROW') return '↑'
-  if (binding === '&kp DOWN_ARROW') return '↓'
-  if (binding === '&kp LEFT_ARROW') return '←'
-  if (binding === '&kp RIGHT_ARROW') return '→'
-
-  // &kp LG(...) → ⌘+inner
-  const lgMatch = binding.match(/^&kp LG\((.+)\)$/)
-  if (lgMatch) return '⌘' + lgMatch[1].slice(0, 3)
-
-  // &kp LC(...) → ⌃+inner
-  const lcMatch = binding.match(/^&kp LC\((.+)\)$/)
-  if (lcMatch) return '⌃' + lcMatch[1].slice(0, 3)
-
-  // &kp LS(...) → ⇧+inner
-  const lsMatch = binding.match(/^&kp LS\((.+)\)$/)
-  if (lsMatch) return '⇧' + lsMatch[1].slice(0, 3)
-
-  // &mo N
-  const moMatch = binding.match(/^&mo\s+(\d+)$/)
-  if (moMatch) return 'mo' + moMatch[1]
-
-  // &lt N X
-  const ltMatch = binding.match(/^&lt\s+(\d+)\s+/)
-  if (ltMatch) return 'LT' + ltMatch[1]
-
-  // &mt X Y
-  const mtMatch = binding.match(/^&mt\s+/)
-  if (mtMatch) return 'MT'
-
-  // &tog N
-  const togMatch = binding.match(/^&tog\s+(\d+)$/)
-  if (togMatch) return 'tog' + togMatch[1]
-
-  // &bt BT_SEL N
-  const btSelMatch = binding.match(/^&bt\s+BT_SEL\s+(\d+)$/)
-  if (btSelMatch) return 'BT' + btSelMatch[1]
-
-  // &kp X → return X (the keycode, max 4 chars)
-  const kpMatch = binding.match(/^&kp\s+(.+)$/)
-  if (kpMatch) return kpMatch[1].slice(0, 4)
-
-  // Default: first 4 chars of the binding
-  return binding.slice(0, 4)
 }
 
 type ZMKBehavior = 'trans' | 'none' | 'layer' | 'toggle' | 'layer-tap' | 'mod-tap' | 'sticky' | 'bluetooth' | 'mouse' | 'caps' | 'normal'
@@ -155,7 +59,7 @@ const LEGEND = [
 ]
 
 export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick, onBindingChange }: Props) {
-  const [editing, setEditing] = useState<{ pos: number; x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
 
   return (
@@ -205,7 +109,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
 
         {CROSSES_LAYOUT.map(key => {
           const binding = layer?.keys[key.pos] ?? '&trans'
-          const label = abbreviate(binding)
+          const label = bindingLabel(binding)
           const vars = getKeyVars(binding)
           const keyStyle = getKeyStyle(key)
           const isSelected = highlighted.has(key.pos)
@@ -223,7 +127,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
                   onKeyClick?.(key.pos)
                   if (onBindingChange) {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4 })
+                    setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
                   }
                 }}
               style={{
@@ -250,6 +154,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
           currentBinding={layer?.keys[editing.pos] ?? '&trans'}
           anchorX={editing.x}
           anchorY={editing.y}
+          anchorTop={editing.top}
           onUpdate={(v) => {
             onBindingChange?.(editing.pos, v)
             setEditing(null)

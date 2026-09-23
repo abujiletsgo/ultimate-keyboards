@@ -4,7 +4,8 @@
  * Shows behavior-type pills + contextual param fields anchored to a clicked key.
  * Works for both ZMK and QMK firmware.
  */
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,7 +15,10 @@ interface Props {
   firmware: Firmware
   currentBinding: string   // full binding string, e.g. "&lt 1 SPACE" or "LT(1,KC_SPC)"
   anchorX: number
+  /** Preferred top edge of the popover (just below the clicked key) */
   anchorY: number
+  /** Bottom edge to use when the popover has to flip above the key */
+  anchorTop?: number
   onUpdate: (newBinding: string) => void
   onCancel: () => void
 }
@@ -226,7 +230,7 @@ function ParamPicker({
       >
         {display} ▾
       </button>
-      {open && (
+      {open && createPortal(
         <div
           ref={ref}
           className="glass-strong anim-scale-in"
@@ -287,7 +291,8 @@ function ParamPicker({
           <div style={{ padding: '5px 10px', fontSize: 9.5, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
             Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -421,7 +426,7 @@ function defaultQMKParams(type: string): string[] {
 
 // ── Main BindingEditor ─────────────────────────────────────────────────────────
 
-export default function BindingEditor({ firmware, currentBinding, anchorX, anchorY, onUpdate, onCancel }: Props) {
+export default function BindingEditor({ firmware, currentBinding, anchorX, anchorY, anchorTop, onUpdate, onCancel }: Props) {
   const behaviors = firmware === 'zmk' ? ZMK_BEHAVIORS : QMK_BEHAVIORS
 
   // Esc dismisses the popover (nested dropdowns stopPropagation their own Esc)
@@ -453,27 +458,56 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
     onUpdate(binding)
   }
 
-  // Smart popover positioning
+  // Popover placement. Rendered through a portal into <body> so position:fixed
+  // is viewport-relative (the keyboard panels animate with a transform, which
+  // would otherwise become the containing block and push the popover
+  // off-screen). Placed from the popover's *measured* size — the height varies
+  // with the selected behavior — and clamped so it is always fully visible.
   const W = 300, MARGIN = 8
-  const APPROX_H = 260
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  let left = anchorX
-  if (left + W > vw - MARGIN) left = vw - W - MARGIN
-  if (left < MARGIN) left = MARGIN
-  const showAbove = anchorY + APPROX_H > vh - MARGIN
-  const top = Math.max(MARGIN, showAbove ? anchorY - APPROX_H - 8 : anchorY)
+  const popRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = popRef.current
+    if (!el) return
+    const place = () => {
+      const vw = window.innerWidth, vh = window.innerHeight
+      // offsetWidth/Height: layout size, unaffected by the scale-in animation
+      const w = el.offsetWidth || W
+      const h = el.offsetHeight
+      let left = anchorX
+      if (left + w > vw - MARGIN) left = vw - w - MARGIN
+      if (left < MARGIN) left = MARGIN
+      let top = anchorY
+      if (top + h > vh - MARGIN) {
+        const above = (anchorTop ?? anchorY - 44) - h
+        top = above >= MARGIN ? above : vh - MARGIN - h
+      }
+      if (top < MARGIN) top = MARGIN
+      setPos(prev => (prev && prev.left === left && prev.top === top) ? prev : { left, top })
+    }
+    place()
+    const ro = new ResizeObserver(place)
+    ro.observe(el)
+    window.addEventListener('resize', place)
+    return () => { ro.disconnect(); window.removeEventListener('resize', place) }
+  }, [anchorX, anchorY, anchorTop])
 
   const selDef = behaviors.find(b => b.code === selBehavior) ?? behaviors[0]
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={onCancel} />
 
-      {/* Popover */}
+      {/* Popover — invisible until measured and placed */}
       <div
-        style={{ position: 'fixed', left, top, zIndex: 1000, width: W }}
+        ref={popRef}
+        style={{
+          position: 'fixed', zIndex: 1000, width: W,
+          left: pos?.left ?? 0, top: pos?.top ?? 0,
+          visibility: pos ? 'visible' : 'hidden',
+          maxHeight: `calc(100vh - ${MARGIN * 2}px)`, overflowY: 'auto',
+        }}
         onClick={e => e.stopPropagation()}
       >
         <div className="glass-strong anim-scale-in" style={{ overflow: 'hidden' }}>
@@ -542,6 +576,7 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

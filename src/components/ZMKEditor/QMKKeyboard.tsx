@@ -119,7 +119,7 @@ function getKeyVars(behavior: QMKBehavior): { bg?: string; border?: string; text
 const ENCODER_VARS = { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.2)', dashed: true }
 
 export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, onBindingChange }: Props) {
-  const [editing, setEditing] = useState<{ pos: number; x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
 
   return (
@@ -162,7 +162,7 @@ export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, on
                 onKeyClick?.(key.pos)
                 if (onBindingChange) {
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4 })
+                  setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
                 }
               }}
               style={{
@@ -189,6 +189,7 @@ export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, on
           currentBinding={keys[editing.pos] ?? 'KC_TRNS'}
           anchorX={editing.x}
           anchorY={editing.y}
+          anchorTop={editing.top}
           onUpdate={(v) => {
             onBindingChange?.(editing.pos, v)
             setEditing(null)
