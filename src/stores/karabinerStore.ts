@@ -9,10 +9,12 @@ interface KarabinerState {
   removeRule: (idx: number) => void;
   updateRule: (idx: number, r: Rule) => void;
   setTitle: (t: string) => void;
+  loadExample: () => void;
   exportJSON: () => string;
 }
 
-const DEFAULT_RULES: Rule[] = [
+/** Example profile (a space layer + a few combos) users can load from the empty state. */
+export const EXAMPLE_RULES: Rule[] = [
   // ── Space layer ─────────────────────────────────────────────────────────────
   {
     type: 'layer_activator',
@@ -64,7 +66,7 @@ const DEFAULT_RULES: Rule[] = [
 export const useKarabinerStore = create<KarabinerState>()(
   persist(
     (set, get) => ({
-      rules: DEFAULT_RULES,
+      rules: [],
       profileTitle: 'Ultimate Keyboards',
 
       addRule: (r) =>
@@ -77,6 +79,8 @@ export const useKarabinerStore = create<KarabinerState>()(
         set((state) => ({ rules: state.rules.map((rule, i) => i === idx ? r : rule) })),
 
       setTitle: (t) => set({ profileTitle: t }),
+
+      loadExample: () => set({ rules: EXAMPLE_RULES }),
 
       exportJSON: () => {
         const { rules, profileTitle } = get();

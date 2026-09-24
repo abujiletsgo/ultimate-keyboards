@@ -6,6 +6,9 @@ import { writeFileSync, existsSync, realpathSync } from "fs";
 import { homedir } from "os";
 import { randomUUID } from "crypto";
 import { sep } from "path";
+import { readFileSync } from "fs";
+
+const APP_VERSION = (JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 // Per-process secret. Injected into the client bundle via `define`, so only
 // pages served by THIS dev server know it — a foreign website can't POST here.
@@ -70,6 +73,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), devFsWritePlugin()],
   define: {
     __DEV_FS_TOKEN__: JSON.stringify(DEV_FS_TOKEN),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
   resolve: {
     alias: {

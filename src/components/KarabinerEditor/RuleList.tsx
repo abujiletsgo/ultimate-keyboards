@@ -63,6 +63,9 @@ export function RuleList() {
             <p className="panel-inset" style={{ margin: 0, padding: '10px 16px', fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)' }}>
               No rules yet. Create your first key rebinding →
             </p>
+            <button className="btn btn-secondary btn-sm" onClick={() => useKarabinerStore.getState().loadExample()}>
+              Load example profile
+            </button>
           </div>
         ) : (
           rules.map((rule, idx) => (

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useZMKStore } from '../../stores/zmkStore'
 import type { ZMKCombo } from '../../lib/zmkParser'
 import SplitKeyboard from './SplitKeyboard'
+import type { PhysicalLayout } from '@/lib/layout'
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -31,12 +32,13 @@ const inputStyle: React.CSSProperties = {
 
 interface ComboFormProps {
   editing?: ZMKCombo
+  layout?: PhysicalLayout
   layerKeys: string[]
   onSave: (combo: ZMKCombo) => void
   onCancel: () => void
 }
 
-const ComboForm: React.FC<ComboFormProps> = ({ editing, layerKeys, onSave, onCancel }) => {
+const ComboForm: React.FC<ComboFormProps> = ({ editing, layout, layerKeys, onSave, onCancel }) => {
   const [name, setName] = useState(editing?.name ?? '')
   const [binding, setBinding] = useState(editing?.bindings ?? '&kp ENTER')
   const [selectedPositions, setSelectedPositions] = useState<Set<number>>(
@@ -149,6 +151,7 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, layerKeys, onSave, onCan
           Click keys to add/remove — highlighted = selected
         </div>
         <SplitKeyboard
+          layout={layout}
           layer={{ index: 0, name: 'pick', keys: layerKeys.length > 0 ? layerKeys : fallbackKeys }}
           highlightedPositions={selectedPositions}
           onKeyClick={handleKeyClick}
@@ -167,7 +170,7 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, layerKeys, onSave, onCan
 
 // ── Main ComboEditor ──────────────────────────────────────────────────────────
 
-const ComboEditor: React.FC = () => {
+const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
   const { keymap, addCombo, updateCombo, deleteCombo } = useZMKStore()
 
   const combos = keymap?.combos ?? []
@@ -221,6 +224,7 @@ const ComboEditor: React.FC = () => {
               : 'Hover a combo to see its keys'}
           </div>
           <SplitKeyboard
+            layout={layout}
             layer={{ index: 0, name: 'preview', keys: layerKeys.length > 0 ? layerKeys : fallbackKeys }}
             highlightedPositions={highlightedForHover}
           />
@@ -230,6 +234,7 @@ const ComboEditor: React.FC = () => {
       {/* Add form */}
       {showAddForm && (
         <ComboForm
+          layout={layout}
           layerKeys={layerKeys}
           onSave={handleAdd}
           onCancel={() => setShowAddForm(false)}
@@ -239,6 +244,7 @@ const ComboEditor: React.FC = () => {
       {/* Edit form */}
       {editingCombo && (
         <ComboForm
+          layout={layout}
           editing={editingCombo}
           layerKeys={layerKeys}
           onSave={handleEdit}

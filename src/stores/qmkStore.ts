@@ -2,15 +2,13 @@ import { create } from 'zustand'
 import { readText, saveText } from '../lib/io'
 import { parseQMKViaJson, toVIARaw, type QMKKeymap } from '../lib/qmkParser'
 
-const QMK_PATH = '/Users/tomkwon/Documents/splitkey2/corne_procyon/corne_procyon.layout.json'
-
 interface QMKState {
   keymap: QMKKeymap | null
-  filePath: string
+  filePath: string | null
   isDirty: boolean
   loadError: string | null
 
-  load: () => Promise<void>
+  load: (path: string) => Promise<void>
   updateLayerKey: (layerIndex: number, keyPos: number, newKeycode: string) => void
   save: () => Promise<void>
   setDirty: (v: boolean) => void
@@ -18,13 +16,14 @@ interface QMKState {
 
 export const useQMKStore = create<QMKState>((set, get) => ({
   keymap: null,
-  filePath: QMK_PATH,
+  filePath: null,
   isDirty: false,
   loadError: null,
 
-  load: async () => {
+  load: async (path) => {
+    set({ filePath: path, keymap: null, loadError: null })
     try {
-      const text = await readText(QMK_PATH)
+      const text = await readText(path)
       const km = parseQMKViaJson(text)
       set({ keymap: km, isDirty: false, loadError: null })
     } catch (err) {
@@ -46,7 +45,7 @@ export const useQMKStore = create<QMKState>((set, get) => ({
 
   save: async () => {
     const { keymap, filePath } = get()
-    if (!keymap) return
+    if (!keymap || !filePath) return
     const raw = toVIARaw(keymap)
     // If the file can't be re-read, abort: writing only `layers` into an
     // empty object would silently drop every other VIA field.

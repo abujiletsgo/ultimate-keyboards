@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { readText, saveText, ValidationError } from '@/lib/io'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
-import { POINTING_DEVICES, type PointingDevice } from '@/lib/pointingConfig'
+import type { PointingDescriptor as PointingDevice } from '@/lib/registry/types'
 import {
   findNode, getBoolProp, setBoolProp, getIntProp, setIntProp,
   getStringProp, setStringProp, getScaler, setScaler,
@@ -195,9 +195,9 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 // ── Main section ──────────────────────────────────────────────────────────────
 
-export default function Pointing() {
-  const [devId, setDevId] = useState<string>(POINTING_DEVICES[0].keyboardId)
-  const dev = useMemo(() => POINTING_DEVICES.find(d => d.keyboardId === devId)!, [devId])
+export default function Pointing({ devices }: { devices: PointingDevice[] }) {
+  const [devId, setDevId] = useState<string>(devices[0].id)
+  const dev = useMemo(() => devices.find(d => d.id === devId) ?? devices[0], [devices, devId])
 
   const [source, setSource] = useState<string | null>(null)
   const [orig, setOrig] = useState<PointingValues | null>(null)
@@ -211,7 +211,8 @@ export default function Pointing() {
   // Report unsaved edits app-wide (quit guard).
   const dirtyRef = useRef(false)
   dirtyRef.current = dirty
-  useEffect(() => registerDirtySource('pointing', () => dirtyRef.current), [])
+  const saveRef = useRef<() => Promise<void>>(async () => {})
+  useEffect(() => registerDirtySource('pointing', () => dirtyRef.current, () => saveRef.current(), () => load(dev)), [dev]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { syncDirty() }, [dirty])
 
   // Guard reload/close while dirty (matches the keymap editor's behavior)
@@ -223,13 +224,13 @@ export default function Pointing() {
   }, [dirty])
 
   const switchDevice = (d: PointingDevice, force = false) => {
-    if (d.keyboardId === devId) return
+    if (d.id === devId) return
     if (dirty && !force) {
       setPendingSwitch(d)
       return
     }
     setPendingSwitch(null)
-    setDevId(d.keyboardId)
+    setDevId(d.id)
   }
 
   const load = (d: PointingDevice) => {
@@ -268,38 +269,32 @@ export default function Pointing() {
     }
   }
 
+  saveRef.current = save
+
   const set = <K extends keyof PointingValues>(k: K, v: PointingValues[K]) =>
     setValues(prev => (prev ? { ...prev, [k]: v } : prev))
 
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
-      {/* Header */}
-      <div className="section-header">
-        <span className="section-title">Pointing Devices</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {status && (
-            <span style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>
-          )}
-          {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
-          <button className="btn btn-primary" onClick={save} disabled={!dirty}>Save</button>
-        </div>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        {devices.length > 1 ? (
+          <div className="seg-ctrl">
+            {devices.map(d => (
+              <button key={d.id} className={`seg-btn${devId === d.id ? ' active' : ''}`} onClick={() => switchDevice(d)} title={d.overlayPath}>
+                {d.name} <span style={{ opacity: 0.65, fontWeight: 400, marginLeft: 4 }}>· {d.chip}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dev.name} · {dev.chip} · <span className="mono" style={{ fontSize: 11 }}>{dev.overlayPath.split('/').pop()}</span></span>
+        )}
+        <span style={{ flex: 1 }} />
+        {status && <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>}
+        {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
+        <button className="btn btn-primary btn-sm" onClick={save} disabled={!dirty}>Save</button>
       </div>
 
-      <div style={{ padding: 24, maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {/* Device switcher */}
-        <div className="seg-ctrl" style={{ alignSelf: 'flex-start' }}>
-          {POINTING_DEVICES.map(d => (
-            <button
-              key={d.keyboardId}
-              className={`seg-btn${devId === d.keyboardId ? ' active' : ''}`}
-              onClick={() => switchDevice(d)}
-              title={d.overlayPath}
-            >
-              {d.keyboardName} <span style={{ opacity: 0.65, fontWeight: 400, marginLeft: 4 }}>· {d.deviceName.toLowerCase()}</span>
-            </button>
-          ))}
-        </div>
-
+      <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Unsaved-changes guard when switching devices */}
         {pendingSwitch && (
           <div className="glass anim-fade-up" style={{
@@ -308,8 +303,8 @@ export default function Pointing() {
             borderColor: 'rgba(251,191,36,0.35)',
           }}>
             <span>
-              Unsaved changes on <strong>{dev.keyboardName}</strong> — switch to{' '}
-              <strong>{pendingSwitch.keyboardName}</strong> and discard them?
+              Unsaved changes on <strong>{dev.name}</strong> — switch to{' '}
+              <strong>{pendingSwitch.name}</strong> and discard them?
             </span>
             <button className="btn btn-secondary btn-sm" onClick={() => switchDevice(pendingSwitch, true)}>
               Discard &amp; switch
