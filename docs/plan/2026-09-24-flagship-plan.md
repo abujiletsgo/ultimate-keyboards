@@ -149,3 +149,19 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | Cmd-Q with nothing unsaved | app exits; `karabiner.json` checksum unchanged before/after |
 | NOT verified | crash-marker keyboard restore (would disable Tom's keyboard mid-session); mouse-engine re-enable after a stall; persisted-scope grant via the file picker (exercised in Phase 1 with the folder picker); Windows/Linux (out of scope) |
 | deferred to Phase 1 | audit F1/F2/F8 (registry, per-keyboard layout, seeded Karabiner rules) |
+
+### Phase 1 verification (2026-09-24, packaged release build, driven via `orca computer` + osascript for the native folder picker)
+
+| check | result |
+|---|---|
+| tsc / bun test | clean / 24 pass (parser, safety, layout importers, pointing detection, compat, catalogue) |
+| personal paths | none in `src/` or the web bundle (`grep tomkwon dist/` = 0); seed only fires when the old files exist |
+| registry | `~/Library/Application Support/com.ultimatekeyboards.app/registry.json` written; 3 keyboards seeded (Corne, Crosses, Corne Procyon) |
+| per-keyboard IA | sidebar lists keyboards; Keymap / Combos / Pointing tabs; Pointing shows the Corne trackpad (Azoteq, 80 %) and the Crosses trackball (PMW3610); Corne Procyon shows QMK layers + 7 keymap.c combos |
+| rename | Edit → type "Corne TP" → Save: sidebar and registry.json updated; renamed back |
+| remove | Remove → in-app confirm → Cancel keeps it; Remove → Remove deletes only the registry entry |
+| add from folder | native picker → `~/Documents/cross_keyboard` detected as ZMK · corne_tp · 42 keys, layout from `cross_corne.json`, trackpad found; duplicate name (case-insensitive) blocks Add; renamed → added → navigated to it with a Pointing tab; persisted with `layout.source = info-json` |
+| onboarding | empty registry shows the first-run screen (browser build) |
+| NOT verified | add from a single .keymap file (needs the native file picker); layout switching from the Edit form on a real save; QMK keyboard added from a folder; compat read-only banner in the UI (unit-tested only); persisted-scope after restart for a picker-granted folder outside ~/Documents |
+| deferred | audit F2's real fix (layout ≠ keymap count) is now a banner + read-only; the Corne info.json layout Tom's repo carries is a flat grid, so the catalogue's staggered "Corne 6 Column" is offered as an alternative in the picker rather than forced |
+
