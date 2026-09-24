@@ -5,7 +5,7 @@ use std::sync::Mutex;
 mod mouse_engine;
 
 use tauri::{
-    menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder},
+    menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
     tray::TrayIconBuilder,
     Emitter, Manager, RunEvent, State, WindowEvent,
 };
@@ -249,6 +249,39 @@ fn set_dirty(state: State<AppState>, dirty: bool) {
     *state.dirty.lock().unwrap() = dirty;
 }
 
+/// The one way the app quits. macOS Cmd-Q normally calls `NSApp terminate:`
+/// directly, which tao does not intercept, so the app menu's Quit item is our
+/// own (with the Cmd+Q accelerator) and the tray Quit routes here too. With
+/// unsaved edits we ask first (non-blocking dialog; a blocking one must not
+/// run on the main thread) and only then call `exit`, which raises
+/// `ExitRequested` where the built-in keyboard is restored.
+fn request_quit(app: &tauri::AppHandle) {
+    let dirty = *app.state::<AppState>().dirty.lock().unwrap();
+    if !dirty {
+        app.exit(0);
+        return;
+    }
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.set_focus();
+    }
+    let handle = app.clone();
+    app.dialog()
+        .message("You have unsaved changes. Quit anyway and discard them?")
+        .title("Unsaved changes")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "Discard and Quit".into(),
+            "Cancel".into(),
+        ))
+        .show(move |confirmed| {
+            if confirmed {
+                *handle.state::<AppState>().dirty.lock().unwrap() = false;
+                handle.exit(0);
+            }
+        });
+}
+
 // ── Mouse / scroll engine ───────────────────────────────────────────────────
 
 /// Frontend-facing mouse-engine config (mirrors mouse_engine's atomics).
@@ -312,6 +345,48 @@ pub fn run() {
                 .item(&quit_item)
                 .build()?;
 
+            // ── App menu ────────────────────────────────────────────────────
+            // Replaces Tauri's default menu so Cmd-Q goes through request_quit
+            // instead of terminating the process behind our back.
+            let quit_menu_item = MenuItemBuilder::with_id("menu_quit", "Quit Ultimate Keyboards")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)?;
+            let app_submenu = SubmenuBuilder::new(app, "Ultimate Keyboards")
+                .about(None)
+                .separator()
+                .services()
+                .separator()
+                .hide()
+                .hide_others()
+                .show_all()
+                .separator()
+                .item(&quit_menu_item)
+                .build()?;
+            let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                .undo()
+                .redo()
+                .separator()
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
+                .build()?;
+            let window_submenu = SubmenuBuilder::new(app, "Window")
+                .minimize()
+                .maximize()
+                .separator()
+                .item(&PredefinedMenuItem::close_window(app, None)?)
+                .build()?;
+            let app_menu = MenuBuilder::new(app)
+                .items(&[&app_submenu, &edit_submenu, &window_submenu])
+                .build()?;
+            app.set_menu(app_menu)?;
+            app.on_menu_event(|app, event| {
+                if event.id().as_ref() == "menu_quit" {
+                    request_quit(app);
+                }
+            });
+
             let (icon_rgba, icon_w, icon_h) = keyboard_template_rgba();
             let icon = tauri::image::Image::new_owned(icon_rgba, icon_w, icon_h);
             let tray = TrayIconBuilder::with_id("main")
@@ -335,11 +410,7 @@ pub fn run() {
                             let _ = w.set_focus();
                         }
                     }
-                    "quit_app" => {
-                        // Never leave the user with a dead keyboard.
-                        let _ = set_builtin_state(app, false);
-                        app.exit(0);
-                    }
+                    "quit_app" => request_quit(app),
                     _ => {}
                 })
                 .build(app)?;
@@ -387,34 +458,15 @@ pub fn run() {
         .expect("error while running tauri application")
         .run(|app, event| {
             if let RunEvent::ExitRequested { api, .. } = event {
-                // Unsaved edits: never quit silently. Keep the app alive, ask
-                // asynchronously (a blocking dialog must not run on the main
-                // thread), and re-issue the exit once the user confirms.
+                // Backstop for exit paths that bypass request_quit: never
+                // discard unsaved edits silently.
                 let dirty = *app.state::<AppState>().dirty.lock().unwrap();
                 if dirty {
                     api.prevent_exit();
-                    let handle = app.clone();
-                    if let Some(w) = app.get_webview_window("main") {
-                        let _ = w.show();
-                        let _ = w.set_focus();
-                    }
-                    app.dialog()
-                        .message("You have unsaved changes. Quit anyway and discard them?")
-                        .title("Unsaved changes")
-                        .kind(MessageDialogKind::Warning)
-                        .buttons(MessageDialogButtons::OkCancelCustom(
-                            "Discard and Quit".into(),
-                            "Cancel".into(),
-                        ))
-                        .show(move |confirmed| {
-                            if confirmed {
-                                *handle.state::<AppState>().dirty.lock().unwrap() = false;
-                                handle.exit(0);
-                            }
-                        });
+                    request_quit(app);
                     return;
                 }
-                // App is actually quitting (Cmd-Q / tray quit) — restore the keyboard.
+                // Never leave the user with a dead keyboard.
                 let _ = set_builtin_state(app, false);
             }
         });

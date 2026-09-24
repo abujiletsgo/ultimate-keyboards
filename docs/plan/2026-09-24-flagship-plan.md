@@ -123,3 +123,15 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 3. Windows/Linux in scope for v1, or macOS-only first? (Karabiner + Mouse sections are macOS-only by nature.)
 4. License: MIT (matches keymap-drawer/keymap-editor ecosystem) or keep private?
 5. Phase 5 (visual builder) may be cut if importers + catalogue cover users; decide after Phase 1.
+
+## 5. Notes from Tom during Phase 0 (2026-09-24)
+
+| Note | Where it lands |
+|---|---|
+| Minimal icon/logo: app icon set (icns/ico/png), menu-bar template glyph, in-app logo mark | Phase 3 (identity task 3.8, alongside the design-token pass); replaces the hand-drawn tray glyph in `lib.rs` |
+| Keyboards must be add / edit / rename / delete | Phase 1 task 1.1 (registry + Settings wizard); confirmed in scope |
+| Mouse and Pointing should be per-keyboard, not global sections | Phase 1: a keyboard becomes the top-level object with Keymap / Combos / Pointing tabs (Pointing only when the descriptor has a pointing device). The macOS scroll engine is host-level; decide at the Phase 1 gate whether it lives under a "This Mac" section with the Karabiner tools or under each keyboard's Pointing tab as "host scroll" |
+
+## 6. Phase 0 execution log
+
+- macOS Cmd-Q never reaches Tauri: tao does not implement `applicationShouldTerminate`, so the process terminates with no `ExitRequested` (OBSERVED in tao 0.35.3 and tauri-runtime-wry 2.11.4 sources). The old "restore keyboard on quit" therefore never ran on Cmd-Q. Fix: the app now sets its own menu whose Quit item (Cmd+Q) and the tray Quit both go through `request_quit`, which asks about unsaved edits and then calls `exit`, where the keyboard is restored.
