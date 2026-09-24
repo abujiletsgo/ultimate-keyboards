@@ -165,3 +165,19 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | NOT verified | add from a single .keymap file (needs the native file picker); layout switching from the Edit form on a real save; QMK keyboard added from a folder; compat read-only banner in the UI (unit-tested only); persisted-scope after restart for a picker-granted folder outside ~/Documents |
 | deferred | audit F2's real fix (layout ≠ keymap count) is now a banner + read-only; the Corne info.json layout Tom's repo carries is a flat grid, so the catalogue's staggered "Corne 6 Column" is offered as an alternative in the picker rather than forced |
 
+### Phase 2 verification (2026-09-24)
+
+| check | result |
+|---|---|
+| tsc / bun test | clean / 59 pass |
+| corpus golden tests | corne_tp, crosses (local) + upstream corne, kyria, lily58, sofle, glove80, urob base: no-op save byte-identical on all 8; one binding edit = exactly one changed line on the 7 parseable ones |
+| urob base (C-macro-defined layers) | 26 syntax errors reported → keymap opens read-only with the lines named (not silently mangled) |
+| CRLF | round-trips; one-key edit keeps line count |
+| combos | edit bindings/positions/layers in place; add `layers` property; drop it; add/remove nodes; untouched nodes byte-identical; file without a combos block gets one inserted before `keymap` |
+| layers | add → rename → delete returns the original bytes; renaming a layer never touches a same-named behaviors node |
+| KLE importer | stateful cursor, rotation, VIA `row,col` legends; export→import round-trip |
+| QMK VIA JSON | one-key edit changes exactly one keycode; every non-`layers` field survives the merge |
+| WASM in the packaged app (spike 2.0) | FAILED twice, then passed: (1) emscripten's own loader cannot fetch on Tauri's custom-scheme origin → we fetch the bytes and pass `wasmBinary` / `Uint8Array`; (2) CSP `connect-src` lacked `'self'` → same-origin fetch blocked. Both fixed; keymap renders through the CST parser in the release build |
+| end-to-end save in the packaged app | X → `&trans` saved through the new parser: exactly one changed line on disk, `.bak` written; file reset afterwards |
+| NOT verified | `#include`d `.dtsi` layer files (parser reads one file; includes are flagged, not followed); Phase 2.3 exporters exercised by unit tests only; `qmk json2c` compile fixtures (qmk CLI not installed here) |
+

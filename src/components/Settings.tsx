@@ -6,6 +6,8 @@ import { Pencil, Trash2, FolderOpen, FileText } from "lucide-react";
 import { useRegistryStore } from "@/stores/registryStore";
 import { IS_TAURI } from "@/lib/io";
 import { CATALOGUE, catalogueLabel } from "@/lib/layout/catalogue";
+import { parseInfoJsonLayouts, parseKle, type PhysicalLayout } from "@/lib/layout";
+import { readText } from "@/lib/io";
 import type { KeyboardDef } from "@/lib/registry/types";
 import AddKeyboard from "./Settings/AddKeyboard";
 import PhysicalBoard from "@/components/board/PhysicalBoard";
@@ -103,10 +105,34 @@ function KeyboardRow({ kb, editing, onEdit, onSave, confirming, onAskRemove, onC
   const [keymapPath, setKeymapPath] = useState(kb.keymapPath);
   const [keymapCPath, setKeymapCPath] = useState(kb.keymapCPath ?? '');
   const [layoutId, setLayoutId] = useState<string>('current');
-  useEffect(() => { setName(kb.name); setKeymapPath(kb.keymapPath); setKeymapCPath(kb.keymapCPath ?? ''); setLayoutId('current') }, [kb, editing]);
+  const [imported, setImported] = useState<PhysicalLayout | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  useEffect(() => { setName(kb.name); setKeymapPath(kb.keymapPath); setKeymapCPath(kb.keymapCPath ?? ''); setLayoutId('current'); setImported(null); setImportError(null) }, [kb, editing]);
 
   const sameCount = useMemo(() => CATALOGUE.filter(e => e.keyCount === kb.layout.keys.length), [kb.layout.keys.length]);
-  const chosenLayout = layoutId === 'current' ? kb.layout : CATALOGUE.find(e => e.id === layoutId)?.layout ?? kb.layout;
+  const chosenLayout = layoutId === 'current' ? kb.layout : layoutId === 'imported' && imported ? imported : CATALOGUE.find(e => e.id === layoutId)?.layout ?? kb.layout;
+
+  /** Import a layout file: QMK/keymap-editor info.json (any layout with a matching key count, else the first) or KLE JSON. */
+  const importLayoutFile = async () => {
+    setImportError(null);
+    const f = await open({ multiple: false, filters: [{ name: 'Layout JSON (info.json / KLE)', extensions: ['json'] }] });
+    if (!f || Array.isArray(f)) return;
+    try {
+      const text = await readText(f);
+      const parsed = JSON.parse(text);
+      let layout: PhysicalLayout | null = null;
+      if (Array.isArray(parsed)) {
+        layout = parseKle(parsed, f.split('/').pop() ?? 'KLE', f);
+      } else {
+        const ls = parseInfoJsonLayouts(text, f);
+        const match = ls.find(l => l.layout.keys.length === kb.layout.keys.length) ?? ls[0];
+        if (match) layout = { ...match.layout, name: `${f.split('/').pop()} · ${match.id}` };
+      }
+      if (!layout || layout.keys.length === 0) { setImportError('No layout found in that file (expected info.json "layouts" or a KLE array).'); return }
+      if (layout.keys.length !== kb.layout.keys.length) { setImportError(`That layout has ${layout.keys.length} keys but this keyboard's keymap has ${kb.layout.keys.length}.`); return }
+      setImported(layout); setLayoutId('imported');
+    } catch (e) { setImportError(String(e)) }
+  };
 
   const pickFile = async (setter: (p: string) => void, ext: string[]) => {
     const f = await open({ multiple: false, filters: [{ name: ext.join('/'), extensions: ext }] });
@@ -156,10 +182,15 @@ function KeyboardRow({ kb, editing, onEdit, onSave, confirming, onAskRemove, onC
           )}
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>
             <span style={{ color: "var(--text-secondary)" }}>Physical layout</span>
-            <select value={layoutId} onChange={e => setLayoutId(e.target.value)} style={{ height: 30 }}>
-              <option value="current">Current: {kb.layout.name} ({kb.layout.keys.length} keys, {kb.layout.source})</option>
-              {sameCount.map(e => <option key={e.id} value={e.id}>{catalogueLabel(e)}</option>)}
-            </select>
+            <div style={{ display: "flex", gap: 6 }}>
+              <select value={layoutId} onChange={e => setLayoutId(e.target.value)} style={{ height: 30, flex: 1 }}>
+                <option value="current">Current: {kb.layout.name} ({kb.layout.keys.length} keys, {kb.layout.source})</option>
+                {imported && <option value="imported">Imported: {imported.name} ({imported.keys.length} keys)</option>}
+                {sameCount.map(e => <option key={e.id} value={e.id}>{catalogueLabel(e)}</option>)}
+              </select>
+              <button className="btn btn-secondary btn-sm" onClick={importLayoutFile} title="info.json (QMK / keymap-editor) or keyboard-layout-editor JSON">Import file…</button>
+            </div>
+            {importError && <span style={{ color: "var(--danger)", fontSize: 11 }}>{importError}</span>}
           </label>
           <div className="panel-inset" style={{ padding: 6 }}>
             <PhysicalBoard layout={chosenLayout} keyAt={(i) => ({ label: String(i), text: 'rgba(226,230,255,0.45)', fontSize: 9 })} editable={false} maxScale={0.7} />

@@ -25,9 +25,29 @@ export interface DtInit {
   grammar: string
 }
 
+const isUrlLike = (s: string) => /^(https?:|tauri:|asset:|blob:|\/)/.test(s)
+
 export function initDevicetree(opts: DtInit): Promise<void> {
   if (!initPromise) {
     initPromise = (async () => {
+      const inBrowser = typeof window !== 'undefined' && typeof document !== 'undefined'
+      if (inBrowser && isUrlLike(opts.runtime) && isUrlLike(opts.grammar)) {
+        // Browser / Tauri: fetch the bytes ourselves. Emscripten's own loader
+        // fails on Tauri's custom-scheme origin ("both async and sync fetching
+        // of the wasm failed"), and this also sidesteps MIME-type issues with
+        // instantiateStreaming.
+        const [runtimeBytes, grammarBytes] = await Promise.all([
+          fetch(opts.runtime).then(r => { if (!r.ok) throw new Error(`fetch ${opts.runtime}: ${r.status}`); return r.arrayBuffer() }),
+          fetch(opts.grammar).then(r => { if (!r.ok) throw new Error(`fetch ${opts.grammar}: ${r.status}`); return r.arrayBuffer() }),
+        ])
+        await ParserCtor.init({ wasmBinary: runtimeBytes })
+        const lang = await LanguageCtor.load(new Uint8Array(grammarBytes))
+        const p = new ParserCtor()
+        p.setLanguage(lang)
+        parser = p
+        return
+      }
+      // Node / bun: file paths.
       await ParserCtor.init({ locateFile: () => opts.runtime })
       const lang = await LanguageCtor.load(opts.grammar)
       const p = new ParserCtor()
