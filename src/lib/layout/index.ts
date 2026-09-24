@@ -2,6 +2,7 @@ export * from './types'
 export { parseZmkPhysicalLayouts, toZmkPhysicalLayoutDtsi } from './zmkDtsi'
 export { parseInfoJsonLayouts, toInfoJsonLayouts } from './infoJson'
 export { parseMatrixTransforms, gridLayoutFromTransform } from './matrixGrid'
+export { parseKle, toKle } from './kle'
 
 import type { PhysicalLayout } from './types'
 import { CROSSES_LAYOUT } from '../crossesLayout'
