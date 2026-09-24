@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { readText, saveText } from '../lib/io'
 import { parseQMKViaJson, toVIARaw, type QMKKeymap } from '../lib/qmkParser'
 
 const QMK_PATH = '/Users/tomkwon/Documents/splitkey2/corne_procyon/corne_procyon.layout.json'
@@ -24,7 +24,7 @@ export const useQMKStore = create<QMKState>((set, get) => ({
 
   load: async () => {
     try {
-      const text = await readTextFile(QMK_PATH)
+      const text = await readText(QMK_PATH)
       const km = parseQMKViaJson(text)
       set({ keymap: km, isDirty: false, loadError: null })
     } catch (err) {
@@ -48,9 +48,19 @@ export const useQMKStore = create<QMKState>((set, get) => ({
     const { keymap, filePath } = get()
     if (!keymap) return
     const raw = toVIARaw(keymap)
-    const json = JSON.parse(await readTextFile(filePath).catch(() => '{}'))
+    // If the file can't be re-read, abort: writing only `layers` into an
+    // empty object would silently drop every other VIA field.
+    const json = JSON.parse(await readText(filePath))
     json.layers = raw
-    await writeTextFile(filePath, JSON.stringify(json, null, 2))
+    const out = JSON.stringify(json, null, 2)
+    await saveText(filePath, out, {
+      validate: (o) => {
+        try {
+          const parsed = JSON.parse(o)
+          return Array.isArray(parsed.layers) && parsed.layers.length === raw.length ? null : 'layer array mismatch'
+        } catch (e) { return `output is not JSON: ${e}` }
+      },
+    })
     set({ isDirty: false })
   },
 

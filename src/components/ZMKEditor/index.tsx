@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
+import { readText, saveText, backupExists, restoreBackup, ValidationError } from '../../lib/io';
 import { parseKeymapText, updateCombosInSource, updateLayerBindingsInSource } from '../../lib/zmkParser';
 import { ZMK_KEYBOARDS, getSelectedKeyboard, setSelectedKeyboard, type ZMKKeyboardDef } from '../../lib/keyboards';
 import { useZMKStore } from '../../stores/zmkStore';
@@ -29,7 +29,7 @@ const ZMKTab: React.FC = () => {
   const loadKeyboard = (kb: ZMKKeyboardDef) => {
     setLoading(true);
     setLoadError(null);
-    readTextFile(kb.keymapPath)
+    readText(kb.keymapPath)
       .then(text => {
         const km = parseKeymapText(text);
         setKeymap(km, kb.keymapPath);
@@ -70,7 +70,7 @@ const ZMKTab: React.FC = () => {
         filters: [{ name: 'ZMK Keymap', extensions: ['keymap'] }],
       });
       if (!selected || Array.isArray(selected)) return;
-      const text = await readTextFile(selected);
+      const text = await readText(selected);
       const km = parseKeymapText(text);
       setKeymap(km, selected);
       setSelectedLayer(0);
@@ -85,12 +85,53 @@ const ZMKTab: React.FC = () => {
     try {
       let updated = updateLayerBindingsInSource(keymap.rawSource, keymap.layers);
       updated = updateCombosInSource(updated, keymap.combos);
-      await writeTextFile(filePath, updated);
+      await saveText(filePath, updated, {
+        // Prove the bytes we are about to write still describe this keymap.
+        validate: (out) => {
+          let km;
+          try { km = parseKeymapText(out); } catch (e) { return `output does not parse: ${e}`; }
+          if (km.layers.length !== keymap.layers.length)
+            return `layer count would change (${keymap.layers.length} → ${km.layers.length})`;
+          for (let i = 0; i < km.layers.length; i++) {
+            if (km.layers[i].keys.length !== keymap.layers[i].keys.length)
+              return `layer "${km.layers[i].name}" key count would change (${keymap.layers[i].keys.length} → ${km.layers[i].keys.length})`;
+          }
+          if (km.combos.length !== keymap.combos.length)
+            return `combo count would change (${keymap.combos.length} → ${km.combos.length})`;
+          return null;
+        },
+      });
+      // Reload from what we wrote so rawSource matches disk exactly.
+      setKeymap(parseKeymapText(updated), filePath);
+      setSelectedLayer(selectedLayer);
       setDirty(false);
+      setHasBackup(true);
       setStatus({ msg: 'Saved!', ok: true });
       setTimeout(() => setStatus(null), 2000);
     } catch (err) {
-      setStatus({ msg: `Error saving: ${err}`, ok: false });
+      const msg = err instanceof ValidationError ? `Not saved — ${err.message}` : `Error saving: ${err}`;
+      setStatus({ msg, ok: false });
+    }
+  };
+
+  const [hasBackup, setHasBackup] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!filePath) { setHasBackup(false); return; }
+    backupExists(filePath).then(v => { if (alive) setHasBackup(v); });
+    return () => { alive = false; };
+  }, [filePath]);
+
+  const restoreFromBackup = async () => {
+    if (!filePath) return;
+    try {
+      const text = await restoreBackup(filePath);
+      setKeymap(parseKeymapText(text), filePath);
+      setSelectedLayer(0);
+      setStatus({ msg: 'Backup restored', ok: true });
+      setTimeout(() => setStatus(null), 2000);
+    } catch (err) {
+      setStatus({ msg: `Error restoring: ${err}`, ok: false });
     }
   };
 
@@ -136,6 +177,15 @@ const ZMKTab: React.FC = () => {
             <button className="btn btn-primary btn-sm" onClick={saveFile} disabled={!isDirty}>
               Save
             </button>
+            {hasBackup && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={restoreFromBackup}
+                title="Put back the version saved before the last write (.bak)"
+              >
+                Restore backup
+              </button>
+            )}
           </>
         )}
         {status && (

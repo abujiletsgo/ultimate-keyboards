@@ -1,0 +1,260 @@
+#include <dt-bindings/zmk/mouse.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/pointing.h>
+
+&lt {
+    tapping-term-ms = <200>;
+    flavor = "balanced";
+    quick-tap-ms = <150>;
+};
+
+/ {
+    chosen {
+        zmk,matrix_transform = &default_transform;
+
+        // zmk,matrix_transform = &five_column_transform;
+    };
+};
+
+/ {
+    //  Add tri-layer behavior here
+
+    behaviors {
+        tri_layer: sl_layer {
+            compatible = "urob,zmk-behavior-simple-layer";
+            label = "TRI_LAYER";
+            layers = <1 2>;        // These are LWR and RSE layers
+            target-layer = <3>;    // Layer 3 will activate when both are held
+        };
+
+        // Android "Cmd" morphs. On the Android layer the right-mid thumb holds
+        // RIGHT_CONTROL (Ctrl+C/V/Z/A/T/W... == Mac Cmd). Android EditText does
+        // line-wise delete/move on ALT, not Ctrl, so while RIGHT_CONTROL is held
+        // these morph to the Alt chord and drop the Ctrl. Verified on the Fold 8
+        // (One UI, Android 17): Ctrl+Backspace = delete word (Mac Option),
+        // Alt+Backspace = delete line (Mac Cmd); Ctrl+Left = word, Alt+Left = line start.
+        // RIGHT_CONTROL is never held on the Mac layers, so they are inert there.
+        and_bspc: android_cmd_backspace {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp BACKSPACE>, <&kp LA(BACKSPACE)>;
+            mods = <(MOD_RCTL)>;
+        };
+
+        and_del: android_cmd_delete {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp DELETE>, <&kp LA(DELETE)>;
+            mods = <(MOD_RCTL)>;
+        };
+
+        and_left: android_cmd_left {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp LEFT_ARROW>, <&kp LA(LEFT_ARROW)>;
+            mods = <(MOD_RCTL)>;
+        };
+
+        and_right: android_cmd_right {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp RIGHT_ARROW>, <&kp LA(RIGHT_ARROW)>;
+            mods = <(MOD_RCTL)>;
+        };
+
+        and_up: android_cmd_up {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp UP_ARROW>, <&kp LA(UP_ARROW)>;
+            mods = <(MOD_RCTL)>;
+        };
+
+        and_down: android_cmd_down {
+            compatible = "zmk,behavior-mod-morph";
+            #binding-cells = <0>;
+            bindings = <&kp DOWN_ARROW>, <&kp LA(DOWN_ARROW)>;
+            mods = <(MOD_RCTL)>;
+        };
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        Enter {
+            bindings = <&kp ENTER>;
+            key-positions = <21 20>;
+        };
+
+        backspace {
+            bindings = <&and_bspc>;
+            key-positions = <8 9>;
+        };
+
+        esc {
+            bindings = <&kp ESC>;
+            key-positions = <2 3>;
+        };
+
+        gesture {
+            bindings = <&mo 3>;
+            key-positions = <38 39>;     // both Space thumbs (inner) -> Mac gesture
+            layers = <0 1 2>;        // Mac gesture: only when a Mac base layer is on top
+        };
+
+        gesture_android {
+            bindings = <&mo 7>;
+            key-positions = <38 39>;     // same Space chord -> Android gesture
+            layers = <5 6>;          // Android gesture: same chord, fires when Android base/numpad is on top
+        };
+
+        backspace2 {
+            bindings = <&and_bspc>;
+            key-positions = <10 9>;
+        };
+
+        enter2 {
+            bindings = <&kp ENTER>;
+            key-positions = <22 21>;
+        };
+
+        esc2 {
+            bindings = <&kp ESCAPE>;
+            key-positions = <1 2>;
+        };
+
+        delete {
+            bindings = <&and_del>;
+            key-positions = <9 10>;
+            layers = <3 7>;
+        };
+
+        ctrl_combo {
+            bindings = <&kp LCTRL>;
+            key-positions = <37 40>;     // both Cmd thumbs (middle) -> Ctrl
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        Primary {
+            display-name = "QWERTY";
+            bindings = <
+&kp TAB         &kp Q  &kp W  &kp E        &kp R         &kp T                           &kp Y              &kp U   &kp I        &kp O    &kp P     &kp BSPC
+&kp CAPSLOCK    &kp A  &kp S  &kp D        &kp F         &kp G                           &kp H              &kp J   &kp K        &kp L    &kp SEMI  &kp SQT
+&kp LEFT_SHIFT  &kp Z  &kp X  &kp C        &kp V         &kp B                           &kp N              &kp M   &kp COMMA    &kp DOT  &kp FSLH  &kp RIGHT_SHIFT
+                              &kp LEFT_ALT  &mt LEFT_COMMAND C_AC_SEARCH  &lt 1 SPACE    &lt 8 SPACE  &kp RIGHT_COMMAND  &tog 2
+            >;
+        };
+
+        Secondary {
+            display-name = "Number";
+            bindings = <
+&trans  &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &kp NUMBER_4  &kp N5       &kp NUMBER_6  &kp N7    &kp N8  &kp N9            &kp N0             &trans
+&trans  &kp TILDE     &mkp MCLK     &mkp RCLK     &mkp LCLK     &mo 2        &mkp MB4      &mkp MB5  &none   &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp BACKSLASH
+&trans  &kp SLASH     &kp ASTERISK  &kp MINUS     &kp PLUS      &kp EQUAL    &none         &none     &trans  &trans            &none              &trans
+                                    &trans        &trans        &trans       &trans        &trans    &trans
+            >;
+        };
+
+        numpad+media {
+            bindings = <
+&kp C_POWER  &kp LG(LS(NUMBER_4))      &mt C_RW C_PREV       &mt C_PP C_PP         &mt C_FAST_FORWARD C_NEXT  &none     &kp ASTERISK  &kp N7        &kp N8        &kp N9        &kp PLUS    &none
+&trans       &kp LS(LC(LG(NUMBER_4)))  &kp K_MUTE            &kp C_VOL_DN          &kp C_VOLUME_UP            &none     &kp SLASH     &kp NUMBER_4  &kp N5        &kp NUMBER_6  &kp MINUS   &kp DOLLAR
+&trans       &kp LS(LG(N5))            &kp C_BRIGHTNESS_DEC  &kp C_BRIGHTNESS_INC  &kp C_AL_CONTROL_PANEL     &none     &kp EQUAL     &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &kp PERIOD  &kp COMMA
+                                                             &trans                &trans                     &trans    &trans        &kp N0        &trans
+            >;
+        };
+
+        Gesture {
+            bindings = <
+&kp F1  &kp F2  &kp F3              &kp F4            &kp F5         &kp F6    &kp F7  &kp F8          &kp F9          &kp F10     &kp F11        &kp F12
+&none   &none   &none               &kp LC(UP_ARROW)  &mo 4                &none     &none   &none           &kp UP_ARROW    &kp LG(N0)       &kp LG(MINUS)  &kp LG(EQUAL)
+&none   &none   &kp LC(LEFT_ARROW)  &kp LC(DOWN_ARROW)  &kp LC(RIGHT_ARROW)  &none     &none   &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW  &none          &none
+                                    &none             &none          &trans    &trans  &none           &none
+            >;
+        };
+
+        Settings {
+            bindings = <
+&bt BT_CLR  &trans  &trans  &trans  &trans  &bt BT_CLR_ALL    &trans  &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2  &bt BT_SEL 3  &trans
+&tog 5      &trans  &trans  &trans  &trans  &trans            &trans  &trans        &trans        &trans        &trans        &trans
+&trans      &trans  &trans  &trans  &trans  &trans            &trans  &trans        &trans        &trans        &trans        &trans
+                            &trans  &trans  &trans            &trans  &trans        &trans
+            >;
+        };
+
+        // ------------------------------------------------------------------
+        // ANDROID SET (Samsung One UI) — L5 overlay + L6 numpad + L7 gesture
+        // Enter Android:  Settings (L4) -> &tog 5
+        // Leave Android:  Android Gesture (L7) -> &tog 5
+        // ------------------------------------------------------------------
+
+        // L5 Android base: a THIN overlay on top of the Mac Primary layer.
+        // Everything is transparent (letters/numbers fall through to L0/L1),
+        // only the platform-specific thumbs change:
+        //   left outer thumb (Mac Option) : LEFT_CONTROL  -> Ctrl+Backspace/arrows = word ops (Mac Option semantics)
+        //   left mid thumb   (Mac Cmd)    : hold = RIGHT_CONTROL (Ctrl+C/V/Z/A... = Mac Cmd), tap = Search
+        //                                   + and_* mod-morphs turn Ctrl+Backspace/arrows into Alt = line ops
+        //   right inner thumb (Space)     : hold = Android Gesture (L7) instead of the Mac one
+        //   right outer thumb             : toggles the ANDROID numpad (L6) instead of the Mac one
+        //   right mid thumb               : falls through to RIGHT_COMMAND == RIGHT_GUI == Android Search/Meta
+        Android_Base {
+            display-name = "Android";
+            bindings = <
+&trans  &trans  &trans  &trans  &trans  &trans                            &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                            &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                            &trans  &trans  &trans  &trans  &trans  &trans
+                        &kp LEFT_CONTROL  &mt RIGHT_CONTROL C_AC_SEARCH  &trans      &lt 7 SPACE  &trans  &tog 6
+            >;
+        };
+
+        // L6 Android numpad+media: mirrors the Mac numpad (L2) but swaps the
+        // three macOS screenshot keys for the Samsung One UI equivalents.
+        //   Cmd+Shift+4 (area)     -> Cmd+Shift+S  = LG(LS(S))  capture selection
+        //   Shift+Ctrl+Cmd+4 (clip)-> Alt+PrintScr = LA(PRINTSCREEN)  capture window
+        //   Cmd+Shift+5 (toolbar)  -> (no Samsung kbd equivalent) &none
+        Android_numpad {
+            bindings = <
+&kp C_POWER  &kp LG(LS(S))        &mt C_RW C_PREV       &mt C_PP C_PP         &mt C_FAST_FORWARD C_NEXT  &none     &kp ASTERISK  &kp N7        &kp N8        &kp N9        &kp PLUS    &none
+&trans       &kp LA(PRINTSCREEN)  &kp K_MUTE            &kp C_VOL_DN          &kp C_VOLUME_UP            &none     &kp SLASH     &kp NUMBER_4  &kp N5        &kp NUMBER_6  &kp MINUS   &kp DOLLAR
+&trans       &none                &kp C_BRIGHTNESS_DEC  &kp C_BRIGHTNESS_INC  &kp C_AL_CONTROL_PANEL     &none     &kp EQUAL     &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &kp PERIOD  &kp COMMA
+                                                        &trans                &trans                     &trans    &trans        &kp N0        &trans
+            >;
+        };
+
+        // L7 Android gesture: mirrors the Mac gesture (L3) with Samsung One UI
+        // window/app management in place of macOS Mission Control / Spaces / zoom.
+        //   Mission Control (Ctrl+Up)  -> Search+Tab   = LG(TAB)   all apps/windows
+        //   Spaces (Ctrl+Left/Right)   -> Search+L/R   = LG(LEFT/RIGHT)  snap window
+        //   App Expose (Ctrl+Down)     -> Alt+Tab      = LA(TAB)   switch to next app
+        //   Zoom (Cmd 0/-/=)           -> Ctrl 0/-/=   browser zoom
+        //   Settings access (&mo 4)    -> &tog 5       switch back to the Mac set
+        //   Arrows are and_* morphs: plain = arrow, with the Android Cmd thumb (RIGHT_CONTROL)
+        //   held = Alt+arrow = line start/end / doc top/bottom (Mac Cmd+arrow semantics)
+        Android_Gesture {
+            bindings = <
+&kp F1  &kp F2  &kp F3       &kp F4      &kp F5         &kp F6    &kp F7  &kp F8          &kp F9          &kp F10     &kp F11        &kp F12
+&none   &none   &none              &kp LG(TAB) &tog 5              &none     &none   &none      &and_up    &kp LC(N0)  &kp LC(MINUS)  &kp LC(EQUAL)
+&none   &none   &kp LG(LEFT_ARROW) &kp LA(TAB) &kp LG(RIGHT_ARROW) &none     &none   &and_left  &and_down  &and_right  &none          &none
+                             &none       &none          &trans    &trans  &none           &none
+            >;
+        };
+
+        // L8 Num+Nav: held by the right Space thumb. Identical to Number (L1)
+        // except the Gesture layer's arrow keys are dropped in at their exact
+        // Gesture positions: Mission Control / Spaces on D X C V (replacing
+        // right-click * - + here only) and plain arrows on K M , .
+        NumNav {
+            display-name = "Num+Nav";
+            bindings = <
+&trans  &kp NUMBER_1  &kp NUMBER_2        &kp NUMBER_3        &kp NUMBER_4         &kp N5       &kp NUMBER_6  &kp N7          &kp N8          &kp N9            &kp N0             &trans
+&trans  &kp TILDE     &mkp MCLK           &kp LC(UP_ARROW)    &mkp LCLK            &mo 2        &mkp MB4      &mkp MB5        &kp UP_ARROW    &kp LEFT_BRACKET  &kp RIGHT_BRACKET  &kp BACKSLASH
+&trans  &kp SLASH     &kp LC(LEFT_ARROW)  &kp LC(DOWN_ARROW)  &kp LC(RIGHT_ARROW)  &kp EQUAL    &none         &kp LEFT_ARROW  &kp DOWN_ARROW  &kp RIGHT_ARROW   &none              &trans
+                                          &trans              &trans               &trans       &trans        &trans          &trans
+            >;
+        };
+    };
+};

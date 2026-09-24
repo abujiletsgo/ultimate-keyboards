@@ -163,9 +163,11 @@ function parseLayers(source: string): ZMKLayer[] {
   const layers: ZMKLayer[] = [];
   let layerIndex = 0;
 
-  // Match layer nodes: LayerName { ... }
+  // Match layer nodes: LayerName { ... } — anchored to the start of a line so a
+  // long run of identifier characters can't make the scan quadratic (a 200 KB
+  // hostile file previously took ~40 s).
   // We need to handle nested braces for the bindings block
-  const layerNameRegex = /(\w[\w+]*)\s*\{/g;
+  const layerNameRegex = /^[ \t]*(\w[\w+]*)\s*\{/gm;
   let lm: RegExpExecArray | null;
 
   while ((lm = layerNameRegex.exec(keymapBlock)) !== null) {
@@ -297,22 +299,12 @@ export function updateLayerBindingsInSource(source: string, layers: ZMKLayer[]):
   let result = source;
 
   for (const layer of layers) {
-    const layerNamePattern = new RegExp(`\\b${escapeRegex(layer.name)}\\s*\\{`);
-    const layerMatch = layerNamePattern.exec(result);
-    if (!layerMatch) continue;
-
-    // Walk braces to find the layer body
-    const openBraceIdx = result.indexOf('{', layerMatch.index);
-    let depth = 0;
-    let closeIdx = openBraceIdx;
-    while (closeIdx < result.length) {
-      if (result[closeIdx] === '{') depth++;
-      else if (result[closeIdx] === '}') {
-        depth--;
-        if (depth === 0) break;
-      }
-      closeIdx++;
-    }
+    // Search inside the keymap block only: a behaviors/macros/combos node that
+    // happens to share a layer's name must never be edited in its place.
+    const node = findLayerNode(result, layer.name);
+    if (!node) continue;
+    const openBraceIdx = node.open;
+    const closeIdx = node.close;
 
     const bodySlice = result.slice(openBraceIdx + 1, closeIdx);
     const bindingsPattern = /(bindings\s*=\s*<)([\s\S]*?)(>\s*;)/;

@@ -10,14 +10,23 @@
 //! MacBook's built-in trackpad and other precision devices — pass through
 //! byte-identical, so multi-finger gestures and momentum are never disturbed.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
+use std::sync::mpsc;
+use std::time::Duration;
 
+use core_foundation::base::TCFType;
+use core_foundation::mach_port::CFMachPortRef;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
     EventField,
 };
+
+extern "C" {
+    /// Re-enable a tap the system switched off (`TapDisabledByTimeout` /
+    /// `TapDisabledByUserInput`). Not re-exported by core-graphics.
+    fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
+}
 
 /// Engine config, read on every scroll event. Speed is an f64 stored as its bit
 /// pattern so it fits in an atomic (no lock on the hot path).
@@ -36,8 +45,14 @@ static CONFIG: EngineConfig = EngineConfig {
     speed_bits: AtomicU64::new(0), // set to 1.0 on start()
 };
 
-/// Set once the tap thread is running, so we don't spawn it twice.
-static STARTED: OnceLock<bool> = OnceLock::new();
+/// Claimed (compare-exchange) by whichever caller spawns the tap thread, so two
+/// concurrent `start()` calls can never create two taps. Reset if creation fails.
+static STARTED: AtomicBool = AtomicBool::new(false);
+
+/// The live tap's mach port, so the event callback can re-enable it when the
+/// system disables it after a slow callback or user-input timeout.
+static TAP_PORT: AtomicPtr<core_foundation::mach_port::__CFMachPort> =
+    AtomicPtr::new(std::ptr::null_mut());
 
 fn speed() -> f64 {
     f64::from_bits(CONFIG.speed_bits.load(Ordering::Relaxed))
@@ -105,11 +120,18 @@ fn transform(event: &core_graphics::event::CGEvent) {
     }
 }
 
-/// Start the scroll engine. Spawns the tap thread once; later calls are no-ops.
-/// Returns Err if the event tap can't be created (usually missing Accessibility
-/// permission), so the UI can prompt the user to grant it.
+const PERMISSION_HELP: &str = "Couldn't create the scroll event tap. Grant Ultimate Keyboards \
+Accessibility access in System Settings › Privacy & Security › Accessibility, then try again.";
+
+/// Start the scroll engine. Spawns the tap thread exactly once; later calls are
+/// no-ops. The tap is created on the worker thread and its result is reported
+/// back over a channel, so permission failures surface synchronously to the UI
+/// without a throwaway probe tap ever being installed.
 pub fn start() -> Result<(), String> {
-    if STARTED.get().is_some() {
+    if STARTED
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
         return Ok(());
     }
 
@@ -118,43 +140,34 @@ pub fn start() -> Result<(), String> {
         CONFIG.speed_bits.store(1.0f64.to_bits(), Ordering::Relaxed);
     }
 
-    // Probe: try creating a tap on this thread first so we can return a real
-    // error synchronously (permission failures happen here).
-    let probe = CGEventTap::new(
-        CGEventTapLocation::HID,
-        CGEventTapPlacement::HeadInsertEventTap,
-        CGEventTapOptions::Default,
-        vec![CGEventType::ScrollWheel],
-        |_proxy, _type, event| {
-            transform(event);
-            None // keep the (possibly mutated-in-place) event
-        },
-    );
-    if probe.is_err() {
-        return Err(
-            "Couldn't create the scroll event tap. Grant Ultimate Keyboards Accessibility \
-             access in System Settings › Privacy & Security › Accessibility, then try again."
-                .to_string(),
-        );
-    }
-    drop(probe); // we'll create the real, run-loop-attached tap on the worker thread
-
-    std::thread::Builder::new()
+    let (tx, rx) = mpsc::channel::<Result<(), String>>();
+    let spawned = std::thread::Builder::new()
         .name("mouse-engine".into())
-        .spawn(|| {
+        .spawn(move || {
             let tap = match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
                 CGEventTapOptions::Default,
                 vec![CGEventType::ScrollWheel],
-                |_proxy, _type, event| {
-                    transform(event);
-                    None
+                |_proxy, ty, event| {
+                    match ty {
+                        // The system disables a tap whose callback stalled or
+                        // when the user input times out; switch it back on.
+                        CGEventType::TapDisabledByTimeout
+                        | CGEventType::TapDisabledByUserInput => {
+                            let port = TAP_PORT.load(Ordering::Acquire);
+                            if !port.is_null() {
+                                unsafe { CGEventTapEnable(port, true) };
+                            }
+                        }
+                        _ => transform(event),
+                    }
+                    None // keep the (possibly mutated-in-place) event
                 },
             ) {
                 Ok(t) => t,
                 Err(_) => {
-                    eprintln!("mouse-engine: failed to create event tap on worker thread");
+                    let _ = tx.send(Err(PERMISSION_HELP.to_string()));
                     return;
                 }
             };
@@ -162,19 +175,30 @@ pub fn start() -> Result<(), String> {
             let loop_source = match tap.mach_port.create_runloop_source(0) {
                 Ok(s) => s,
                 Err(_) => {
-                    eprintln!("mouse-engine: failed to create runloop source");
+                    let _ = tx.send(Err("mouse-engine: failed to create runloop source".into()));
                     return;
                 }
             };
+            TAP_PORT.store(tap.mach_port.as_concrete_TypeRef(), Ordering::Release);
             let run_loop = CFRunLoop::get_current();
             unsafe {
                 run_loop.add_source(&loop_source, kCFRunLoopCommonModes);
             }
             tap.enable();
+            let _ = tx.send(Ok(()));
             CFRunLoop::run_current();
-        })
-        .map_err(|e| format!("Failed to spawn mouse-engine thread: {e}"))?;
+        });
 
-    let _ = STARTED.set(true);
-    Ok(())
+    let result = match spawned {
+        Err(e) => Err(format!("Failed to spawn mouse-engine thread: {e}")),
+        Ok(_) => match rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(r) => r,
+            Err(_) => Err("mouse-engine: tap thread did not report back".into()),
+        },
+    };
+    if result.is_err() {
+        // Let a later attempt (after the user grants Accessibility) try again.
+        STARTED.store(false, Ordering::Release);
+    }
+    result
 }

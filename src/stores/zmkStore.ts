@@ -175,6 +175,10 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
   updateLayerKey: (layerIndex, keyPos, newBinding) =>
     set((state) => {
       if (!state.keymap) return state;
+      // A position outside the layer's binding list would create a sparse
+      // array and force the serializer into a full rewrite — refuse instead.
+      const target = state.keymap.layers[layerIndex];
+      if (!target || keyPos < 0 || keyPos >= target.keys.length) return state;
       const layers = state.keymap.layers.map((layer, i) => {
         if (i !== layerIndex) return layer;
         const newKeys = [...layer.keys];

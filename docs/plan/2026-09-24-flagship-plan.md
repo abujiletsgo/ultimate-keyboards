@@ -107,9 +107,45 @@ Backlog (not scheduled): visual layout builder; git push from the app; keymap.c 
 ## 3. Routing (AF)
 Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dirty registry design): Fable/high. Execution-loop heavy (2.2 migrations, 2.7 copy pass, 0.9 cleanup, 1.5 QMK, 5.1 builder): Sol/high via codex. Everyday build: Sonnet/medium. Mechanical (fixture collection, token replacement): Haiku.
 
-## 4. Open decisions for Tom
+## 4. Decisions recorded at the plan gate (2026-09-24)
+
+| Decision | Answer |
+|---|---|
+| Plan v2 | Approved; Phase 0 started on branch `phase-0-safe-local-preview` |
+| Platforms v1 | macOS only; Windows/Linux deferred to Phase 6 |
+| License | MIT |
+| Apple Developer Program | Not now — Phase 6.1 (signed public macOS build) is blocked until enrollment; all other phases proceed |
+| Codex planning lane | Degraded on 2026-09-24 (tool host timeouts); critique obtained with sources inlined |
+
+## 4b. Original open decisions
 1. Product name and bundle identifier domain (`com.ultimatekeyboards.app` needs a domain you control for signing/updater).
 2. Apple Developer Program ($99/yr) — required for Phase 6.1; nothing public before that.
 3. Windows/Linux in scope for v1, or macOS-only first? (Karabiner + Mouse sections are macOS-only by nature.)
 4. License: MIT (matches keymap-drawer/keymap-editor ecosystem) or keep private?
 5. Phase 5 (visual builder) may be cut if importers + catalogue cover users; decide after Phase 1.
+
+## 5. Notes from Tom during Phase 0 (2026-09-24)
+
+| Note | Where it lands |
+|---|---|
+| Minimal icon/logo: app icon set (icns/ico/png), menu-bar template glyph, in-app logo mark | Phase 3 (identity task 3.8, alongside the design-token pass); replaces the hand-drawn tray glyph in `lib.rs` |
+| Keyboards must be add / edit / rename / delete | Phase 1 task 1.1 (registry + Settings wizard); confirmed in scope |
+| Mouse and Pointing should be per-keyboard, not global sections | Phase 1: a keyboard becomes the top-level object with Keymap / Combos / Pointing tabs (Pointing only when the descriptor has a pointing device). The macOS scroll engine is host-level; decide at the Phase 1 gate whether it lives under a "This Mac" section with the Karabiner tools or under each keyboard's Pointing tab as "host scroll" |
+
+## 6. Phase 0 execution log
+
+- macOS Cmd-Q never reaches Tauri: tao does not implement `applicationShouldTerminate`, so the process terminates with no `ExitRequested` (OBSERVED in tao 0.35.3 and tauri-runtime-wry 2.11.4 sources). The old "restore keyboard on quit" therefore never ran on Cmd-Q. Fix: the app now sets its own menu whose Quit item (Cmd+Q) and the tray Quit both go through `request_quit`, which asks about unsaved edits and then calls `exit`, where the keyboard is restored.
+
+### Phase 0 verification (2026-09-24, packaged release build, driven via `orca computer`)
+
+| check | result |
+|---|---|
+| tsc / bun test / cargo check | clean / 9 pass / clean |
+| dev bridge | no creds 403 · foreign Origin 403 · bogus token 403 · real token + same origin 200 · real token + path outside ~/Documents 403 |
+| keymap loads in packaged app | yes (first launch after build took ~15 s to render; second launch 8 s — watch in Phase 1) |
+| edit key → Cmd-Q | native "Unsaved changes" dialog (Discard and Quit / Cancel); Cancel keeps app alive and dirty |
+| Save | exactly one line changed on disk; `corne_tp.keymap.bak` created; "Restore backup" button appears |
+| Restore backup | disk byte-identical to git; a second restore swaps back (restore is itself undoable) |
+| Cmd-Q with nothing unsaved | app exits; `karabiner.json` checksum unchanged before/after |
+| NOT verified | crash-marker keyboard restore (would disable Tom's keyboard mid-session); mouse-engine re-enable after a stall; persisted-scope grant via the file picker (exercised in Phase 1 with the folder picker); Windows/Linux (out of scope) |
+| deferred to Phase 1 | audit F1/F2/F8 (registry, per-keyboard layout, seeded Karabiner rules) |

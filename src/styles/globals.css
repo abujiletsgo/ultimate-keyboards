@@ -254,17 +254,7 @@ select {
   box-shadow: var(--shadow-popover), var(--glass-highlight);
 }
 
-.glass-hover {
-  transition: background var(--dur-1) var(--ease-out),
-              border-color var(--dur-1) var(--ease-out),
-              transform var(--dur-2) var(--ease-out),
-              box-shadow var(--dur-2) var(--ease-out);
-}
 
-.glass-hover:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
-}
 
 /* Legacy panel names — now glass */
 .panel {
@@ -357,7 +347,6 @@ select {
 }
 
 .btn-sm { height: var(--ctrl-sm); padding: 0 10px; font-size: var(--text-11); border-radius: var(--r-sm); }
-.btn-lg { height: var(--ctrl-lg); padding: 0 18px; }
 
 /* ═══════════════════════════════════════════════════════════════════════
    Segmented control — glass track, glowing active thumb
@@ -514,7 +503,6 @@ select {
   color: var(--text);
 }
 
-.toolbar-actions { display: flex; align-items: center; gap: var(--sp-2); }
 
 .section-header {
   display: flex;
@@ -566,7 +554,6 @@ select {
 
 .tag-accent  { background: var(--accent-soft); border-color: rgba(45, 212, 191, 0.30); color: var(--accent-hover); }
 .tag-success { background: rgba(74, 222, 128, 0.14); border-color: rgba(74, 222, 128, 0.25); color: var(--success); }
-.tag-danger  { background: rgba(251, 113, 133, 0.14); border-color: rgba(251, 113, 133, 0.25); color: var(--danger); }
 
 .mono {
   font-family: var(--font-mono);
@@ -628,11 +615,6 @@ select {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@keyframes pop {
-  0%   { transform: scale(0.96); }
-  55%  { transform: scale(1.03); }
-  100% { transform: scale(1); }
-}
 
 @keyframes glow-pulse {
   0%, 100% { box-shadow: 0 0 12px rgba(45, 212, 191, 0.25); }
@@ -645,9 +627,7 @@ select {
 }
 
 .anim-fade-up  { animation: fade-up var(--dur-3) var(--ease-out) both; }
-.anim-fade-in  { animation: fade-in var(--dur-2) var(--ease-out) both; }
 .anim-scale-in { animation: scale-in var(--dur-2) var(--ease-spring) both; }
-.anim-pop      { animation: pop var(--dur-2) var(--ease-spring) both; }
 
 /* Staggered entrance: set style={{ '--i': n }} on children */
 .anim-stagger > * {
