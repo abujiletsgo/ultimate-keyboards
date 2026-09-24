@@ -107,7 +107,17 @@ Backlog (not scheduled): visual layout builder; git push from the app; keymap.c 
 ## 3. Routing (AF)
 Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dirty registry design): Fable/high. Execution-loop heavy (2.2 migrations, 2.7 copy pass, 0.9 cleanup, 1.5 QMK, 5.1 builder): Sol/high via codex. Everyday build: Sonnet/medium. Mechanical (fixture collection, token replacement): Haiku.
 
-## 4. Open decisions for Tom
+## 4. Decisions recorded at the plan gate (2026-09-24)
+
+| Decision | Answer |
+|---|---|
+| Plan v2 | Approved; Phase 0 started on branch `phase-0-safe-local-preview` |
+| Platforms v1 | macOS only; Windows/Linux deferred to Phase 6 |
+| License | MIT |
+| Apple Developer Program | Not now — Phase 6.1 (signed public macOS build) is blocked until enrollment; all other phases proceed |
+| Codex planning lane | Degraded on 2026-09-24 (tool host timeouts); critique obtained with sources inlined |
+
+## 4b. Original open decisions
 1. Product name and bundle identifier domain (`com.ultimatekeyboards.app` needs a domain you control for signing/updater).
 2. Apple Developer Program ($99/yr) — required for Phase 6.1; nothing public before that.
 3. Windows/Linux in scope for v1, or macOS-only first? (Karabiner + Mouse sections are macOS-only by nature.)
