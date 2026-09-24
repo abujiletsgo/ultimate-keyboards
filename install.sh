@@ -6,14 +6,15 @@ echo "==> Checking dependencies for Ultimate Keyboards"
 
 # ── Homebrew ──────────────────────────────────────────────────────────────────
 if ! command -v brew &>/dev/null; then
-  echo "Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  echo "Homebrew is required. Install it from https://brew.sh (review the script there), then re-run this installer."
+  exit 1
 fi
 
 # ── Rust / Cargo (required for Tauri) ────────────────────────────────────────
 if ! command -v cargo &>/dev/null; then
-  echo "Installing Rust..."
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  echo "Installing Rust via Homebrew (no remote scripts are piped to a shell)..."
+  brew install rustup
+  rustup-init -y --no-modify-path
   source "$HOME/.cargo/env"
 fi
 
@@ -34,7 +35,7 @@ fi
 # ── Node modules ──────────────────────────────────────────────────────────────
 echo "==> Installing JS dependencies..."
 cd "$(dirname "$0")"
-bun install
+bun install --frozen-lockfile
 
 # ── Pre-create Karabiner complex_modifications dir ────────────────────────────
 mkdir -p ~/.config/karabiner/assets/complex_modifications

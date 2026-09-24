@@ -7,6 +7,9 @@
 
 import { getHandle, getFile } from './fs-handles'
 
+// Injected by vite `define` (dev server only); undefined in production builds.
+declare const __DEV_FS_TOKEN__: string | undefined
+
 export async function readTextFile(path: string): Promise<string> {
   const handle = getHandle(path)
   if (handle) {
@@ -37,7 +40,10 @@ export async function writeTextFile(path: string, contents: string): Promise<voi
   if (import.meta.env.DEV && path.startsWith('/')) {
     const res = await fetch('/__fs/write', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Dev-Fs-Token': typeof __DEV_FS_TOKEN__ === 'string' ? __DEV_FS_TOKEN__ : '',
+      },
       body: JSON.stringify({ path, contents }),
     })
     if (res.ok) return
@@ -56,4 +62,19 @@ export async function writeTextFile(path: string, contents: string): Promise<voi
 
 export async function mkdir(_path: string, _options?: { recursive?: boolean }): Promise<void> {
   // No-op in browser
+}
+
+// The atomic-save helpers in lib/io.ts only call these on desktop; in the
+// browser there is no rename/copy, so saves write in place.
+export async function exists(_path: string): Promise<boolean> {
+  return false
+}
+export async function rename(_from: string, _to: string): Promise<void> {
+  throw new Error('rename is not available in browser mode')
+}
+export async function copyFile(_from: string, _to: string): Promise<void> {
+  throw new Error('copyFile is not available in browser mode')
+}
+export async function remove(_path: string): Promise<void> {
+  throw new Error('remove is not available in browser mode')
 }

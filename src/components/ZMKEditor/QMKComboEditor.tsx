@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { readText, saveText, ValidationError } from '../../lib/io'
 import { parseQMKCombos, updateQMKCombosInSource, makeComboNames, type QMKCombo } from '../../lib/qmkComboParser'
 import { useQMKStore } from '../../stores/qmkStore'
 import QMKKeyboard from './QMKKeyboard'
@@ -165,7 +165,7 @@ const QMKComboEditor: React.FC = () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const text = await readTextFile(KEYMAP_C_PATH)
+      const text = await readText(KEYMAP_C_PATH)
       setSource(text)
       setCombos(parseQMKCombos(text))
     } catch (err) {
@@ -180,13 +180,19 @@ const QMKComboEditor: React.FC = () => {
   const saveBack = async (newCombos: QMKCombo[]) => {
     try {
       const newSource = updateQMKCombosInSource(source, newCombos)
-      await writeTextFile(KEYMAP_C_PATH, newSource)
+      await saveText(KEYMAP_C_PATH, newSource, {
+        validate: (out) => {
+          const n = parseQMKCombos(out).length
+          return n === newCombos.length ? null : `combo count would be ${n}, expected ${newCombos.length}`
+        },
+      })
       setSource(newSource)
       setCombos(newCombos)
       setStatus({ msg: 'Saved to keymap.c', ok: true })
       setTimeout(() => setStatus(null), 2500)
     } catch (err) {
-      setStatus({ msg: `Error: ${err}`, ok: false })
+      const msg = err instanceof ValidationError ? `Not saved — ${err.message}` : `Error: ${err}`
+      setStatus({ msg, ok: false })
     }
   }
 

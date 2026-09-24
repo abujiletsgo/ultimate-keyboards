@@ -1,6 +1,17 @@
 import { useState, useEffect, Suspense, lazy, Component, type ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
+import { useQMKStore } from "@/stores/qmkStore";
+import { registerDirtySource, syncDirty, isAnyDirty } from "@/lib/dirty";
+import { IS_TAURI } from "@/lib/io";
+
+// Sections with a store register once; component-held state (Pointing)
+// registers from its own effect.
+registerDirtySource("zmk", () => useZMKStore.getState().isDirty);
+registerDirtySource("qmk", () => useQMKStore.getState().isDirty);
+useZMKStore.subscribe(syncDirty);
+useQMKStore.subscribe(syncDirty);
 
 const ZMKEditor = lazy(() => import("@/components/ZMKEditor"));
 const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
@@ -85,15 +96,34 @@ export default function App() {
     localStorage.setItem(SECTION_KEY, s);
   };
 
-  // Guard against silently losing unsaved keymap edits on reload/close
+  // Guard against silently losing unsaved edits on reload/close (web build;
+  // the desktop quit path is handled natively via the dirty registry).
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (useZMKStore.getState().isDirty) {
+      if (isAnyDirty()) {
         e.preventDefault();
       }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Resume the native scroll engine at launch from the persisted config, so
+  // it does not stay off until the user happens to open the Mouse section.
+  useEffect(() => {
+    if (!IS_TAURI) return;
+    try {
+      const raw = localStorage.getItem("uk.mouseConfig");
+      if (!raw) return;
+      const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number };
+      if (config.enabled) {
+        invoke("set_mouse_config", {
+          config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 },
+        }).catch(() => {});
+      }
+    } catch {
+      /* ignore corrupt config */
+    }
   }, []);
 
   return (

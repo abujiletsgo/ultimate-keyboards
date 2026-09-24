@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 
@@ -8,6 +9,7 @@ use tauri::{
     tray::TrayIconBuilder,
     Emitter, Manager, RunEvent, State, WindowEvent,
 };
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 /// `hidutil --matching` selector for the MacBook's built-in keyboard. The product
 /// string is the same across Intel and Apple-Silicon MacBooks.
@@ -21,29 +23,13 @@ struct AppState {
     tray: tauri::tray::TrayIcon<tauri::Wry>,
     /// The tray menu's checkbox item — kept so both code paths stay in sync.
     toggle_item: tauri::menu::CheckMenuItem<tauri::Wry>,
-}
-
-#[tauri::command]
-fn run_shell_command(command: String, args: Vec<String>) -> Result<String, String> {
-    let output = Command::new(&command)
-        .args(&args)
-        .output()
-        .map_err(|e| format!("Failed to execute command '{}': {}", command, e))?;
-
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        Ok(stdout)
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        Err(format!(
-            "Command '{}' failed with status {:?}.\nstderr: {}\nstdout: {}",
-            command,
-            output.status.code(),
-            stderr,
-            stdout
-        ))
-    }
+    /// Marker file that exists while the built-in keyboard is disabled, so a
+    /// crash (or SIGKILL) never leaves the user with a dead keyboard: the next
+    /// launch sees the marker and restores.
+    disabled_marker: PathBuf,
+    /// `true` while the frontend has unsaved edits (any section). Consulted on
+    /// quit so Cmd-Q / tray Quit never silently discard work.
+    dirty: Mutex<bool>,
 }
 
 /// Build the `hidutil` `UserKeyMapping` payload. When disabling, every keyboard
@@ -127,18 +113,42 @@ fn patch_karabiner_disable_builtin(disabled: bool) {
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0);
                 if is_kbd && vendor != APPLE_VENDOR_ID {
-                    device["disable_built_in_keyboard_if_exists"] = serde_json::Value::Bool(disabled);
-                    changed = true;
+                    let current = device
+                        .get("disable_built_in_keyboard_if_exists")
+                        .and_then(|v| v.as_bool());
+                    if current != Some(disabled) {
+                        device["disable_built_in_keyboard_if_exists"] =
+                            serde_json::Value::Bool(disabled);
+                        changed = true;
+                    }
                 }
             }
         }
     }
 
-    if changed {
-        if let Ok(pretty) = serde_json::to_string_pretty(&json) {
-            let _ = std::fs::write(&path, format!("{pretty}\n"));
-        }
+    // Nothing to do → never touch the file (a no-op toggle or quit must leave
+    // karabiner.json byte-identical).
+    if !changed {
+        return;
     }
+    let Ok(pretty) = serde_json::to_string_pretty(&json) else { return };
+    let _ = write_atomic_with_backup(&path, &format!("{pretty}\n"), &text);
+}
+
+/// Write `contents` to `path` without ever leaving a truncated file behind:
+/// keep one `.bak` of the previous contents, write a sibling temp file, then
+/// rename it over the target (atomic on the same filesystem).
+fn write_atomic_with_backup(
+    path: &std::path::Path,
+    contents: &str,
+    previous: &str,
+) -> std::io::Result<()> {
+    let ext = path.extension().and_then(|e| e.to_str());
+    let bak = path.with_extension(ext.map(|e| format!("{e}.bak")).unwrap_or_else(|| "bak".into()));
+    let tmp = path.with_extension(ext.map(|e| format!("{e}.tmp")).unwrap_or_else(|| "tmp".into()));
+    std::fs::write(&bak, previous)?;
+    std::fs::write(&tmp, contents)?;
+    std::fs::rename(&tmp, path)
 }
 
 // ── Status-bar icon artwork ─────────────────────────────────────────────────
@@ -200,6 +210,14 @@ fn set_builtin_state(app: &tauri::AppHandle, disabled: bool) -> Result<(), Strin
 
     let state: State<AppState> = app.state();
     *state.builtin_disabled.lock().unwrap() = disabled;
+    if disabled {
+        if let Some(dir) = state.disabled_marker.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::write(&state.disabled_marker, b"1");
+    } else {
+        let _ = std::fs::remove_file(&state.disabled_marker);
+    }
     let _ = state.toggle_item.set_checked(disabled);
     let _ = state.tray.set_tooltip(Some(if disabled {
         "Ultimate Keyboards — built-in keyboard OFF"
@@ -223,6 +241,12 @@ fn is_builtin_keyboard_disabled(state: State<AppState>) -> bool {
 #[tauri::command]
 fn set_builtin_keyboard_disabled(app: tauri::AppHandle, disabled: bool) -> Result<(), String> {
     set_builtin_state(&app, disabled)
+}
+
+/// The frontend reports whether any section has unsaved edits.
+#[tauri::command]
+fn set_dirty(state: State<AppState>, dirty: bool) {
+    *state.dirty.lock().unwrap() = dirty;
 }
 
 // ── Mouse / scroll engine ───────────────────────────────────────────────────
@@ -261,11 +285,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
-            run_shell_command,
             is_builtin_keyboard_disabled,
             set_builtin_keyboard_disabled,
+            set_dirty,
             set_mouse_config,
             get_mouse_config
         ])
@@ -320,11 +344,30 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            let disabled_marker = app
+                .path()
+                .app_data_dir()
+                .map(|d| d.join("builtin-keyboard-disabled"))
+                .unwrap_or_else(|_| {
+                    std::env::temp_dir().join("ultimate-keyboards-builtin-disabled")
+                });
+            let marker_present = disabled_marker.exists();
+
             app.manage(AppState {
                 builtin_disabled: Mutex::new(false),
                 tray,
                 toggle_item,
+                disabled_marker,
+                dirty: Mutex::new(false),
             });
+
+            // A previous run disabled the built-in keyboard and never restored
+            // it (crash, SIGKILL, power loss) — restore now, before anything else.
+            if marker_present {
+                if let Err(e) = set_builtin_state(app.handle(), false) {
+                    eprintln!("startup restore of built-in keyboard failed: {e}");
+                }
+            }
 
             #[cfg(debug_assertions)]
             {
@@ -343,7 +386,34 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
         .run(|app, event| {
-            if let RunEvent::ExitRequested { .. } = event {
+            if let RunEvent::ExitRequested { api, .. } = event {
+                // Unsaved edits: never quit silently. Keep the app alive, ask
+                // asynchronously (a blocking dialog must not run on the main
+                // thread), and re-issue the exit once the user confirms.
+                let dirty = *app.state::<AppState>().dirty.lock().unwrap();
+                if dirty {
+                    api.prevent_exit();
+                    let handle = app.clone();
+                    if let Some(w) = app.get_webview_window("main") {
+                        let _ = w.show();
+                        let _ = w.set_focus();
+                    }
+                    app.dialog()
+                        .message("You have unsaved changes. Quit anyway and discard them?")
+                        .title("Unsaved changes")
+                        .kind(MessageDialogKind::Warning)
+                        .buttons(MessageDialogButtons::OkCancelCustom(
+                            "Discard and Quit".into(),
+                            "Cancel".into(),
+                        ))
+                        .show(move |confirmed| {
+                            if confirmed {
+                                *handle.state::<AppState>().dirty.lock().unwrap() = false;
+                                handle.exit(0);
+                            }
+                        });
+                    return;
+                }
                 // App is actually quitting (Cmd-Q / tray quit) — restore the keyboard.
                 let _ = set_builtin_state(app, false);
             }

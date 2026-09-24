@@ -61,9 +61,24 @@ const LEGEND = [
 export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick, onBindingChange }: Props) {
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
+  // The board geometry is fixed at CROSSES_LAYOUT.length keys (until the
+  // per-keyboard layout registry lands); a keymap with a different key count
+  // must be shown read-only or a click on a phantom key would corrupt it.
+  const keyCount = layer?.keys.length ?? CROSSES_LAYOUT.length
+  const mismatch = keyCount !== CROSSES_LAYOUT.length
+  const editable = !mismatch
 
   return (
     <div style={{ padding: '16px 0' }}>
+      {mismatch && (
+        <div className="panel-inset" role="alert" style={{
+          padding: '10px 14px', marginBottom: 12, fontSize: 12,
+          color: 'var(--warning)', borderColor: 'rgba(251,191,36,0.35)',
+        }}>
+          Layout mismatch: this keymap has {keyCount} keys per layer but the board layout has {CROSSES_LAYOUT.length}.
+          Editing is disabled so the file can't be corrupted.
+        </div>
+      )}
       {/* Legend */}
       {onBindingChange && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 10, color: 'var(--text-muted)', flexWrap: 'wrap', paddingLeft: 2 }}>
@@ -124,6 +139,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
                 vars.dashed && !isSelected ? 'dashed' : '',
               ].filter(Boolean).join(' ')}
               onClick={(e) => {
+                  if (!editable) return
                   onKeyClick?.(key.pos)
                   if (onBindingChange) {
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
@@ -138,7 +154,7 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
                   '--key-text': vars.text,
                 }),
                 fontSize: label.length <= 3 ? 11 : label.length <= 5 ? 9 : 8,
-                cursor: (onKeyClick || onBindingChange) ? 'pointer' : 'default',
+                cursor: editable && (onKeyClick || onBindingChange) ? 'pointer' : 'default',
                 overflow: 'hidden',
               } as CSSProperties}
             >

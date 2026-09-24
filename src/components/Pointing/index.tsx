@@ -3,8 +3,9 @@
  * Reads the shield's right-side overlay, exposes the device's real
  * devicetree options as controls, and writes back minimal diffs.
  */
-import { useEffect, useMemo, useState } from 'react'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { readText, saveText, ValidationError } from '@/lib/io'
+import { registerDirtySource, syncDirty } from '@/lib/dirty'
 import { POINTING_DEVICES, type PointingDevice } from '@/lib/pointingConfig'
 import {
   findNode, getBoolProp, setBoolProp, getIntProp, setIntProp,
@@ -207,6 +208,11 @@ export default function Pointing() {
   const [pendingSwitch, setPendingSwitch] = useState<PointingDevice | null>(null)
 
   const dirty = !!(orig && values && JSON.stringify(orig) !== JSON.stringify(values))
+  // Report unsaved edits app-wide (quit guard).
+  const dirtyRef = useRef(false)
+  dirtyRef.current = dirty
+  useEffect(() => registerDirtySource('pointing', () => dirtyRef.current), [])
+  useEffect(() => { syncDirty() }, [dirty])
 
   // Guard reload/close while dirty (matches the keymap editor's behavior)
   useEffect(() => {
@@ -228,7 +234,7 @@ export default function Pointing() {
 
   const load = (d: PointingDevice) => {
     setSource(null); setOrig(null); setValues(null); setLoadError(null)
-    readTextFile(d.overlayPath)
+    readText(d.overlayPath)
       .then(text => {
         setSource(text)
         const v = parseValues(text, d)
@@ -244,7 +250,12 @@ export default function Pointing() {
     if (!source || !orig || !values) return
     try {
       const updated = applyValues(source, dev, orig, values)
-      await writeTextFile(dev.overlayPath, updated)
+      await saveText(dev.overlayPath, updated, {
+        validate: (out) => {
+          try { parseValues(out, dev) } catch (e) { return `output does not parse: ${e}` }
+          return null
+        },
+      })
       setSource(updated)
       const v = parseValues(updated, dev)
       setOrig(v)
@@ -252,7 +263,8 @@ export default function Pointing() {
       setStatus({ msg: 'Saved! Rebuild + flash firmware to apply.', ok: true })
       setTimeout(() => setStatus(null), 3500)
     } catch (err) {
-      setStatus({ msg: `Error saving: ${err}`, ok: false })
+      const msg = err instanceof ValidationError ? `Not saved — ${err.message}` : `Error saving: ${err}`
+      setStatus({ msg, ok: false })
     }
   }
 
