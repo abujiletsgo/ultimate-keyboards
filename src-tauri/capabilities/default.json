@@ -9,6 +9,7 @@
     "core:default",
     "dialog:default",
     "fs:default",
+    "store:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [
@@ -59,6 +60,14 @@
     },
     {
       "identifier": "fs:allow-stat",
+      "allow": [
+        {
+          "path": "$DOCUMENT/**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
       "allow": [
         {
           "path": "$DOCUMENT/**"

@@ -3,36 +3,23 @@ import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
 import { useQMKStore } from "@/stores/qmkStore";
-import { registerDirtySource, syncDirty, isAnyDirty } from "@/lib/dirty";
+import { useRegistryStore } from "@/stores/registryStore";
+import { syncDirty, isAnyDirty, dirtySources, saveAllDirty, discardAllDirty, onDirtyChange } from "@/lib/dirty";
 import { IS_TAURI } from "@/lib/io";
+import { loadSection, saveSection, sameSection, type Section } from "@/lib/nav";
 
-// Sections with a store register once; component-held state (Pointing)
-// registers from its own effect.
-registerDirtySource("zmk", () => useZMKStore.getState().isDirty);
-registerDirtySource("qmk", () => useQMKStore.getState().isDirty);
+const KeyboardSection = lazy(() => import("@/components/Keyboard/KeyboardSection"));
+const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
+const Mouse = lazy(() => import("@/components/Mouse"));
+const Settings = lazy(() => import("@/components/Settings"));
+const Onboarding = lazy(() => import("@/components/Onboarding"));
+
 useZMKStore.subscribe(syncDirty);
 useQMKStore.subscribe(syncDirty);
 
-const ZMKEditor = lazy(() => import("@/components/ZMKEditor"));
-const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
-const Pointing = lazy(() => import("@/components/Pointing"));
-const Mouse = lazy(() => import("@/components/Mouse"));
-const Settings = lazy(() => import("@/components/Settings"));
-
-export type Section = "zmk" | "karabiner" | "pointing" | "mouse" | "settings";
-
 function LoadingFallback() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        gap: 14,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 14 }}>
       <div className="skeleton" style={{ width: 220, height: 14 }} />
       <div className="skeleton" style={{ width: 320, height: 14 }} />
       <div className="skeleton" style={{ width: 260, height: 14 }} />
@@ -40,41 +27,21 @@ function LoadingFallback() {
   );
 }
 
-class SectionErrorBoundary extends Component<
-  { section: string; children: ReactNode },
-  { error: Error | null }
-> {
+class SectionErrorBoundary extends Component<{ section: string; children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
-
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
-
+  static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidUpdate(prev: { section: string }) {
-    // Reset when navigating to a different section
-    if (prev.section !== this.props.section && this.state.error) {
-      this.setState({ error: null });
-    }
+    if (prev.section !== this.props.section && this.state.error) this.setState({ error: null });
   }
-
   render() {
     if (this.state.error) {
       return (
-        <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center",
-          justifyContent: "center", height: "100%", gap: 14, padding: 40,
-        }}>
-          <div style={{ fontSize: 36 }}>⚠️</div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 14, padding: 40 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Something went wrong in this section</div>
-          <div className="panel-inset" style={{
-            padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: 11,
-            color: "var(--danger)", maxWidth: 560, wordBreak: "break-word",
-          }}>
+          <div className="panel-inset" style={{ padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--danger)", maxWidth: 560, wordBreak: "break-word" }}>
             {String(this.state.error)}
           </div>
-          <button className="btn btn-secondary" onClick={() => this.setState({ error: null })}>
-            Try again
-          </button>
+          <button className="btn btn-secondary" onClick={() => this.setState({ error: null })}>Try again</button>
         </div>
       );
     }
@@ -82,34 +49,60 @@ class SectionErrorBoundary extends Component<
   }
 }
 
-const SECTION_KEY = "uk.activeSection";
-const SECTIONS: Section[] = ["zmk", "karabiner", "pointing", "mouse", "settings"];
-
 export default function App() {
-  const [activeSection, setActiveSection] = useState<Section>(() => {
-    const saved = localStorage.getItem(SECTION_KEY) as Section | null;
-    return saved && SECTIONS.includes(saved) ? saved : "zmk";
-  });
+  const registry = useRegistryStore();
+  const [section, setSection] = useState<Section | null>(null);
+  const [pending, setPending] = useState<Section | null>(null);
+  const [dirtyNames, setDirtyNames] = useState<string[]>([]);
 
+  // Load the registry, then resolve the initial section.
+  useEffect(() => {
+    registry.load().then(() => {
+      const { keyboards, selectedId } = useRegistryStore.getState();
+      const saved = loadSection();
+      if (saved && (saved.kind !== 'keyboard' || keyboards.some(k => k.id === saved.id))) { setSection(saved); return; }
+      if (keyboards.length === 0) { setSection({ kind: 'onboarding' }); return; }
+      setSection({ kind: 'keyboard', id: selectedId ?? keyboards[0].id });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => onDirtyChange(() => setDirtyNames(dirtySources())), []);
+
+  // A removed keyboard or an emptied registry moves the user somewhere valid.
+  useEffect(() => {
+    if (!section || !registry.loaded) return;
+    if (section.kind === 'keyboard' && !registry.keyboards.some(k => k.id === section.id)) {
+      setSection(registry.keyboards[0] ? { kind: 'keyboard', id: registry.keyboards[0].id } : { kind: 'onboarding' });
+    }
+    if (section.kind === 'onboarding' && registry.keyboards.length > 0) {
+      setSection({ kind: 'keyboard', id: registry.keyboards[0].id });
+    }
+  }, [section, registry.keyboards, registry.loaded]);
+
+  const go = (s: Section) => {
+    setPending(null);
+    setSection(s);
+    saveSection(s);
+    if (s.kind === 'keyboard') registry.select(s.id);
+  };
+
+  /** Navigate, but hold at a banner when leaving unsaved edits behind. */
   const navigate = (s: Section) => {
-    setActiveSection(s);
-    localStorage.setItem(SECTION_KEY, s);
+    if (section && sameSection(s, section)) { if (s.kind === 'settings' && s.add) setSection(s); return; }
+    if (isAnyDirty()) { setPending(s); return; }
+    go(s);
   };
 
   // Guard against silently losing unsaved edits on reload/close (web build;
   // the desktop quit path is handled natively via the dirty registry).
   useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isAnyDirty()) {
-        e.preventDefault();
-      }
-    };
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { if (isAnyDirty()) e.preventDefault(); };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
-  // Resume the native scroll engine at launch from the persisted config, so
-  // it does not stay off until the user happens to open the Mouse section.
+  // Resume the native scroll engine at launch from the persisted config.
   useEffect(() => {
     if (!IS_TAURI) return;
     try {
@@ -117,28 +110,51 @@ export default function App() {
       if (!raw) return;
       const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number };
       if (config.enabled) {
-        invoke("set_mouse_config", {
-          config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 },
-        }).catch(() => {});
+        invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 } }).catch(() => {});
       }
-    } catch {
-      /* ignore corrupt config */
-    }
+    } catch { /* ignore corrupt config */ }
   }, []);
+
+  // Cmd+S saves everything dirty.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (isAnyDirty()) saveAllDirty().catch(err => console.error(err));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const key = section ? (section.kind === 'keyboard' ? `keyboard:${section.id}` : section.kind) : 'loading';
+  const activeKeyboard = section?.kind === 'keyboard' ? registry.keyboards.find(k => k.id === section.id) ?? null : null;
 
   return (
     <div className="app-layout">
-      <Sidebar active={activeSection} onNavigate={navigate} />
+      <Sidebar keyboards={registry.keyboards} active={section ?? { kind: 'onboarding' }} onNavigate={navigate} />
       <main className="app-main">
+        {pending && (
+          <div className="glass anim-fade-up" role="alertdialog" style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            margin: '12px 24px 0', padding: '10px 14px', fontSize: 12,
+            borderColor: 'rgba(251,191,36,0.35)',
+          }}>
+            <span>Unsaved changes in <strong>{dirtyNames.join(', ') || 'this section'}</strong>.</span>
+            <button className="btn btn-secondary btn-sm" onClick={async () => { try { await saveAllDirty(); go(pending) } catch (e) { console.error(e) } }}>Save, then switch</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => { discardAllDirty(); go(pending) }}>Discard &amp; switch</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPending(null)}>Cancel</button>
+          </div>
+        )}
         <Suspense fallback={<LoadingFallback />}>
-          {/* key remounts the wrapper so each section animates in */}
-          <SectionErrorBoundary section={activeSection}>
-            <div key={activeSection} className="anim-fade-up" style={{ height: "100%" }}>
-              {activeSection === "zmk" && <ZMKEditor />}
-              {activeSection === "karabiner" && <KarabinerEditor />}
-              {activeSection === "pointing" && <Pointing />}
-              {activeSection === "mouse" && <Mouse />}
-              {activeSection === "settings" && <Settings />}
+          <SectionErrorBoundary section={key}>
+            <div key={key} className="anim-fade-up" style={{ height: "100%" }}>
+              {!section ? <LoadingFallback /> :
+                section.kind === 'keyboard' ? (activeKeyboard ? <KeyboardSection keyboard={activeKeyboard} onEditInSettings={() => navigate({ kind: 'settings' })} /> : <LoadingFallback />) :
+                section.kind === 'karabiner' ? <KarabinerEditor /> :
+                section.kind === 'mouse' ? <Mouse /> :
+                section.kind === 'settings' ? <Settings startAdd={section.add} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
+                <Onboarding onAddFromFolder={() => go({ kind: 'settings', add: true })} onAddFromFile={() => go({ kind: 'settings', add: true })} />}
             </div>
           </SectionErrorBoundary>
         </Suspense>

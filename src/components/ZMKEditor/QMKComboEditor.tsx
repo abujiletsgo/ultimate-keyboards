@@ -3,9 +3,7 @@ import { readText, saveText, ValidationError } from '../../lib/io'
 import { parseQMKCombos, updateQMKCombosInSource, makeComboNames, type QMKCombo } from '../../lib/qmkComboParser'
 import { useQMKStore } from '../../stores/qmkStore'
 import QMKKeyboard from './QMKKeyboard'
-
-const KEYMAP_C_PATH =
-  '/Users/tomkwon/Documents/splitkey2/corne_procyon/corne_procyon36/keymaps/default/keymap.c'
+import type { PhysicalLayout } from '@/lib/layout'
 
 const COMMON_TO_KEYS = [
   'KC_ENT', 'KC_ESC', 'KC_BSPC', 'KC_DEL', 'KC_TAB', 'KC_SPC',
@@ -49,7 +47,7 @@ interface ComboFormProps {
   onCancel: () => void
 }
 
-const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKeys, onSave, onCancel }) => {
+const ComboForm: React.FC<ComboFormProps & { layout?: PhysicalLayout }> = ({ editing, existingCombos, layerKeys, onSave, onCancel, layout }) => {
   const [fromKeys, setFromKeys] = useState<string[]>(editing?.fromKeys ?? [])
   const [toInput, setToInput] = useState(editing?.toKey ?? 'KC_ENT')
   const [error, setError] = useState('')
@@ -130,6 +128,7 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
           Click keys to add/remove from trigger — highlighted = selected
         </div>
         <QMKKeyboard
+          layout={layout}
           keys={layerKeys.length > 0 ? layerKeys : fallbackKeys}
           highlightedPositions={highlightedPositions}
           onKeyClick={handleKeyClick}
@@ -148,7 +147,8 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, existingCombos, layerKey
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-const QMKComboEditor: React.FC = () => {
+const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }> = ({ keymapCPath, layout }) => {
+  const KEYMAP_C_PATH = keymapCPath
   const { keymap } = useQMKStore()
   const layerKeys = keymap?.layers[0]?.keys ?? []
 
@@ -173,7 +173,7 @@ const QMKComboEditor: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [KEYMAP_C_PATH])
 
   useEffect(() => { loadSource() }, [loadSource])
 
@@ -262,6 +262,7 @@ const QMKComboEditor: React.FC = () => {
               : 'Hover a combo to see its keys'}
           </div>
           <QMKKeyboard
+            layout={layout}
             keys={layerKeys.length > 0 ? layerKeys : fallbackKeys}
             highlightedPositions={highlightedForHover}
           />
@@ -271,6 +272,7 @@ const QMKComboEditor: React.FC = () => {
       {/* Add/Edit forms */}
       {showAddForm && (
         <ComboForm
+          layout={layout}
           existingCombos={combos}
           layerKeys={layerKeys}
           onSave={handleAdd}
@@ -279,6 +281,7 @@ const QMKComboEditor: React.FC = () => {
       )}
       {editingCombo && (
         <ComboForm
+          layout={layout}
           editing={editingCombo}
           existingCombos={combos}
           layerKeys={layerKeys}

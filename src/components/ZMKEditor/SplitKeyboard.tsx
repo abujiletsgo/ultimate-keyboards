@@ -1,12 +1,14 @@
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import type { ZMKLayer } from '@/lib/zmkParser'
-import { CROSSES_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, KEY_UNIT, KEY_GAP } from '@/lib/crossesLayout'
-import ScaledBoard from '@/components/ScaledBoard'
+import PhysicalBoard, { type KeyVisual } from '@/components/board/PhysicalBoard'
+import { LEGACY_CROSSES, type PhysicalLayout } from '@/lib/layout'
 import BindingEditor from './BindingEditor'
 import { bindingLabel } from '@/lib/keyLabel'
 
 interface Props {
   layer: ZMKLayer | null
+  /** Physical layout to draw; defaults to the legacy 42-key Corne/Crosses geometry. */
+  layout?: PhysicalLayout
   highlightedPositions?: Set<number>
   onKeyClick?: (pos: number) => void
   onBindingChange?: (pos: number, newBinding: string) => void
@@ -46,8 +48,6 @@ function getKeyVars(binding: string): { bg?: string; border?: string; text?: str
   }
 }
 
-// Divider x position: centered in the split gap (left ends 6.2u, right starts 6.9u)
-const DIVIDER_X = 6.55 * (KEY_UNIT + KEY_GAP)
 
 const LEGEND = [
   { color: 'rgba(96,165,250,0.65)', label: 'Layer' },
@@ -58,15 +58,25 @@ const LEGEND = [
   { color: 'rgba(244,114,182,0.55)', label: 'Mouse' },
 ]
 
-export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick, onBindingChange }: Props) {
+export default function SplitKeyboard({ layer, layout = LEGACY_CROSSES, highlightedPositions, onKeyClick, onBindingChange }: Props) {
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
-  // The board geometry is fixed at CROSSES_LAYOUT.length keys (until the
-  // per-keyboard layout registry lands); a keymap with a different key count
-  // must be shown read-only or a click on a phantom key would corrupt it.
-  const keyCount = layer?.keys.length ?? CROSSES_LAYOUT.length
-  const mismatch = keyCount !== CROSSES_LAYOUT.length
+  // A keymap whose layers don't have one binding per layout key must be shown
+  // read-only, or a click on a phantom key would corrupt it.
+  const keyCount = layer?.keys.length ?? layout.keys.length
+  const mismatch = keyCount !== layout.keys.length
   const editable = !mismatch
+
+  const keyAt = (pos: number): KeyVisual => {
+    const binding = layer?.keys[pos] ?? '&trans'
+    const label = bindingLabel(binding)
+    const vars = getKeyVars(binding)
+    return {
+      label, title: binding,
+      bg: vars.bg, border: vars.border, text: vars.text, dashed: vars.dashed,
+      fontSize: label.length <= 3 ? 11 : label.length <= 5 ? 9 : 8,
+    }
+  }
 
   return (
     <div style={{ padding: '16px 0' }}>
@@ -75,8 +85,8 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
           padding: '10px 14px', marginBottom: 12, fontSize: 12,
           color: 'var(--warning)', borderColor: 'rgba(251,191,36,0.35)',
         }}>
-          Layout mismatch: this keymap has {keyCount} keys per layer but the board layout has {CROSSES_LAYOUT.length}.
-          Editing is disabled so the file can't be corrupted.
+          Layout mismatch: this keymap has {keyCount} keys per layer but the board layout has {layout.keys.length}.
+          Editing is disabled so the file can't be corrupted. Pick a matching layout in Settings.
         </div>
       )}
       {/* Legend */}
@@ -99,71 +109,19 @@ export default function SplitKeyboard({ layer, highlightedPositions, onKeyClick,
         </div>
       )}
 
-      {/* Keyboard body — scales with its container */}
-      <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
-      <div
-        className="glass"
-        style={{
-          position: 'relative',
-          width: BOARD_WIDTH,
-          height: BOARD_HEIGHT,
-          borderRadius: 16,
-          flexShrink: 0,
+      <PhysicalBoard
+        layout={layout}
+        keyAt={keyAt}
+        selected={highlighted}
+        editable={editable && !!(onKeyClick || onBindingChange)}
+        onKeyClick={(pos, el) => {
+          onKeyClick?.(pos)
+          if (onBindingChange) {
+            const rect = el.getBoundingClientRect()
+            setEditing({ pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
+          }
         }}
-      >
-        {/* Half divider line */}
-        <div style={{
-          position: 'absolute',
-          left: DIVIDER_X,
-          top: '8%',
-          width: 1,
-          height: '84%',
-          background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.10) 20%, rgba(255,255,255,0.10) 80%, transparent)',
-          pointerEvents: 'none',
-        }} />
-
-        {CROSSES_LAYOUT.map(key => {
-          const binding = layer?.keys[key.pos] ?? '&trans'
-          const label = bindingLabel(binding)
-          const vars = getKeyVars(binding)
-          const keyStyle = getKeyStyle(key)
-          const isSelected = highlighted.has(key.pos)
-
-          return (
-            <div
-              key={key.pos}
-              title={binding}
-              className={[
-                'keycap',
-                isSelected ? 'selected' : '',
-                vars.dashed && !isSelected ? 'dashed' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={(e) => {
-                  if (!editable) return
-                  onKeyClick?.(key.pos)
-                  if (onBindingChange) {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
-                  }
-                }}
-              style={{
-                ...keyStyle,
-                ...(isSelected ? {} : {
-                  '--key-bg': vars.bg,
-                  '--key-border': vars.border,
-                  '--key-text': vars.text,
-                }),
-                fontSize: label.length <= 3 ? 11 : label.length <= 5 ? 9 : 8,
-                cursor: editable && (onKeyClick || onBindingChange) ? 'pointer' : 'default',
-                overflow: 'hidden',
-              } as CSSProperties}
-            >
-              {label}
-            </div>
-          )
-        })}
-      </div>
-      </ScaledBoard>
+      />
       {editing !== null && (
         <BindingEditor
           firmware="zmk"

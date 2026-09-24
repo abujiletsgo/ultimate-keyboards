@@ -78,3 +78,8 @@ export async function copyFile(_from: string, _to: string): Promise<void> {
 export async function remove(_path: string): Promise<void> {
   throw new Error('remove is not available in browser mode')
 }
+
+export interface DirEntry { name: string; isDirectory: boolean; isFile: boolean; isSymlink: boolean }
+export async function readDir(_path: string): Promise<DirEntry[]> {
+  throw new Error('Folder detection needs the desktop app; in the browser add a keyboard from a .keymap file instead.')
+}
