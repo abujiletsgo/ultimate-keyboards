@@ -119,22 +119,19 @@ export function bindingLabel(binding: string): string {
   const kp = b.match(/^&kp\s+(.+)$/)
   if (kp) return keycodeLabel(kp[1])
 
-  const mo = b.match(/^&mo\s+(\d+)$/)
-  if (mo) return 'mo' + mo[1]
+  // Layer / mod behaviors: the main label is what a tap does (or the layer
+  // number); bindingSubLabel() names the hold/toggle behavior underneath.
+  const mo = b.match(/^&(mo|tog|to|sl)\s+(\d+)$/)
+  if (mo) return 'L' + mo[2]
 
-  const lt = b.match(/^&lt\s+(\d+)\s+/)
-  if (lt) return 'LT' + lt[1]
+  const lt = b.match(/^&lt\s+(\d+)\s+(.+)$/)
+  if (lt) return keycodeLabel(lt[2])
 
-  if (/^&mt\s+/.test(b)) return 'MT'
-
-  const tog = b.match(/^&tog\s+(\d+)$/)
-  if (tog) return 'tog' + tog[1]
-
-  const sl = b.match(/^&sl\s+(\d+)$/)
-  if (sl) return 'sl' + sl[1]
+  const mt = b.match(/^&mt\s+(\S+)\s+(.+)$/)
+  if (mt) return keycodeLabel(mt[2])
 
   const sk = b.match(/^&sk\s+(.+)$/)
-  if (sk) return '⇢' + keycodeLabel(sk[1])
+  if (sk) return keycodeLabel(sk[1])
 
   const bt = b.match(/^&bt\s+BT_SEL\s+(\d+)$/)
   if (bt) return 'BT' + bt[1]
@@ -150,4 +147,28 @@ export function bindingLabel(binding: string): string {
   }
 
   return b.slice(0, 4)
+}
+
+/** Short behavior cue shown under the key label (only for non-plain keys). */
+export function bindingSubLabel(binding: string): string | undefined {
+  const b = binding.trim()
+  let m: RegExpMatchArray | null
+  if ((m = b.match(/^&lt\s+(\d+)\s+(.+)$/))) return `hold L${m[1]}`
+  if (/^&mo\s+\d+$/.test(b)) return 'hold'
+  if (/^&tog\s+\d+$/.test(b)) return 'toggle'
+  if (/^&to\s+\d+$/.test(b)) return 'go to'
+  if (/^&sl\s+\d+$/.test(b)) return 'sticky'
+  if ((m = b.match(/^&mt\s+(\S+)\s+(.+)$/))) return `hold ${keycodeLabel(m[1])}`
+  if (/^&sk\s+/.test(b)) return 'sticky'
+  if (/^&bt\s+/.test(b)) return 'bluetooth'
+  if (/^&out\s+/.test(b)) return 'output'
+  if (/^&mkp\s+/.test(b)) return 'mouse'
+  if (/^&(mmv|msc)\s+/.test(b)) return 'mouse'
+  if (/^&caps_word$/.test(b)) return 'caps word'
+  if (/^&(bootloader|sys_reset|soft_off)$/.test(b)) return 'system'
+  if (/^&kp\s+[LR][GCSA]\(/.test(b)) return 'shortcut'
+  if (b === '&trans') return 'pass'
+  if (b === '&none') return 'blocked'
+  if (/^&[A-Za-z0-9_]+/.test(b) && !b.startsWith('&kp ')) return 'custom'
+  return undefined
 }

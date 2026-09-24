@@ -151,56 +151,10 @@ fn write_atomic_with_backup(
     std::fs::rename(&tmp, path)
 }
 
-// ── Status-bar icon artwork ─────────────────────────────────────────────────
-// Hand-drawn so the menu-bar item is a crisp monochrome keyboard glyph
-// (rendered as a macOS template image — black where opaque, transparent
-// elsewhere — so it tints itself to match light/dark menu bars).
-
-fn px(buf: &mut [u8], w: usize, h: usize, x: i32, y: i32) {
-    if x < 0 || y < 0 {
-        return;
-    }
-    let (x, y) = (x as usize, y as usize);
-    if x >= w || y >= h {
-        return;
-    }
-    buf[(y * w + x) * 4 + 3] = 0xFF; // RGB stays 0,0,0
-}
-
-fn fill(buf: &mut [u8], w: usize, h: usize, x0: i32, y0: i32, x1: i32, y1: i32) {
-    for y in y0..y1 {
-        for x in x0..x1 {
-            px(buf, w, h, x, y);
-        }
-    }
-}
-
-fn keyboard_template_rgba() -> (Vec<u8>, u32, u32) {
-    const W: usize = 36;
-    const H: usize = 36;
-    let mut buf = vec![0u8; W * H * 4];
-
-    // Keyboard body outline (2 px stroke), with the four corner pixels clipped
-    // so it reads as slightly rounded.
-    let (x0, y0, x1, y1, t) = (3i32, 8i32, 33i32, 28i32, 2i32);
-    fill(&mut buf, W, H, x0, y0, x1, y0 + t); // top
-    fill(&mut buf, W, H, x0, y1 - t, x1, y1); // bottom
-    fill(&mut buf, W, H, x0, y0, x0 + t, y1); // left
-    fill(&mut buf, W, H, x1 - t, y0, x1, y1); // right
-    for &(cx, cy) in &[(x0, y0), (x1 - 1, y0), (x0, y1 - 1), (x1 - 1, y1 - 1)] {
-        buf[(cy as usize * W + cx as usize) * 4 + 3] = 0;
-    }
-
-    // Two rows of keys.
-    for &kx in &[7, 12, 17, 22, 27] {
-        fill(&mut buf, W, H, kx, 12, kx + 3, 15);
-        fill(&mut buf, W, H, kx, 17, kx + 3, 20);
-    }
-    // Spacebar.
-    fill(&mut buf, W, H, 11, 22, 25, 25);
-
-    (buf, W as u32, H as u32)
-}
+// ── Status-bar icon ─────────────────────────────────────────────────────────
+// The split-keyboard glyph from design/tray-template.svg, rendered at 2× (72 px)
+// as a macOS template image: black where opaque, so the system tints it.
+const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/tray-template.png");
 
 /// Apply a new built-in-keyboard state everywhere: run `hidutil`, update the
 /// shared flag, sync the tray checkbox + tooltip, and notify the frontend.
@@ -241,6 +195,33 @@ fn is_builtin_keyboard_disabled(state: State<AppState>) -> bool {
 #[tauri::command]
 fn set_builtin_keyboard_disabled(app: tauri::AppHandle, disabled: bool) -> Result<(), String> {
     set_builtin_state(&app, disabled)
+}
+
+/// Write a complex-modifications rule file where Karabiner-Elements looks for
+/// them (`~/.config/karabiner/assets/complex_modifications/`). The file name is
+/// derived from the profile title; the JSON is written atomically with a
+/// backup. Returns the path written.
+#[tauri::command]
+fn install_karabiner_rules(title: String, json: String) -> Result<String, String> {
+    if json.len() > 2_000_000 {
+        return Err("rule file is unexpectedly large".into());
+    }
+    serde_json::from_str::<serde_json::Value>(&json).map_err(|e| format!("not valid JSON: {e}"))?;
+    let Some(home) = std::env::var_os("HOME") else { return Err("HOME is not set".into()) };
+    let dir = std::path::Path::new(&home).join(".config/karabiner/assets/complex_modifications");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    let slug: String = title
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+    let slug = if slug.is_empty() { "ultimate-keyboards".to_string() } else { slug };
+    let path = dir.join(format!("{slug}.json"));
+    let previous = std::fs::read_to_string(&path).unwrap_or_default();
+    write_atomic_with_backup(&path, &json, &previous).map_err(|e| format!("write failed: {e}"))?;
+    Ok(path.display().to_string())
 }
 
 /// The frontend reports whether any section has unsaved edits.
@@ -324,6 +305,7 @@ pub fn run() {
             is_builtin_keyboard_disabled,
             set_builtin_keyboard_disabled,
             set_dirty,
+            install_karabiner_rules,
             set_mouse_config,
             get_mouse_config
         ])
@@ -388,8 +370,8 @@ pub fn run() {
                 }
             });
 
-            let (icon_rgba, icon_w, icon_h) = keyboard_template_rgba();
-            let icon = tauri::image::Image::new_owned(icon_rgba, icon_w, icon_h);
+            let icon = tauri::image::Image::from_bytes(TRAY_ICON_PNG)
+                .expect("tray icon PNG is embedded at build time");
             let tray = TrayIconBuilder::with_id("main")
                 .icon(icon)
                 .icon_as_template(true)

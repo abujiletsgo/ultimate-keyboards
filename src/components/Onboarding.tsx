@@ -1,4 +1,5 @@
-import { FolderOpen, FileText, Keyboard } from 'lucide-react'
+import { FolderOpen, FileText } from 'lucide-react'
+import LogoMark from '@/components/ui/LogoMark'
 
 interface Props {
   onAddFromFolder: () => void
@@ -15,7 +16,7 @@ export default function Onboarding({ onAddFromFolder, onAddFromFile }: Props) {
       <div style={{ padding: 24, maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div className="glass anim-fade-up" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="logo-mark" style={{ width: 36, height: 36 }}><Keyboard size={18} strokeWidth={2} /></span>
+            <span className="logo-mark" style={{ width: 36, height: 36 }}><LogoMark size={24} color="#fff" accent="#0a0c16" /></span>
             <div>
               <div style={{ fontSize: 17, fontWeight: 600 }}>Add your first keyboard</div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>

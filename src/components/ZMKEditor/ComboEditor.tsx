@@ -3,6 +3,7 @@ import { useZMKStore } from '../../stores/zmkStore'
 import type { ZMKCombo } from '../../lib/zmkParser'
 import SplitKeyboard from './SplitKeyboard'
 import type { PhysicalLayout } from '@/lib/layout'
+import { ConfirmBanner, DeleteButton } from '@/components/ui'
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
@@ -33,18 +34,22 @@ const inputStyle: React.CSSProperties = {
 interface ComboFormProps {
   editing?: ZMKCombo
   layout?: PhysicalLayout
+  /** names already in use (for uniqueness) */
+  existingNames: string[]
+  /** available layers for the filter pills */
+  layerNames: string[]
   layerKeys: string[]
   onSave: (combo: ZMKCombo) => void
   onCancel: () => void
 }
 
-const ComboForm: React.FC<ComboFormProps> = ({ editing, layout, layerKeys, onSave, onCancel }) => {
+const ComboForm: React.FC<ComboFormProps> = ({ editing, layout, existingNames, layerNames, layerKeys, onSave, onCancel }) => {
   const [name, setName] = useState(editing?.name ?? '')
   const [binding, setBinding] = useState(editing?.bindings ?? '&kp ENTER')
   const [selectedPositions, setSelectedPositions] = useState<Set<number>>(
     new Set(editing?.keyPositions ?? [])
   )
-  const [layersText, setLayersText] = useState(editing?.layers?.join(' ') ?? '')
+  const [layerSel, setLayerSel] = useState<Set<number>>(new Set(editing?.layers ?? []))
   const [error, setError] = useState('')
 
   const handleKeyClick = (pos: number) => {
@@ -57,12 +62,13 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, layout, layerKeys, onSav
   }
 
   const handleSave = () => {
-    if (!name.trim()) { setError('Name is required'); return }
+    const trimmed = name.trim()
+    if (!trimmed) { setError('Name is required'); return }
+    if (!/^[A-Za-z_][\w-]*$/.test(trimmed)) { setError('Name must be a devicetree node name: letters, digits, _ or -'); return }
+    if (existingNames.some(n => n === trimmed && n !== editing?.name)) { setError(`A combo named "${trimmed}" already exists`); return }
     if (!binding.trim()) { setError('Binding is required'); return }
     if (selectedPositions.size < 2) { setError('Select at least 2 keys on the keyboard below'); return }
-    const layers = layersText.trim()
-      ? layersText.trim().split(/\s+/).map(Number).filter((n) => !isNaN(n))
-      : undefined
+    const layers = layerSel.size > 0 ? [...layerSel].sort((a, b) => a - b) : undefined
     onSave({
       name: name.trim(),
       bindings: binding.trim(),
@@ -111,15 +117,21 @@ const ComboForm: React.FC<ComboFormProps> = ({ editing, layout, layerKeys, onSav
           </div>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Layers (optional)</span>
-          <input
-            style={{ ...inputStyle, width: 100 }}
-            value={layersText}
-            onChange={(e) => setLayersText(e.target.value)}
-            placeholder="0 1"
-          />
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Layers (optional — none = all)</span>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }} role="group" aria-label="Layers this combo is active on">
+            {layerNames.map((ln, i) => (
+              <button key={i} type="button" className="pill" aria-pressed={layerSel.has(i)}
+                onClick={() => setLayerSel(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n })}
+                style={{ padding: '3px 8px', borderRadius: 'var(--r-pill)', fontSize: 10, cursor: 'pointer',
+                  background: layerSel.has(i) ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.06)',
+                  border: layerSel.has(i) ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                  color: layerSel.has(i) ? 'var(--accent-hover)' : 'var(--text-muted)' }}>
+                {i} {ln}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Selected positions summary */}
@@ -196,10 +208,10 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
     setEditingCombo(null)
   }
 
-  const handleDelete = (name: string) => {
-    if (!window.confirm(`Delete combo "${name}"?`)) return
-    deleteCombo(name)
-  }
+  const [confirmName, setConfirmName] = useState<string | null>(null)
+  const handleDelete = (name: string) => setConfirmName(name)
+  const layerNames = keymap?.layers.map(l => l.displayName ?? l.name) ?? []
+  const existingNames = combos.map(c => c.name)
 
   const fallbackKeys = Array.from({ length: 42 }, (_, i) => `&kp ${i}`)
 
@@ -210,10 +222,20 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
         <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
           Combos ({combos.length})
         </h3>
-        <button className="btn btn-primary" onClick={() => { setShowAddForm(true); setEditingCombo(null) }}>
+        <button className="btn btn-primary" onClick={() => { setShowAddForm(true); setEditingCombo(null) }} disabled={showAddForm || !!editingCombo}>
           + Add
         </button>
       </div>
+
+      {confirmName && (
+        <ConfirmBanner
+          danger
+          message={<>Delete combo <strong>{confirmName}</strong>?</>}
+          confirmLabel="Delete"
+          onConfirm={() => { deleteCombo(confirmName); setConfirmName(null) }}
+          onCancel={() => setConfirmName(null)}
+        />
+      )}
 
       {/* Keyboard visualization — hover a combo to highlight its keys */}
       {combos.length > 0 && !showAddForm && !editingCombo && (
@@ -235,6 +257,8 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
       {showAddForm && (
         <ComboForm
           layout={layout}
+          existingNames={existingNames}
+          layerNames={layerNames}
           layerKeys={layerKeys}
           onSave={handleAdd}
           onCancel={() => setShowAddForm(false)}
@@ -245,6 +269,8 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
       {editingCombo && (
         <ComboForm
           layout={layout}
+          existingNames={existingNames}
+          layerNames={layerNames}
           editing={editingCombo}
           layerKeys={layerKeys}
           onSave={handleEdit}
@@ -316,9 +342,11 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
                   <button
                     className="btn btn-secondary btn-sm"
-                    onClick={() => { setEditingCombo(combo); setShowAddForm(false) }}
+                    disabled={showAddForm}
+                    title={showAddForm ? 'Finish or cancel the new combo first' : undefined}
+                    onClick={() => { setEditingCombo(combo) }}
                   >Edit</button>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(combo.name)}>×</button>
+                  <DeleteButton label={`Delete combo ${combo.name}`} onClick={() => handleDelete(combo.name)} />
                 </div>
               </div>
             )

@@ -2,8 +2,9 @@
  * MacKeyEditor — click-to-popover for MacBook key remapping.
  * Appears anchored to the clicked key, matching BindingEditor's style.
  */
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
+import { Popover, DeleteButton } from '@/components/ui'
 import { KEY_CODES, MODIFIER_NAMES, type SimpleRemapRule, type ComboRule, type LayerActivatorRule, type LayerBindingRule } from '@/lib/karabinerGenerator'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import type { MacKey } from '@/lib/macbookLayout'
@@ -12,6 +13,7 @@ interface Props {
   macKey: MacKey
   anchorX: number
   anchorY: number
+  anchorTop?: number
   onClose: () => void
 }
 
@@ -57,8 +59,8 @@ function displayKey(k: string) {
 function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, top: 0 })
 
   const filtered = useMemo(() => {
     if (!query) return KEY_CODES.slice(0, 50)
@@ -66,41 +68,31 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
     return KEY_CODES.filter(k => k.includes(q) || (KEY_LABELS[k] ?? '').toLowerCase().includes(q)).slice(0, 50)
   }, [query])
 
-  useEffect(() => {
-    if (open) inputRef.current?.focus()
-  }, [open])
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   return (
-    <div ref={ref} style={{ position: 'relative', flex: 1 }}>
+    <div style={{ position: 'relative', flex: 1 }}>
       <button
+        ref={btnRef}
         className="btn btn-secondary btn-sm"
-        onClick={() => setOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => {
+          if (!open && btnRef.current) { const r = btnRef.current.getBoundingClientRect(); setAnchor({ x: r.left, y: r.bottom + 4, top: r.top - 4 }) }
+          setOpen(v => !v)
+        }}
         style={{ width: '100%', justifyContent: 'flex-start', fontFamily: 'var(--font-mono)' }}
       >
         {displayKey(value)} <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>({value})</span> ▾
       </button>
       {open && (
-        <div className="glass-strong anim-scale-in" style={{
-          position: 'absolute', top: '100%', left: 0, zIndex: 300,
-          width: 220, maxHeight: 220, display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}>
+        <Popover anchor={anchor} width={220} layer="menu" noBackdrop label="Choose a key" onClose={() => setOpen(false)}
+          onOutsideMouseDown={(t) => { if (!btnRef.current?.contains(t)) setOpen(false) }}>
+        <div style={{ maxHeight: 240, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <input
-            ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search key…"
             onKeyDown={e => {
               if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
-              if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
             }}
             style={{ margin: 6, height: 26, fontSize: 11 }}
           />
@@ -109,15 +101,9 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
               <div
                 key={k}
                 onClick={() => { onChange(k); setOpen(false); setQuery('') }}
-                style={{
-                  padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)',
-                  color: k === value ? 'var(--accent)' : 'var(--text-secondary)',
-                  background: k === value ? 'var(--accent-soft)' : 'transparent',
-                  display: 'flex', gap: 8, alignItems: 'center',
-                  transition: 'background var(--dur-1) var(--ease-out)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-bg-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = k === value ? 'var(--accent-soft)' : 'transparent')}
+                className="menu-item"
+                role="option"
+                aria-selected={k === value}
               >
                 <span style={{ minWidth: 28, color: 'var(--text)' }}>{displayKey(k)}</span>
                 <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{k}</span>
@@ -125,6 +111,7 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
             ))}
           </div>
         </div>
+        </Popover>
       )}
     </div>
   )
@@ -162,18 +149,9 @@ function ModPills({ selected, onChange }: { selected: string[]; onChange: (v: st
 
 // ── Main popover ──────────────────────────────────────────────────────────────
 
-export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Props) {
+export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onClose }: Props) {
   const { rules, addRule, removeRule } = useKarabinerStore()
   const [mode, setMode] = useState<Mode>('remap')
-
-  // Esc dismisses the popover (nested dropdowns stopPropagation their own Esc)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   // Remap state
   const [toKey, setToKey] = useState(KEY_CODES[0])
@@ -261,16 +239,6 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
     )
   }
 
-  // Smart positioning
-  const W = 290, MARGIN = 8, APPROX_H = 360
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
-  let left = anchorX
-  if (left + W > vw - MARGIN) left = vw - W - MARGIN
-  if (left < MARGIN) left = MARGIN
-  const showAbove = anchorY + APPROX_H > vh - MARGIN
-  const top = Math.max(MARGIN, showAbove ? anchorY - APPROX_H - 8 : anchorY)
-
   // Letter keys for combo grid
   const LETTERS = 'abcdefghijklmnopqrstuvwxyz'.split('')
 
@@ -282,13 +250,8 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
   }
 
   return (
-    <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={onClose} />
-      <div
-        className="glass-strong anim-scale-in"
-        style={{ position: 'fixed', left, top, zIndex: 1000, width: W, overflow: 'hidden' }}
-        onClick={e => e.stopPropagation()}
-      >
+    <Popover anchor={{ x: anchorX, y: anchorY, top: anchorTop }} width={290} label={`Configure ${macKey.label}`} onClose={onClose}>
+      <div style={{ overflow: 'hidden' }}>
         {/* Header */}
         <div style={{
           padding: '10px 12px 8px',
@@ -325,15 +288,7 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)', flex: 1, fontFamily: 'var(--font-mono)' }}>
                   {r.description}
                 </span>
-                <button
-                  onClick={() => removeRule(rules.indexOf(r))}
-                  style={{ color: 'var(--text-muted)', padding: 2, borderRadius: 3, transition: 'color var(--dur-1) var(--ease-out)' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                  title="Remove rule"
-                >
-                  <X size={12} />
-                </button>
+                <DeleteButton label={`Remove rule: ${r.description}`} onClick={() => removeRule(rules.indexOf(r))} />
               </div>
             ))}
           </div>
@@ -495,6 +450,6 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, onClose }: Prop
           </button>
         </div>
       </div>
-    </>
+    </Popover>
   )
 }

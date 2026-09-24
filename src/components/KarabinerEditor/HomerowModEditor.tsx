@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { Switch, ConfirmBanner } from '@/components/ui'
+import { HOMEROW_HOLD_MS } from '@/lib/karabinerGenerator'
 import React, { useMemo } from 'react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import type { HomerowModRule } from '@/lib/karabinerGenerator'
@@ -96,6 +99,13 @@ export const HomerowModEditor: React.FC = () => {
     })
   }
 
+  const [pendingPreset, setPendingPreset] = useState<typeof PRESETS[0] | 'clear' | null>(null)
+  function requestPreset(preset: typeof PRESETS[0]) {
+    if (modsByKey.size > 0) setPendingPreset(preset); else applyPreset(preset)
+  }
+  function requestClear() {
+    if (modsByKey.size > 0) setPendingPreset('clear')
+  }
   function applyPreset(preset: typeof PRESETS[0]) {
     // Remove all existing homerow mod rules first
     const toRemove = [...modsByKey.values()].map(e => e.idx).sort((a, b) => b - a)
@@ -124,6 +134,15 @@ export const HomerowModEditor: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {pendingPreset && (
+        <ConfirmBanner
+          danger={pendingPreset === 'clear'}
+          message={pendingPreset === 'clear' ? <>Remove all {modsByKey.size} homerow mods?</> : <>Replace the current {modsByKey.size} homerow mods with the <strong>{pendingPreset.label}</strong> preset?</>}
+          confirmLabel={pendingPreset === 'clear' ? 'Remove all' : 'Replace'}
+          onConfirm={() => { if (pendingPreset === 'clear') clearAll(); else applyPreset(pendingPreset); setPendingPreset(null) }}
+          onCancel={() => setPendingPreset(null)}
+        />
+      )}
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -135,7 +154,7 @@ export const HomerowModEditor: React.FC = () => {
           </p>
         </div>
         {enabledCount > 0 && (
-          <button className="btn btn-danger btn-sm" onClick={clearAll}>Clear all</button>
+          <button className="btn btn-danger btn-sm" onClick={requestClear}>Clear all</button>
         )}
       </div>
 
@@ -144,7 +163,7 @@ export const HomerowModEditor: React.FC = () => {
         <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Presets</span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {PRESETS.map(p => (
-            <button key={p.label} className="btn btn-secondary btn-sm" onClick={() => applyPreset(p)}
+            <button key={p.label} className="btn btn-secondary btn-sm" onClick={() => requestPreset(p)}
               title={p.desc}>
               {p.label}
             </button>
@@ -175,21 +194,7 @@ export const HomerowModEditor: React.FC = () => {
                   opacity: active ? 1 : 0.5,
                   transition: 'opacity var(--dur-1) var(--ease-out)',
                 }}>
-                  {/* Toggle */}
-                  <div
-                    onClick={() => toggle(hk)}
-                    style={{
-                      width: 32, height: 20, borderRadius: 10, cursor: 'pointer',
-                      background: active ? 'var(--accent-grad)' : 'var(--bg-tertiary)',
-                      position: 'relative', transition: 'background var(--dur-1) var(--ease-out)', flexShrink: 0,
-                    }}
-                  >
-                    <div style={{
-                      position: 'absolute', top: 2, left: active ? 14 : 2,
-                      width: 16, height: 16, borderRadius: 8,
-                      background: '#fff', transition: 'left var(--dur-1) var(--ease-out)',
-                    }} />
-                  </div>
+                  <Switch size="sm" checked={active} onChange={() => toggle(hk)} aria-label={`Homerow mod on ${hk.label}`} />
 
                   {/* Key label */}
                   <span style={{
@@ -223,7 +228,7 @@ export const HomerowModEditor: React.FC = () => {
 
       {/* Hint */}
       <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-        Tap threshold: 120ms — typing normally won't trigger mods.
+        Hold threshold: {HOMEROW_HOLD_MS} ms (written into the rule) — typing normally won't trigger mods.
         Works best with touch-typing. Conflicts with combos that use the same keys.
       </p>
     </div>

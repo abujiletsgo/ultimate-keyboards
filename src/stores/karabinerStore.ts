@@ -10,6 +10,8 @@ interface KarabinerState {
   updateRule: (idx: number, r: Rule) => void;
   setTitle: (t: string) => void;
   loadExample: () => void;
+  /** Move a rule up (-1) or down (+1); Karabiner evaluates rules in order. */
+  moveRule: (idx: number, delta: -1 | 1) => void;
   exportJSON: () => string;
 }
 
@@ -81,6 +83,15 @@ export const useKarabinerStore = create<KarabinerState>()(
       setTitle: (t) => set({ profileTitle: t }),
 
       loadExample: () => set({ rules: EXAMPLE_RULES }),
+
+      moveRule: (idx, delta) =>
+        set((state) => {
+          const j = idx + delta;
+          if (j < 0 || j >= state.rules.length) return state;
+          const rules = [...state.rules];
+          [rules[idx], rules[j]] = [rules[j], rules[idx]];
+          return { rules };
+        }),
 
       exportJSON: () => {
         const { rules, profileTitle } = get();

@@ -9,12 +9,27 @@ import {
   updateLayerBindingsInSource,
 } from '../lib/zmkParser';
 
+export interface LayerReference {
+  where: string;
+  binding: string;
+  /** layer index + key position, when the reference is a key binding */
+  layer?: number;
+  pos?: number;
+}
+
 interface ZMKState {
   keymap: ZMKKeymap | null;
   filePath: string | null;
   isDirty: boolean;
   /** Persisted across section switches so returning users keep their place */
   selectedLayer: number;
+  /** Undo/redo stacks of keymap snapshots (cleared on load) */
+  past: ZMKKeymap[];
+  future: ZMKKeymap[];
+  undo: () => void;
+  redo: () => void;
+  /** Everything that references a layer index — computed without mutating. */
+  layerReferences: (index: number) => LayerReference[];
 
   // Actions
   setKeymap: (km: ZMKKeymap | null, path: string) => void;
@@ -32,14 +47,69 @@ interface ZMKState {
   updateLayerKey: (layerIndex: number, keyPos: number, newBinding: string) => void;
 }
 
+const HISTORY_LIMIT = 100;
+
+/** Record the current keymap before a mutation (call inside `set`). */
+function pushHistory(state: ZMKState): Pick<ZMKState, 'past' | 'future'> {
+  if (!state.keymap) return { past: state.past, future: state.future };
+  return { past: [...state.past.slice(-HISTORY_LIMIT + 1), state.keymap], future: [] };
+}
+
 export const useZMKStore = create<ZMKState>((set, get) => ({
   keymap: null,
   filePath: null,
   isDirty: false,
   selectedLayer: 0,
+  past: [],
+  future: [],
 
   setKeymap: (km, path) =>
-    set({ keymap: km, filePath: path, isDirty: false }),
+    set({ keymap: km, filePath: path, isDirty: false, past: [], future: [] }),
+
+  undo: () =>
+    set((state) => {
+      const prev = state.past[state.past.length - 1];
+      if (!prev || !state.keymap) return state;
+      return {
+        keymap: prev,
+        past: state.past.slice(0, -1),
+        future: [state.keymap, ...state.future],
+        isDirty: true,
+        selectedLayer: Math.min(state.selectedLayer, prev.layers.length - 1),
+      };
+    }),
+
+  redo: () =>
+    set((state) => {
+      const next = state.future[0];
+      if (!next || !state.keymap) return state;
+      return {
+        keymap: next,
+        past: [...state.past, state.keymap],
+        future: state.future.slice(1),
+        isDirty: true,
+        selectedLayer: Math.min(state.selectedLayer, next.layers.length - 1),
+      };
+    }),
+
+  layerReferences: (index) => {
+    const { keymap } = get();
+    if (!keymap) return [];
+    const refRe = /^&(mo|lt|tog|sl|to)\s+(\d+)/;
+    const out: LayerReference[] = [];
+    keymap.layers.forEach((l, li) => {
+      l.keys.forEach((key, pos) => {
+        const m = refRe.exec(key);
+        if (m && parseInt(m[2], 10) === index) out.push({ where: `layer "${l.displayName ?? l.name}" key ${pos}`, binding: key, layer: li, pos });
+      });
+    });
+    for (const c of keymap.combos) {
+      if (c.layers?.includes(index)) out.push({ where: `combo "${c.name}" layer filter`, binding: `layers = <${c.layers.join(' ')}>` });
+      const m = refRe.exec(c.bindings);
+      if (m && parseInt(m[2], 10) === index) out.push({ where: `combo "${c.name}"`, binding: c.bindings });
+    }
+    return out;
+  },
 
   setSelectedLayer: (idx) => set({ selectedLayer: idx }),
 
@@ -54,7 +124,7 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     src = addLayerToSource(src, name, keyCount);
     const km = parseKeymapText(src);
     const newIndex = km.layers.length - 1;
-    set({ keymap: km, isDirty: true, selectedLayer: newIndex });
+    set((state) => ({ ...pushHistory(state), keymap: km, isDirty: true, selectedLayer: newIndex }));
     return newIndex;
   },
 
@@ -70,7 +140,7 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     src = updateCombosInSource(src, keymap.combos);
     src = renameLayerInSource(src, layer.name, newName);
     const km = parseKeymapText(src);
-    set({ keymap: km, isDirty: true, selectedLayer });
+    set((state) => ({ ...pushHistory(state), keymap: km, isDirty: true, selectedLayer }));
     return null;
   },
 
@@ -124,11 +194,12 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     src = updateLayerBindingsInSource(src, newLayers);
     src = updateCombosInSource(src, newCombos);
     const km = parseKeymapText(src);
-    set({
+    set((state) => ({
+      ...pushHistory(state),
       keymap: km,
       isDirty: true,
-      selectedLayer: Math.min(get().selectedLayer, km.layers.length - 1),
-    });
+      selectedLayer: Math.min(state.selectedLayer, km.layers.length - 1),
+    }));
     return null;
   },
 
@@ -136,6 +207,7 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     set((state) => {
       if (!state.keymap) return state;
       return {
+        ...pushHistory(state),
         keymap: {
           ...state.keymap,
           combos: [...state.keymap.combos, combo],
@@ -148,6 +220,7 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     set((state) => {
       if (!state.keymap) return state;
       return {
+        ...pushHistory(state),
         keymap: {
           ...state.keymap,
           combos: state.keymap.combos.map((c) =>
@@ -162,6 +235,7 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
     set((state) => {
       if (!state.keymap) return state;
       return {
+        ...pushHistory(state),
         keymap: {
           ...state.keymap,
           combos: state.keymap.combos.filter((c) => c.name !== name),
@@ -185,6 +259,6 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
         newKeys[keyPos] = newBinding;
         return { ...layer, keys: newKeys };
       });
-      return { keymap: { ...state.keymap, layers }, isDirty: true };
+      return { ...pushHistory(state), keymap: { ...state.keymap, layers }, isDirty: true };
     }),
 }));

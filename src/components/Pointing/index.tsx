@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { readText, saveText, ValidationError } from '@/lib/io'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
+import { Switch } from '@/components/ui'
 import type { PointingDescriptor as PointingDevice } from '@/lib/registry/types'
 import {
   findNode, getBoolProp, setBoolProp, getIntProp, setIntProp,
@@ -135,28 +136,13 @@ function applyValues(src: string, dev: PointingDevice, orig: PointingValues, v: 
 
 function Toggle({ label, hint, value, onChange }: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <span>
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{label}</span>
         {hint && <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block' }}>{hint}</span>}
       </span>
-      <span
-        onClick={e => { e.preventDefault(); onChange(!value) }}
-        style={{
-          width: 40, height: 22, borderRadius: 11, flexShrink: 0, position: 'relative',
-          background: value ? 'var(--accent-grad)' : 'rgba(255,255,255,0.10)',
-          boxShadow: value ? 'var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2)' : 'inset 0 1px 3px rgba(0,0,0,0.4)',
-          transition: 'background var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out)',
-        }}
-      >
-        <span style={{
-          position: 'absolute', top: 2, left: value ? 20 : 2,
-          width: 18, height: 18, borderRadius: 9, background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-          transition: 'left var(--dur-2) var(--ease-spring)',
-        }} />
-      </span>
-    </label>
+      <Switch checked={value} onChange={onChange} aria-label={label} />
+    </div>
   )
 }
 
