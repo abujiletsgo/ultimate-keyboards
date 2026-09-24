@@ -135,3 +135,17 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 ## 6. Phase 0 execution log
 
 - macOS Cmd-Q never reaches Tauri: tao does not implement `applicationShouldTerminate`, so the process terminates with no `ExitRequested` (OBSERVED in tao 0.35.3 and tauri-runtime-wry 2.11.4 sources). The old "restore keyboard on quit" therefore never ran on Cmd-Q. Fix: the app now sets its own menu whose Quit item (Cmd+Q) and the tray Quit both go through `request_quit`, which asks about unsaved edits and then calls `exit`, where the keyboard is restored.
+
+### Phase 0 verification (2026-09-24, packaged release build, driven via `orca computer`)
+
+| check | result |
+|---|---|
+| tsc / bun test / cargo check | clean / 9 pass / clean |
+| dev bridge | no creds 403 · foreign Origin 403 · bogus token 403 · real token + same origin 200 · real token + path outside ~/Documents 403 |
+| keymap loads in packaged app | yes (first launch after build took ~15 s to render; second launch 8 s — watch in Phase 1) |
+| edit key → Cmd-Q | native "Unsaved changes" dialog (Discard and Quit / Cancel); Cancel keeps app alive and dirty |
+| Save | exactly one line changed on disk; `corne_tp.keymap.bak` created; "Restore backup" button appears |
+| Restore backup | disk byte-identical to git; a second restore swaps back (restore is itself undoable) |
+| Cmd-Q with nothing unsaved | app exits; `karabiner.json` checksum unchanged before/after |
+| NOT verified | crash-marker keyboard restore (would disable Tom's keyboard mid-session); mouse-engine re-enable after a stall; persisted-scope grant via the file picker (exercised in Phase 1 with the folder picker); Windows/Linux (out of scope) |
+| deferred to Phase 1 | audit F1/F2/F8 (registry, per-keyboard layout, seeded Karabiner rules) |
