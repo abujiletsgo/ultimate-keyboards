@@ -1,13 +1,7 @@
-import { useState, type CSSProperties } from 'react'
-import {
-  CORNE_PROCYON_LAYOUT,
-  getKeyStyle as getCPKeyStyle,
-  BOARD_WIDTH,
-  BOARD_HEIGHT,
-  DIVIDER_X,
-} from '@/lib/corneProcyonLayout'
-import ScaledBoard from '@/components/ScaledBoard'
+import { useState } from 'react'
 import BindingEditor from './BindingEditor'
+import PhysicalBoard, { type KeyVisual } from '@/components/board/PhysicalBoard'
+import { LEGACY_CORNE_PROCYON, type PhysicalLayout } from '@/lib/layout'
 
 // ── Behavior type detection ───────────────────────────────────────────────────
 type QMKBehavior = 'trans' | 'none' | 'layer' | 'layer-tap' | 'mod-tap' | 'toggle' | 'shifted' | 'normal'
@@ -96,7 +90,9 @@ export function abbreviateQMK(kc: string): string {
 }
 
 interface Props {
-  keys: string[]  // 44 full QMK keycode strings
+  keys: string[]  // one full QMK keycode string per layout position
+  /** Physical layout to draw; defaults to the legacy Corne Procyon geometry. */
+  layout?: PhysicalLayout
   highlightedPositions?: Set<number>
   onKeyClick?: (pos: number) => void
   onBindingChange?: (pos: number, newKeycode: string) => void
@@ -116,73 +112,38 @@ function getKeyVars(behavior: QMKBehavior): { bg?: string; border?: string; text
   }
 }
 
-const ENCODER_VARS = { bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.2)', dashed: true }
 
-export default function QMKKeyboard({ keys, highlightedPositions, onKeyClick, onBindingChange }: Props) {
+export default function QMKKeyboard({ keys, layout = LEGACY_CORNE_PROCYON, highlightedPositions, onKeyClick, onBindingChange }: Props) {
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
 
+  const keyAt = (pos: number): KeyVisual => {
+    const fullKc = keys[pos] ?? 'KC_TRNS'
+    const behavior = getBehavior(fullKc)
+    const label = abbreviateQMK(fullKc)
+    const vars = getKeyVars(behavior)
+    return {
+      label, title: fullKc,
+      bg: vars.bg, border: vars.border, text: vars.text, dashed: vars.dashed,
+      fontSize: label.length <= 2 ? 12 : label.length <= 4 ? 10 : 8,
+    }
+  }
+
   return (
     <div style={{ padding: '16px 0' }}>
-      <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
-      <div
-        className="glass"
-        style={{
-          position: 'relative',
-          width: BOARD_WIDTH,
-          height: BOARD_HEIGHT,
-          borderRadius: 16,
-          flexShrink: 0,
+      <PhysicalBoard
+        layout={layout}
+        keyAt={keyAt}
+        selected={highlighted}
+        editable={!!(onKeyClick || onBindingChange)}
+        onKeyClick={(pos, el) => {
+          onKeyClick?.(pos)
+          if (onBindingChange) {
+            const rect = el.getBoundingClientRect()
+            setEditing({ pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
+          }
         }}
-      >
-        {/* Half divider line */}
-        <div style={{ position: 'absolute', left: DIVIDER_X, top: 0, width: 1, height: '100%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
-
-        {CORNE_PROCYON_LAYOUT.map(key => {
-          const fullKc = keys[key.pos] ?? 'KC_TRNS'
-          const isEncoder = key.isEncoder ?? false
-          const behavior = getBehavior(fullKc)
-          const label = isEncoder ? '◎' : abbreviateQMK(fullKc)
-          const vars = isEncoder ? ENCODER_VARS : getKeyVars(behavior)
-          const keyStyle = getCPKeyStyle(key)
-          const isSelected = highlighted.has(key.pos)
-          const labelLen = label.length
-
-          return (
-            <div
-              key={key.pos}
-              title={isEncoder ? 'Encoder' : fullKc}
-              className={[
-                'keycap',
-                isSelected ? 'selected' : '',
-                vars.dashed && !isSelected ? 'dashed' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={(e) => {
-                if (isEncoder) return
-                onKeyClick?.(key.pos)
-                if (onBindingChange) {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  setEditing({ pos: key.pos, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
-                }
-              }}
-              style={{
-                ...keyStyle,
-                ...(isSelected ? {} : {
-                  '--key-bg': vars.bg,
-                  '--key-border': vars.border,
-                  '--key-text': vars.text,
-                }),
-                fontSize: labelLen <= 2 ? 12 : labelLen <= 4 ? 10 : 8,
-                cursor: (!isEncoder && (onKeyClick || onBindingChange)) ? 'pointer' : 'default',
-                overflow: 'hidden',
-              } as CSSProperties}
-            >
-              {label}
-            </div>
-          )
-        })}
-      </div>
-      </ScaledBoard>
+      />
       {editing !== null && (
         <BindingEditor
           firmware="qmk"
