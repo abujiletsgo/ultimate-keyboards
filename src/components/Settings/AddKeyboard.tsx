@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { readText } from '@/lib/io'
-import { parseKeymapText } from '@/lib/zmkParser'
+import { parseKeymapText, isDevicetreeReady } from '@/lib/zmkParser'
 import { detectKeyboard, type DetectedKeyboard, type LayoutCandidate } from '@/lib/registry/detect'
 import { CATALOGUE, catalogueLabel, catalogueByKeyCount, findCatalogueLayout } from '@/lib/layout/catalogue'
 import { gridLayoutFromTransform, type PhysicalLayout } from '@/lib/layout'
@@ -78,7 +78,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
     if (!detected || detected.firmware !== 'zmk' || !keymapPath) return
     let alive = true
     readText(keymapPath).then(text => {
-      if (!alive) return
+      if (!alive || !isDevicetreeReady()) return
       const km = parseKeymapText(text)
       const n = km.layers[0]?.keys.length ?? 0
       setKeyCount(n)

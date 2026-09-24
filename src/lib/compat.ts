@@ -20,8 +20,11 @@ export interface CompatReport {
   editable: boolean
 }
 
-export function checkZmkCompatibility(source: string): CompatReport {
+export function checkZmkCompatibility(source: string, syntaxErrorLines: number[] = []): CompatReport {
   const issues: CompatIssue[] = []
+  for (const line of syntaxErrorLines) {
+    issues.push({ line, construct: 'syntax the parser cannot read', detail: 'usually a C macro standing in for devicetree (e.g. ZMK_LAYER(...))', blocking: true })
+  }
   const lines = source.split('\n')
 
   // Locate the keymap block (line span) so conditionals inside it can be flagged as blocking.

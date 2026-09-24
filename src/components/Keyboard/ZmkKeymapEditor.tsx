@@ -67,9 +67,9 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     setLoadError(null)
     try {
       const text = await readText(keyboard.keymapPath)
-      const report = checkZmkCompatibility(text)
-      setCompat(report)
-      setKeymap(parseKeymapText(text), keyboard.keymapPath)
+      const km = parseKeymapText(text)
+      setCompat(checkZmkCompatibility(text, km.syntaxErrors))
+      setKeymap(km, keyboard.keymapPath)
       setSelectedLayer(0)
     } catch (err) {
       setLoadError(String(err))
@@ -118,8 +118,9 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   const onRestore = async () => {
     try {
       const text = await restoreBackup(keyboard.keymapPath)
-      setCompat(checkZmkCompatibility(text))
-      setKeymap(parseKeymapText(text), keyboard.keymapPath)
+      const km = parseKeymapText(text)
+      setCompat(checkZmkCompatibility(text, km.syntaxErrors))
+      setKeymap(km, keyboard.keymapPath)
       setSelectedLayer(0)
       flash('Backup restored')
     } catch (err) {

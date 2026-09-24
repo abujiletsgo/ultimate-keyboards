@@ -7,6 +7,13 @@ import { useRegistryStore } from "@/stores/registryStore";
 import { syncDirty, isAnyDirty, dirtySources, saveAllDirty, discardAllDirty, onDirtyChange } from "@/lib/dirty";
 import { IS_TAURI } from "@/lib/io";
 import { loadSection, saveSection, sameSection, type Section } from "@/lib/nav";
+import { initDevicetree } from "@/lib/zmkParser";
+import treeSitterWasm from "web-tree-sitter/web-tree-sitter.wasm?url";
+import devicetreeWasm from "tree-sitter-devicetree/tree-sitter-devicetree.wasm?url";
+
+// Devicetree parser (WASM) — started at module load so it overlaps the
+// registry read; keyboard sections wait on it.
+const parserReady = initDevicetree({ runtime: treeSitterWasm, grammar: devicetreeWasm });
 
 const KeyboardSection = lazy(() => import("@/components/Keyboard/KeyboardSection"));
 const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
@@ -54,6 +61,11 @@ export default function App() {
   const [section, setSection] = useState<Section | null>(null);
   const [pending, setPending] = useState<Section | null>(null);
   const [dirtyNames, setDirtyNames] = useState<string[]>([]);
+  const [parserState, setParserState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [parserError, setParserError] = useState<string | null>(null);
+  useEffect(() => {
+    parserReady.then(() => setParserState('ready')).catch(e => { setParserError(String(e)); setParserState('failed') });
+  }, []);
 
   // Load the registry, then resolve the initial section.
   useEffect(() => {
@@ -150,7 +162,14 @@ export default function App() {
           <SectionErrorBoundary section={key}>
             <div key={key} className="anim-fade-up" style={{ height: "100%" }}>
               {!section ? <LoadingFallback /> :
-                section.kind === 'keyboard' ? (activeKeyboard ? <KeyboardSection keyboard={activeKeyboard} onEditInSettings={() => navigate({ kind: 'settings' })} /> : <LoadingFallback />) :
+                section.kind === 'keyboard' ? (
+                  parserState === 'failed' ? (
+                    <div className="panel-inset" role="alert" style={{ margin: 24, padding: '12px 16px', fontSize: 12, color: 'var(--danger)' }}>
+                      The keymap parser failed to load: {parserError}
+                    </div>
+                  ) : parserState === 'loading' || !activeKeyboard ? <LoadingFallback /> :
+                  <KeyboardSection keyboard={activeKeyboard} onEditInSettings={() => navigate({ kind: 'settings' })} />
+                ) :
                 section.kind === 'karabiner' ? <KarabinerEditor /> :
                 section.kind === 'mouse' ? <Mouse /> :
                 section.kind === 'settings' ? <Settings startAdd={section.add} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
