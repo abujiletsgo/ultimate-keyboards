@@ -1,4 +1,4 @@
-# Ultimate Keyboards — flagship product plan (draft v1, 2026-09-24)
+# Ultimate Keyboards — flagship product plan (v2, 2026-09-24; v1 + Codex critique resolved once)
 
 Inputs: `docs/audit/2026-09-24-flow-audit.md` (35 findings: 6 P0, 14 P1, 15 P2; 23 drift rows; 27 hardcoded-assumption rows), `docs/audit/2026-09-24-security-audit.md` (15 findings: 1 Critical, 3 High, 7 Medium, 4 Low), `docs/research/2026-09-24-market.md` (12 competitors, 4 layout formats, 5 pointing modules, distribution norms).
 
@@ -22,81 +22,87 @@ Inputs: `docs/audit/2026-09-24-flow-audit.md` (35 findings: 6 P0, 14 P1, 15 P2; 
 - **File I/O layer** (`src/lib/io.ts`): atomic write (tmp + rename) with one `.bak`, size cap, realpath check; the only place that writes.
 - **Devicetree parser** (Phase 3): tree-sitter-devicetree (WASM) AST with byte-range edits, replacing regex slicing; unknown nodes preserved verbatim (keymap-editor's proven approach).
 
-## 2. Phases
+## 1b. Critique resolution (one opposite-vendor pass, Codex gpt-5.6-sol/high, `docs/plan/2026-09-24-codex-critique.md`)
 
-Each phase ends with: `npx tsc -b` clean, `bun test` green (fixtures: corne_tp, crosses, plus public sofle/glove80/lily58 keymaps and a KLE/info.json set), a manual smoke in the packaged app, and a plan-gate check-in with Tom before the next phase starts.
+| Codex point | Decision |
+|---|---|
+| Phase 0 not enough for a stranger's machine: count guard is a data-safety defect; validate-before-write; visible "Restore backup"; frozen lockfile + pinned install.sh | Accepted. All moved into Phase 0. Phase 0 renamed "safe local preview". |
+| Phase 1 "Any keyboard" is misleading while the regex parser remains; make it a vertical slice and pull the real parser forward | Accepted. Phase 1 = registry + detection + ZMK-native layout import + catalogue + compatibility report. Phase 2 = real parser + corpus + remaining importers. UX polish moves to Phase 3. |
+| Pointing wizard: "known module" is too loose; bound to tested tuples (module rev × controller × bus × split × ZMK version); unsupported = editable preview, no buildability claim | Accepted. |
+| Cut the visual layout builder (5.1); move the catalogue (5.2) into Phase 1 | Accepted. Builder goes to backlog, reconsidered only on observed import failures. |
+| Cut git push and automatic UF2 handling from build integration; keep diff preview, run status, artifact download; no stored GitHub token | Accepted for push and tokens. Partially accepted for UF2: kept as an explicit user-triggered "Flash" step (wait for volume, copy, report), never automatic. |
+| QMK: JSON-only editable; keymap.c read-only with explanation; golden tests for unknown JSON fields; `qmk json2c` compile fixtures | Accepted. |
+| Web build later than desktop stability | Accepted. Stays in Phase 6, after 6.1/6.2. |
+| Replace non-deterministic acceptance criteria (kill -9, "identically", "≤3 clicks", "fully visible", Lighthouse) with scripted assertions | Accepted; criteria rewritten below. |
+| Risks: tree-sitter WASM packaging, persisted-scope + atomic rename siblings, TCC across signed updates | Accepted as explicit spikes: 2.0, 0.2, 6.1. |
 
-### Phase 0 — Safe to run on someone else's machine (security + data safety)
-Closes: security #1–#11, #13–#15; flow F5, F7, dead code.
+## 2. Phases (resolved order)
 
-| Task | Owned files | Acceptance (deterministic) |
+Every phase ends with `npx tsc -b` clean, `bun test` green, the phase's scripted checks green, a manual smoke in the packaged app, and a gate with Tom.
+
+### Phase 0 — Safe local preview (security + data safety)
+
+| Task | Owned files | Acceptance (scripted) |
 |---|---|---|
-| 0.1 Remove `run_shell_command`, `tauri-plugin-shell`; set CSP | `src-tauri/src/lib.rs`, `Cargo.toml`, `package.json`, `capabilities/default.json`, `tauri.conf.json` | grep finds no `run_shell_command`/`plugin-shell`; `csp` non-null; app boots and saves |
-| 0.2 fs scope: no static `$HOME/**`; add `tauri-plugin-persisted-scope` + dialog-granted paths; app-data dir for registry | `capabilities/default.json`, `Cargo.toml`, `src-tauri/src/lib.rs` | reading an unregistered path fails; registered path read/write works after restart |
-| 0.3 Dev write bridge: Origin + Content-Type + per-run token; realpath allowlist of registered files; narrow `server.fs.allow` | `vite.config.ts`, `src/lib/tauri-web-shims/plugin-fs.ts` | curl POST without token/origin → 403; app dev save works |
-| 0.4 `io.ts` atomic write + `.bak` + 1 MB cap; all writers use it; remove `'{}'` fallback in qmkStore | `src/lib/io.ts`, `ZMKEditor/index.tsx`, `Pointing/index.tsx`, `QMKComboEditor.tsx`, `stores/qmkStore.ts` | kill -9 during save leaves original or complete file; `.bak` exists |
-| 0.5 Karabiner patch: skip unchanged, preserve_order, tmp+rename, startup restore marker for built-in keyboard | `src-tauri/src/lib.rs`, `Cargo.toml` | quit with no toggle → `karabiner.json` byte-identical; crash after disable → next launch restores |
-| 0.6 Mouse engine: re-enable on `TapDisabled*`, `Once` spawn, drop probe tap, push config on launch | `src-tauri/src/mouse_engine.rs`, `Mouse.tsx` | engine survives a 2 s stall; relaunch restores reverse-scroll without visiting Mouse |
-| 0.7 Parser hardening: anchored layer regex, keymap-block-scoped node search; fixture tests | `src/lib/zmkParser.ts`, `tests/` | 200 KB hostile file parses < 100 ms; behaviors node with a layer's name untouched on save |
-| 0.8 Exit guard: Rust dirty flag via invoke; native confirm on `ExitRequested`; QMK/Pointing in dirty check | `lib.rs`, `src/lib/dirty.ts`, stores | Cmd-Q with dirty edits prompts; clean quit doesn't |
-| 0.9 Delete dead code + unused CSS; untrack `.claude/settings*`, `.vite/`; pin `@types/bun` | listed in audit | `tsc` clean; `git ls-files` shows none |
+| 0.1 Remove `run_shell_command` + `tauri-plugin-shell`; set CSP | `src-tauri/src/lib.rs`, `Cargo.toml`, `package.json`, `capabilities/default.json`, `tauri.conf.json` | grep: 0 hits for `run_shell_command`, `plugin-shell`; CSP non-null; app boots, loads, saves a fixture |
+| 0.2 fs scope spike + rollout: no static `$HOME/**`; `tauri-plugin-persisted-scope` with directory grants from the folder picker; app-data dir for the registry | `capabilities/default.json`, `Cargo.toml`, `lib.rs` | harness: grant repo dir → restart → write sibling `.tmp` → rename over target → restore `.bak` → adjacent dir still denied; every step asserted |
+| 0.3 Dev write bridge: Origin + Content-Type + per-run token; realpath allowlist of registered files; narrow `server.fs.allow` | `vite.config.ts`, `tauri-web-shims/plugin-fs.ts` | curl POST without token or with foreign Origin → 403; with both → 200 only for a registered file |
+| 0.4 `io.ts`: validate-before-write (re-parse the output; refuse if layer/key counts changed), atomic tmp+rename, one `.bak`, 1 MB cap; count-mismatch guard blocks edits when layout≠keymap length; all writers use it; remove `'{}'` fallback | `src/lib/io.ts`, `zmkStore.ts`, `ZMKEditor/index.tsx`, `Pointing/index.tsx`, `QMKComboEditor.tsx`, `qmkStore.ts` | fault injection after tmp write and after bak rename → target is either original or complete; sparse-array edit path cannot be reached (test) |
+| 0.5 "Restore backup" affordance in ZMK/QMK/Pointing toolbars | `components/ui/RestoreBackup.tsx`, toolbars | clicking restores `.bak` byte-for-byte and reloads |
+| 0.6 Karabiner patch hygiene: skip unchanged, preserve_order, tmp+rename, startup restore marker for built-in keyboard | `lib.rs`, `Cargo.toml` | quit without toggle → file byte-identical; marker present at launch → `hidutil` restore runs |
+| 0.7 Mouse engine: re-enable on `TapDisabled*`, `Once` spawn, drop probe tap, push config at launch | `mouse_engine.rs`, `Mouse.tsx` | test blocks callback 2 s, emits disabled event, asserts exactly one active tap resumes |
+| 0.8 Parser hardening: anchored layer regex; keymap-block-scoped node search | `zmkParser.ts`, `tests/` | 200 KB hostile fixture parses < 100 ms; behaviors node sharing a layer name is untouched after save |
+| 0.9 Exit guard: Rust dirty flag; native confirm on `ExitRequested`; QMK/Pointing included | `lib.rs`, `src/lib/dirty.ts`, stores | scripted: dirty → exit request → confirm shown; clean → no confirm |
+| 0.10 Dead code + unused CSS removed; untrack `.claude/settings*`, `.vite/`; pin `@types/bun`; `bun install --frozen-lockfile` in CI; pin or remove remote scripts in `install.sh` | listed in audits | `tsc` clean; `git ls-files` clean; CI uses frozen lockfile |
 
-### Phase 1 — Any keyboard: registry, layouts, onboarding
-Closes: flow F1, F2, F8, F35, all 27 hardcoded rows; security #12.
+### Phase 1 — Any ZMK config repo: registry, detection, catalogue, compatibility report
 
 | Task | Owned files | Acceptance |
 |---|---|---|
-| 1.1 PhysicalLayout model + importers (KLE, QMK info.json, ZMK physical-layout dtsi, keymap-editor info.json, matrix-transform grid fallback) + ZMK/QMK exporters; fixtures | `src/lib/layout/*`, `tests/layout/*` | round-trip tests per format; corne_tp & crosses render from imported dtsi identically to today |
-| 1.2 `<PhysicalBoard>` renderer with rotation, encoders, hand split, count-mismatch guard; replaces geometry in SplitKeyboard/QMKKeyboard/MacbookKeyboard | `src/components/board/*`, callers | opening a 36/42/58/80-key keymap shows every key; layout≠keymap count shows banner, edits blocked |
-| 1.3 Registry store + Settings "Add keyboard" wizard: pick repo folder → detect firmware, `build.yaml`, `config/*.keymap`, shields, `west.yml` modules, physical layout → confirm → save. Edit/remove rows. ZMK/QMK/Pointing pickers read from it | `src/lib/registry/*`, `Settings.tsx`, `ZMKEditor/index.tsx`, `Pointing/index.tsx` | clean machine → editable board in ≤3 clicks; no `/Users/tomkwon` in `dist/` |
-| 1.4 First-run screen + empty states; Karabiner ships `rules: []` with "Load example" | `App.tsx`, `components/Onboarding.tsx`, `karabinerStore.ts` | fresh profile shows onboarding, not an error panel |
-| 1.5 QMK: registry-driven `keymap.json` load/save (Configurator format), layout from `info.json`; VIA JSON kept as import | `stores/qmkStore.ts`, `lib/qmkParser.ts` | corne_procyon opens from registry; layer names from file |
+| 1.1 Registry store (`tauri-plugin-store` / localStorage) with descriptors; Settings "Add keyboard": pick repo folder → detect firmware, `build.yaml`, `config/*.keymap`, shields, `west.yml` modules → confirm → save; edit/remove; ZMK/QMK/Pointing pickers read from it | `src/lib/registry/*`, `Settings.tsx`, `ZMKEditor/index.tsx`, `Pointing/index.tsx` | scripted first-run against a fixture repo: registered and editable in a declared click count; `dist/` contains no `/Users/` string |
+| 1.2 PhysicalLayout model + ZMK-native import (`zmk,physical-layout` dtsi, matrix-transform grid fallback) + `<PhysicalBoard>` renderer with rotation/encoders/hand split | `src/lib/layout/*`, `src/components/board/*` | geometry snapshot of corne_tp and crosses within 0.01u of today's; 36/42/58/80-key fixtures render all keys |
+| 1.3 Layout catalogue (bundled JSON: keymap-editor contrib + QMK info.json for popular boards) with search, used when no layout is detected | `src/lib/layout/catalogue/*` | "Sofle" resolves without files |
+| 1.4 Compatibility report: on open, list constructs the current parser does not own (includes of other keymap files, macros/behaviors referencing layers, conditional layers, preprocessor conditionals); unsupported → read-only with the construct named | `src/lib/compat.ts`, `ZMKEditor/index.tsx` | fixture with `#ifdef` opens read-only, banner names the line |
+| 1.5 First-run screen + empty states; Karabiner ships `rules: []` with "Load example" | `App.tsx`, `Onboarding.tsx`, `karabinerStore.ts` | fresh profile shows onboarding, not an error panel |
 
-### Phase 2 — Editor UX and consistency
-Closes: flow F3, F4, F6, F9–F34; all 23 drift rows.
-
-| Task | Owned files | Acceptance |
-|---|---|---|
-| 2.1 UI primitives (Popover, ConfirmBanner, Toast, Switch, FieldLabel, ErrorPanel, Section, IconButton, BoardLegend) + tokens (`--z-*`, `--r-pill`, `--text-10/12/14`) | `src/components/ui/*`, `globals.css` | zero `window.confirm`/`alert`; zero `position: fixed` outside Popover; zero emoji icons |
-| 2.2 Migrate BindingEditor, MacKeyEditor, ParamPicker, KeyDropdown, all combo forms, HomerowMod, Pointing toggles to primitives | listed files | MacBook key popover fully visible at 800×600; all toggles Tab+Space |
-| 2.3 Keys as `<button>`: roving tabindex, arrow nav, Enter opens editor, Esc returns focus; `.key-sub` behavior labels; shared legend; `--text-muted` ≥ 4.5:1 | board components, `globals.css` | keyboard-only edit of a key succeeds; every non-kp key has a text cue |
-| 2.4 Dirty registry: Cmd+S, Revert, Cmd+Z/Shift+Cmd+Z (snapshot history), section-switch guard, Pointing store | `src/lib/dirty.ts`, stores, `App.tsx`, `Pointing/*` | slider edit survives section switch; Cmd+Z undoes a key edit |
-| 2.5 Combos: unique names, layer pills, edit-while-add guard; layer delete dry-run with "Go to key"; rename inline error; Karabiner rule reorder/edit-in-place; homerow threshold emitted | `ComboEditor.tsx`, `ZMKEditor/index.tsx`, `RuleList.tsx`, `MacComboEditor.tsx`, `karabinerGenerator.ts` | duplicate combo name rejected; referenced-layer delete never shows a confirm |
-| 2.6 Karabiner "Install" writes to `~/.config/karabiner/assets/complex_modifications/` on desktop; success only after write | `KarabinerEditor/index.tsx` | rule appears in Karabiner's Add-rule list |
-| 2.7 Copy pass: section names, casing, de-personalized strings, README rewrite | many | grep for `tomkwon`, `corne_procyon` in `src/` returns nothing |
-
-### Phase 3 — ZMK depth: real parser, behaviors, build + flash
-Flagship capabilities #2, #3, #5, #9.
+### Phase 2 — Preservation guarantee: real devicetree parser + corpus + importers
 
 | Task | Owned files | Acceptance |
 |---|---|---|
-| 3.1 tree-sitter-devicetree (WASM) parser with byte-range edits; unknown nodes preserved; `#include`d `.dtsi` layers/macros read; keep minimal-diff invariant | `src/lib/dt/*`, `zmkParser.ts` | byte-identical no-op save on 6 public keymaps; edit of one binding = one changed line |
-| 3.2 Behavior editors: macros, hold-tap, mod-morph, tap-dance, sticky, caps-word params; user behaviors appear in BindingEditor | `components/ZMKEditor/Behaviors/*` | create a hold-tap and bind it; file diff reviewed in tests |
-| 3.3 Build & flash: git commit/push from app (with diff preview), GitHub Actions run status, artifact download, UF2 volume watcher + copy (the flow used manually on 2026-09-23) | `src-tauri/src/build.rs`, `components/Build/*` | click "Build" → run status → "Flash left/right" copies uf2 when NICENANO mounts |
-| 3.4 Keymap render/export (SVG via keymap-drawer-compatible YAML) and print view | `src/lib/export/*` | SVG matches board |
+| 2.0 Spike: tree-sitter-devicetree WASM loaded in a packaged universal build under the Phase 0 CSP; parses one fixture | `src/lib/dt/spike/*`, CSP | packaged app parses fixture; asset served with correct MIME offline |
+| 2.1 Parser with byte-range edits applied in descending offset order; unknown nodes preserved; `#include`d `.dtsi` read for layers/macros with include ownership tracked; CRLF safe | `src/lib/dt/*`, `zmkParser.ts` | corpus (≥8 public keymaps incl. macros, conditional layers, duplicate node names, nested includes, CRLF, malformed): byte-identical no-op; one edit = one changed line |
+| 2.2 QMK: `keymap.json` (Configurator format) editable; unknown JSON fields preserved (golden tests); `keymap.c` repos open read-only with explanation; `qmk json2c` compile fixtures | `qmkStore.ts`, `qmkParser.ts`, `tests/qmk/*` | golden tests pass; `qmk json2c` output compiles for 2 fixtures |
+| 2.3 Remaining importers/exporters: KLE, QMK info.json, keymap-editor info.json; export ZMK dtsi + QMK info.json | `src/lib/layout/*` | round-trip per format within 0.01u; exported ZMK dtsi coordinates match source integers exactly |
 
-### Phase 4 — Pointing devices, generalized
-Flagship capability #10 (the gap).
+### Phase 3 — Editor UX and consistency (was Phase 2 in v1)
+Tasks 2.1–2.7 of v1 unchanged (primitives + tokens; migrations; keys as buttons + a11y + `.key-sub` + contrast; dirty registry with Cmd+S/Revert/undo; combos/layer-delete/rename/Karabiner reorder; Karabiner Install writes file; copy pass). Acceptance rewritten: popover bounding box asserted within an 800×600 viewport; scripted keyboard-only edit asserts binding and restored focus; Karabiner install asserts a schema-valid file at the exact assets path (discovery in Karabiner is manual smoke).
 
-| Task | Owned files | Acceptance |
-|---|---|---|
-| 4.1 Pointing descriptor detection from overlays: `zmk,input-listener` nodes, sensor `compatible`, processors, split `zmk,input-split`; per-layer children UI generic (move/scroll/snipe/temp-layer) | `src/lib/pointing/*`, `Pointing/*` | corne_tp and crosses detected with no hand-written regex; choovick charybdis config detected |
-| 4.2 "Add pointing device" wizard for PMW3610 (SPI), Azoteq IQS5XX (I2C), Cirque Pinnacle (SPI/I2C): writes `west.yml` module, `.conf` flags, overlay pinctrl/bus/sensor/listener from templates; pin form with board pin picker; diff preview; remove = inverse | `src/lib/pointing/templates/*`, `components/Pointing/Wizard/*` | generated config for nice!nano + PMW3610 builds green in CI on a test repo |
-| 4.3 QMK pointing: `rules.mk`/`config.h` flags (driver, rotation, invert, auto-mouse layer) | `src/lib/qmkConfig.ts` | round-trip on a Charybdis QMK keymap dir |
+### Phase 4 — ZMK depth: behaviors, build status, export
 
-### Phase 5 — Custom layout builder
 | Task | Acceptance |
 |---|---|
-| 5.1 Visual layout editor: add/move/resize/rotate keys, split halves, encoders, matrix assignment, snap grid; import any Phase 1 format; export ZMK physical-layout dtsi + matrix transform and QMK info.json | drawn 36-key layout exports a dtsi that builds and matches ZMK Studio's rendering |
-| 5.2 Community layout catalogue (bundled JSON from keymap-editor contrib + QMK info.json for popular boards) with search | pick "Sofle" → layout loads without files |
+| 4.1 Behavior editors: macros, hold-tap, mod-morph, tap-dance, sticky, caps-word; user behaviors in BindingEditor | create + bind a hold-tap; diff asserted in tests |
+| 4.2 Build integration WITHOUT push: repo state + diff preview; watch a user-initiated Actions run (pinned fake API in tests); artifact download; explicit "Flash" button that waits for the UF2 volume and copies (never automatic) | fake-API test passes; flash step is manual smoke |
+| 4.3 Keymap SVG export (keymap-drawer-compatible) | exported coordinates equal board geometry within tolerance |
+
+### Phase 5 — Pointing devices (tested tuples only)
+
+| Task | Acceptance |
+|---|---|
+| 5.1 Descriptor detection from overlays (`zmk,input-listener`, sensor `compatible`, processors, `zmk,input-split`); generic per-layer children UI | corne_tp, crosses, choovick charybdis detected with no hand-written regex |
+| 5.2 "Add pointing device" wizard bound to a tested-tuples table (e.g. nice!nano v2 × PMW3610 badjeff@zmk-0.4 × SPI × split-right × ZMK main; nice!nano v2 × Azoteq IQS5XX × I2C; Cirque SPI); writes `west.yml`, `.conf`, overlay from templates; diff preview; untested tuple → editable preview labelled "untested"; remove = inverse | pinned containerized ZMK build compiles the generated config for each tested tuple |
+| 5.3 QMK pointing flags (`rules.mk`/`config.h`) | round-trip on a Charybdis QMK dir |
 
 ### Phase 6 — Distribution
+
 | Task | Acceptance |
 |---|---|
-| 6.1 Developer ID signing + notarization, universal build, `minimumSystemVersion`, stable TCC identity | `spctl --assess` passes on a clean Mac; Accessibility grant survives rebuild |
-| 6.2 `tauri-plugin-updater` + GitHub Releases `latest.json` via tauri-action; Windows/Linux builds (Karabiner/Mouse sections hidden off-macOS) | update from vN to vN+1 in-app |
-| 6.3 Web build: Chromium FS Access path only, no personal paths, "desktop recommended" banner; Vercel | Lighthouse a11y ≥ 95; no `tomkwon` in bundle |
-| 6.4 Docs site, in-app "What is supported" page (ZMK shapes, QMK limits), CHANGELOG, license (MIT) | published |
+| 6.1 Developer ID signing + notarization, universal, `minimumSystemVersion`; TCC test: install signed vN in `/Applications`, grant Accessibility, update to vN+1, event tap works without reopening Settings | `spctl --assess` passes; TCC procedure documented and passed |
+| 6.2 `tauri-plugin-updater` + GitHub Releases `latest.json`; Windows/Linux builds with macOS-only sections hidden | in-app update vN→vN+1 |
+| 6.3 Web build (Chromium FS Access only), after 6.1/6.2 | axe: 0 violations; no personal paths in bundle |
+| 6.4 Docs site, in-app "What is supported" page, CHANGELOG, license | published |
+
+Backlog (not scheduled): visual layout builder; git push from the app; keymap.c editing.
 
 ## 3. Routing (AF)
 Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dirty registry design): Fable/high. Execution-loop heavy (2.2 migrations, 2.7 copy pass, 0.9 cleanup, 1.5 QMK, 5.1 builder): Sol/high via codex. Everyday build: Sonnet/medium. Mechanical (fixture collection, token replacement): Haiku.
