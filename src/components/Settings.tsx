@@ -10,6 +10,8 @@ import { parseInfoJsonLayouts, parseKle, type PhysicalLayout } from "@/lib/layou
 import { readText } from "@/lib/io";
 import type { KeyboardDef } from "@/lib/registry/types";
 import AddKeyboard from "./Settings/AddKeyboard";
+import Updates from "./Settings/Updates";
+import Supported from "./Settings/Supported";
 import PhysicalBoard from "@/components/board/PhysicalBoard";
 
 interface Props {
@@ -77,11 +79,20 @@ export default function Settings({ startAdd, onAdded }: Props) {
           <BuiltInKeyboardField />
         </Section>
 
+        <Section title="Updates">
+          <Updates />
+        </Section>
+
+        <Section title="What is supported">
+          <Supported />
+        </Section>
+
         <Section title="About">
           <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.8" }}>
             <p><strong style={{ color: "var(--text)" }}>Ultimate Keyboards</strong> v{__APP_VERSION__}</p>
             <p>ZMK / QMK keymap editor, pointing-device tuner, and Karabiner-Elements configurator.</p>
             <p style={{ marginTop: "8px" }}>Built with Tauri v2 + React 19 + TypeScript. {CATALOGUE.length} physical layouts bundled from ZMK.</p>
+            <p>MIT licensed. Source and release notes: github.com/abujiletsgo/ultimate-keyboards</p>
           </div>
         </Section>
       </div>

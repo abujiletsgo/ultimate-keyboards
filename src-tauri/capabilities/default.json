@@ -73,6 +73,8 @@
           "path": "$DOCUMENT/**"
         }
       ]
-    }
+    },
+    "updater:default",
+    "process:allow-restart"
   ]
 }

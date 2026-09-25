@@ -1,22 +1,53 @@
 # Ultimate Keyboards
 
-Personal keyboard control center — a Tauri desktop / web app that fully replaces
-[nickcoutsos/keymap-editor](https://nickcoutsos.github.io/keymap-editor/) by editing
-local ZMK config checkouts directly.
+A macOS app for people who build and tune split keyboards. It edits your ZMK or
+QMK config files directly: keymaps, combos, behaviors, trackpads and
+trackballs, then builds and flashes the firmware through your own GitHub
+Actions. It also remaps the MacBook's built-in keyboard through
+Karabiner-Elements.
+
+MIT licensed. See [what is supported](docs/user/supported.md) and the
+[changelog](CHANGELOG.md).
+
+## Install
+
+1. Download `Ultimate Keyboards_<version>_aarch64.dmg` from
+   [Releases](https://github.com/abujiletsgo/ultimate-keyboards/releases) and drag the app to Applications.
+2. The app is not signed by Apple yet. On first launch, right-click it, choose **Open**,
+   then **Open** again.
+3. Click **Add keyboard…** and pick your config repo folder (for ZMK, the folder
+   that holds `config/` and `build.yaml`). The keymap, physical layout and any
+   trackpad or trackball are detected.
+
+Updates arrive in **Settings › Updates**. Each download is checked against the
+release signing key before it is installed.
+
+### Permissions it asks for
+
+| Permission | Why |
+|---|---|
+| Documents folder | Your config repos usually live there. Other folders are only read after you pick them. |
+| Accessibility | Only for the scroll engine under **This Mac › Scroll & Mouse**. |
+| Karabiner-Elements | Only for **This Mac › MacBook Keys**; install it separately. |
+
+The app never runs shell commands you type, never uploads your files, and talks
+to GitHub only through your own `gh` login when you open the Build tab.
 
 ## What it does
 
-Each keyboard you register is a top-level object with **Keymap**, **Combos** and
-(when it has a trackpad/trackball) **Pointing** tabs. Host-level tools live under
+Each keyboard you register is a top-level object with **Keymap**, **Combos**,
+**Behaviors** (ZMK), **Pointing** and **Build** tabs. Host-level tools live under
 **This Mac**.
 
 | Section | Purpose |
 |---|---|
 | **Keyboard › Keymap / Combos** | Visual editor for a ZMK `.keymap` (layers, bindings, combos, layer create/rename/delete) or a QMK VIA layout JSON + `keymap.c` combos. Keys are drawn on the keyboard's real physical layout. |
-| **Keyboard › Pointing** | Trackpad/trackball tuning written straight into the shield overlay: cursor speed, scroll, gestures, CPI, axis flips, snipe, scroll-on-layer (Azoteq IQS5XX, Pixart PMW3610/3360, Cirque). |
+| **Keyboard › Behaviors** | ZMK hold-taps, mod-morphs, tap-dances, macros: edit, add, remove. |
+| **Keyboard › Pointing** | Tune a trackpad/trackball in the shield overlay (speed, scroll, gestures, CPI, axis flips, snipe, scroll layer), or add one from a tested template with a diff preview. QMK: pointing flags in `rules.mk` / `config.h`. |
+| **Keyboard › Build** | GitHub Actions runs, artifact download, UF2 flash. |
 | **This Mac › MacBook Keys** | Karabiner-Elements complex-modification builder: remaps, combos, layers, homerow mods. |
 | **This Mac › Scroll & Mouse** | Native scroll engine (reverse direction, speed) for discrete-wheel mice. |
-| **Settings** | Add keyboards from a config folder (firmware, keymap, physical layout and pointing sensors are detected) or a single `.keymap`; rename, change files or layout, remove. Built-in-keyboard mute. |
+| **Settings** | Add, rename, re-point or remove keyboards; built-in-keyboard mute; updates; what is supported. |
 
 ## Data flow
 
@@ -33,15 +64,30 @@ from the bundled catalogue of ZMK's shared layouts (`scripts/build-catalogue.ts`
 
 Edit → Save → `git commit && git push` in the config repo → GitHub Actions builds firmware.
 
-## Run
+## Develop
 
 ```sh
 bun install
 bun run dev          # web dev build — fs bridge lets the browser read/write the keymap files
 bun run tauri:dev    # desktop app (auto-loads keymaps natively)
 bun run build        # package the desktop app
-npx tsc -b           # typecheck
+bun run typecheck    # tsc -b
+bun test
+bun run scripts/gen-supported-doc.ts   # after editing src/lib/supported.ts
 ```
+
+### Releasing
+
+1. Once per machine: `bash scripts/setup-updater-key.sh` (creates the updater
+   signing key, stores the GitHub secrets, writes the public key into
+   `tauri.conf.json`).
+2. Bump `version` in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and
+   `package.json`; add a `## [x.y.z]` section to `CHANGELOG.md`.
+3. Tag and push: `git tag vx.y.z && git push origin vx.y.z`. The Release workflow
+   builds, signs the update, and publishes the release with `latest.json`.
+
+Local `bun run build` does not sign or produce update archives; only the
+Release workflow does (it passes `createUpdaterArtifacts` and the key secrets).
 
 The vite dev server picks the first free port from 5173 (another local project often
 holds 5173 — check the `➜ Local:` line).
