@@ -25,7 +25,8 @@ export interface LayoutCandidate {
 
 export interface DetectedKeyboard {
   firmware: Firmware
-  repoPath: string
+  /** config repo root; absent for a lone keymap file outside a repo */
+  repoPath?: string
   suggestedName: string
   shield?: string
   keymapCandidates: string[]

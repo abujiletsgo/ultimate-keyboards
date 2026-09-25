@@ -19,85 +19,37 @@ interface Props {
 export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, selectedKeys, comboHighlights, selectorMode }: Props) {
   const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number; top: number } | null>(null)
 
-  // Build set of mapped key codes for highlighting
-  const mappedFrom = new Set<string>()
-  const mappedTo = new Set<string>()
+  // What each key does now, for the ones the rules change (tap output / hold output).
+  const MOD_SYM: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
+  const labelOf = (code: string) => MACBOOK_LAYOUT.find(k => k.code === code)?.label || code.replace(/_/g, ' ')
+  const modsOf = (mods?: string[]) => (mods ?? []).map(m => MOD_SYM[m.replace(/^(left|right)_/, '')] ?? m).join('')
+  const changed = new Map<string, string>()
   for (const rule of rules) {
     switch (rule.type) {
-      case 'simple':
-        mappedFrom.add(rule.fromKey)
-        mappedTo.add(rule.toKey)
-        break
-      case 'combo':
-        rule.fromKeys.forEach(k => mappedFrom.add(k))
-        mappedTo.add(rule.toKey)
-        break
-      case 'layer_activator':
-        mappedFrom.add(rule.fromKey)
-        break
-      case 'layer_binding':
-        mappedFrom.add(rule.fromKey)
-        mappedTo.add(rule.toKey)
-        break
-      case 'homerow_mod':
-        mappedFrom.add(rule.fromKey)
-        mappedTo.add(rule.modKey)
-        break
+      case 'simple': changed.set(rule.fromKey, `→ ${modsOf(rule.toModifiers)}${labelOf(rule.toKey)}`); break
+      case 'layer_activator': changed.set(rule.fromKey, `hold: ${rule.layerName}`); break
+      case 'homerow_mod': changed.set(rule.fromKey, `hold ${MOD_SYM[rule.modKey.replace(/^(left|right)_/, '')] ?? rule.modKey}`); break
+      default: break // combos and layer keys are shown in their own tabs
     }
   }
 
-  /** Per-state key colors, injected into .keycap via CSS custom props */
   function getKeyVars(key: MacKey) {
-    const code = key.code
-    const isComboHighlit  = comboHighlights?.has(code)
-    const isMappedFrom    = mappedFrom.has(code)
-    const isMappedTo      = mappedTo.has(code)
-
-    if (isComboHighlit) return {
-      bg: 'rgba(251,146,60,0.25)',
-      border: 'rgba(251,146,60,0.5)',
-      text: '#fb923c',
-    }
-    if (isMappedFrom) return {
-      bg: 'rgba(255,69,58,0.18)',
-      border: 'rgba(255,69,58,0.4)',
-      text: 'var(--danger)',
-    }
-    if (isMappedTo) return {
-      bg: 'rgba(50,215,75,0.15)',
-      border: 'rgba(50,215,75,0.35)',
-      text: 'var(--success)',
-    }
-    // Default
-    return {
-      bg: key.small
-        ? 'rgba(255,255,255,0.05)'
-        : 'rgba(255,255,255,0.08)',
-      border: 'rgba(255,255,255,0.09)',
-      text: 'var(--text-secondary)',
-    }
+    if (comboHighlights?.has(key.code)) return { bg: 'rgba(251,146,60,0.25)', border: 'rgba(251,146,60,0.5)', text: '#fb923c' }
+    if (!selectorMode && changed.has(key.code)) return { bg: 'rgba(45,212,191,0.14)', border: 'rgba(45,212,191,0.45)', text: 'var(--text)' }
+    return { bg: key.small ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.09)', text: 'var(--text-secondary)' }
   }
 
   return (
-    <div style={{ padding: '24px 0' }}>
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16, fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(255,69,58,0.4)', display: 'inline-block' }} />
-          Remapped from
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(50,215,75,0.35)', display: 'inline-block' }} />
-          Remapped to
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--accent)', display: 'inline-block' }} />
-          Selected
-        </span>
-        <span style={{ color: 'var(--text-muted)', marginLeft: 'auto' }}>
-          Click any key to configure its binding
-        </span>
-      </div>
+    <div style={{ padding: '8px 0' }}>
+      {!selectorMode && (
+        <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(45,212,191,0.45)', display: 'inline-block' }} />
+            Changed ({changed.size})
+          </span>
+          <span style={{ marginLeft: 'auto' }}>Click a key to change what it does</span>
+        </div>
+      )}
 
       {/* Keyboard body — scales with its container */}
       <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
@@ -122,9 +74,10 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
             <button
               type="button"
               key={key.code}
-              aria-label={`${key.label} (${key.code})`}
+              aria-label={`${key.label || key.code}${changed.has(key.code) ? `, ${changed.get(key.code)}` : ''}`}
               aria-pressed={isSelected}
               className={['keycap', isSelected ? 'selected' : ''].filter(Boolean).join(' ')}
+              disabled={selectorMode && !onKeyClick}
               onClick={(e) => {
                 onKeyClick?.(key)
                 if (!selectorMode) {
@@ -145,6 +98,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
               } as CSSProperties}
             >
               <span className="key-main">{key.label}</span>
+              {!selectorMode && changed.has(key.code) && <span className="key-sub" style={{ color: 'var(--accent)', opacity: 1, textTransform: 'none' }}>{changed.get(key.code)}</span>}
             </button>
           )
         })}

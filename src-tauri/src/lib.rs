@@ -195,7 +195,7 @@ fn is_builtin_keyboard_disabled(state: State<AppState>) -> bool {
     *state.builtin_disabled.lock().unwrap()
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn set_builtin_keyboard_disabled(app: tauri::AppHandle, disabled: bool) -> Result<(), String> {
     set_builtin_state(&app, disabled)
 }
@@ -204,7 +204,7 @@ fn set_builtin_keyboard_disabled(app: tauri::AppHandle, disabled: bool) -> Resul
 /// them (`~/.config/karabiner/assets/complex_modifications/`). The file name is
 /// derived from the profile title; the JSON is written atomically with a
 /// backup. Returns the path written.
-#[tauri::command]
+#[tauri::command(async)]
 fn install_karabiner_rules(title: String, json: String) -> Result<String, String> {
     if json.len() > 2_000_000 {
         return Err("rule file is unexpectedly large".into());
@@ -278,13 +278,48 @@ struct MouseConfig {
 
 /// Push new config to the live engine. Starts the tap thread on first enable;
 /// returns an error (e.g. missing Accessibility permission) the UI can surface.
-#[tauri::command]
+#[tauri::command(async)]
 fn set_mouse_config(config: MouseConfig) -> Result<(), String> {
     if config.enabled {
         mouse_engine::start()?;
     }
     mouse_engine::set_config(config.enabled, config.reverse, config.speed);
     Ok(())
+}
+
+#[link(name = "ApplicationServices", kind = "framework")]
+extern "C" {
+    fn AXIsProcessTrusted() -> bool;
+}
+
+/// Whether macOS has granted this app Accessibility (needed for the scroll tap).
+#[tauri::command]
+fn accessibility_trusted() -> bool {
+    unsafe { AXIsProcessTrusted() }
+}
+
+/// Open System Settings at Privacy & Security › Accessibility. Fixed URL, no input.
+#[tauri::command(async)]
+fn open_accessibility_settings() -> Result<(), String> {
+    std::process::Command::new("/usr/bin/open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        .status()
+        .map_err(|e| e.to_string())
+        .and_then(|s| if s.success() { Ok(()) } else { Err(format!("open exited with {s}")) })
+}
+
+/// Open a GitHub page in the default browser. Only https://github.com/ URLs
+/// with no whitespace are accepted, so the webview cannot launch anything else.
+#[tauri::command(async)]
+fn open_github_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://github.com/") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err("only https://github.com/ links can be opened".into());
+    }
+    std::process::Command::new("/usr/bin/open")
+        .arg(&url)
+        .status()
+        .map_err(|e| e.to_string())
+        .and_then(|s| if s.success() { Ok(()) } else { Err(format!("open exited with {s}")) })
 }
 
 #[tauri::command]
@@ -319,7 +354,10 @@ pub fn run() {
             build::list_firmware,
             build::flash_uf2,
             set_mouse_config,
-            get_mouse_config
+            get_mouse_config,
+            accessibility_trusted,
+            open_accessibility_settings,
+            open_github_url
         ])
         .setup(|app| {
             // ── Status-bar (menu-bar) item ──────────────────────────────────

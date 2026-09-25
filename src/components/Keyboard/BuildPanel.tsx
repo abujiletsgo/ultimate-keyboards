@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { RefreshCw, Download, Zap, ExternalLink } from 'lucide-react'
 import { IS_TAURI } from '@/lib/io'
 import { useToast } from '@/components/ui'
+import { openGithub } from '@/lib/openUrl'
 import type { KeyboardDef } from '@/lib/registry/types'
 
 interface RepoStatus { branch: string; ahead: number; behind: number; changes: string[]; remote: string | null; github: string | null }
@@ -28,27 +29,27 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
 
   const refresh = useCallback(async () => {
     if (!IS_TAURI || !repo) return
-    setError(null)
+    setError(null); setBusy('refresh')
     try {
       const st = await invoke<RepoStatus>('git_repo_status', { repo })
       setStatus(st)
-      setDiff(await invoke<string>('git_diff_file', { repo, path: keyboard.keymapPath }).catch(() => null))
+      setDiff(await invoke<string>('git_diff_file', { repo, path: keyboard.keymapPath }).catch(e => `Could not read the diff: ${e}`))
       setFirmware(await invoke<string[]>('list_firmware', { repo }))
       const info = await invoke<GhInfo>('gh_info')
       setGh(info)
       if (info.available && info.logged_in && st.github) {
         const json = await invoke<string>('gh_run_list', { repo, branch: st.branch, limit: 5 })
         setRuns(JSON.parse(json) as Run[])
-      }
+      } else setRuns([])
     } catch (e) {
-      setError(String(e))
-    }
+      setError(String(e)); setRuns([])
+    } finally { setBusy(b => (b === 'refresh' ? null : b)) }
   }, [repo, keyboard.keymapPath])
 
   useEffect(() => { refresh() }, [refresh])
 
   if (!IS_TAURI) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>Build status, artifact download and flashing need the desktop app.</div>
-  if (!repo) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>This keyboard has no config folder registered. Edit it in Settings and add its repo folder.</div>
+  if (!repo) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>This keyboard has no config folder. Open Settings › Keyboards › Edit › Files and choose its config folder.</div>
 
   const download = async (run: Run) => {
     setBusy(`download-${run.databaseId}`)
@@ -75,7 +76,7 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Build</h3>
         <span style={{ flex: 1 }} />
-        <button className="btn btn-secondary btn-sm" onClick={refresh}><RefreshCw size={13} /> Refresh</button>
+        <button className="btn btn-secondary btn-sm" onClick={refresh} disabled={busy === 'refresh'}><RefreshCw size={13} /> {busy === 'refresh' ? 'Refreshing…' : 'Refresh'}</button>
       </div>
       {error && <div className="panel-inset error-panel" role="alert">{error}</div>}
 
@@ -88,7 +89,7 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
               <span className="mono">{repo}</span> · branch <strong>{status.branch}</strong>
               {status.ahead > 0 && <span className="tag" style={{ marginLeft: 6 }}>{status.ahead} unpushed</span>}
               {status.behind > 0 && <span className="tag" style={{ marginLeft: 6 }}>{status.behind} behind</span>}
-              {status.github && <a href={`https://github.com/${status.github}`} target="_blank" rel="noreferrer" style={{ marginLeft: 8, fontSize: 11 }}>{status.github} <ExternalLink size={10} /></a>}
+              {status.github && <button className="btn-link" onClick={() => openGithub(`https://github.com/${status.github}`).catch(e => toast.error(String(e)))} style={{ marginLeft: 8, fontSize: 11 }}>{status.github} <ExternalLink size={10} /></button>}
             </div>
             {status.changes.length === 0 ? (
               <div style={{ fontSize: 12, color: 'var(--success)' }}>Working tree clean — everything is committed.</div>
@@ -124,7 +125,7 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.displayTitle}>{r.displayTitle}</span>
             <span style={{ color: stateColor(r), fontSize: 11 }}>{stateLabel(r)}</span>
             <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>{r.headSha.slice(0, 7)}</span>
-            <a href={r.url} target="_blank" rel="noreferrer" aria-label="Open run on GitHub"><ExternalLink size={12} /></a>
+            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => openGithub(r.url).catch(e => toast.error(String(e)))} aria-label="Open run on GitHub" title="Open run on GitHub"><ExternalLink size={12} /></button>
             <button className="btn btn-secondary btn-sm" disabled={r.conclusion !== 'success' || busy !== null} onClick={() => download(r)}>
               <Download size={12} /> {busy === `download-${r.databaseId}` ? 'Downloading…' : 'Download'}
             </button>

@@ -12,6 +12,8 @@ export interface PointingTargets {
   overlay: string | null
   westPath: string | null
   configDir: string | null
+  /** set when the folder could not be read (usually: access was never granted) */
+  error?: string
 }
 
 async function listDir(path: string): Promise<{ name: string; isDirectory: boolean }[]> {
@@ -30,7 +32,9 @@ export function confForOverlay(overlayPath: string): string {
 export async function findPointingTargets(kb: KeyboardDef): Promise<PointingTargets> {
   const none: PointingTargets = { overlays: [], overlay: null, westPath: null, configDir: null }
   if (!kb.repoPath) return none
-  const root = await listDir(kb.repoPath)
+  let root: { name: string; isDirectory: boolean }[]
+  try { root = (await readDir(kb.repoPath)).map(e => ({ name: e.name, isDirectory: !!e.isDirectory })) }
+  catch (e) { return { ...none, error: `The app cannot read ${kb.repoPath} (${e}). Open Settings › Keyboards › Edit › Files and choose the config folder again to grant access.` } }
   const names = new Set(root.map(e => e.name))
   const configDir = names.has('config') ? join(kb.repoPath, 'config') : root.some(e => e.name.endsWith('.keymap')) ? kb.repoPath : null
   if (!configDir) return none

@@ -8,6 +8,12 @@ import type { KeyboardDef } from '@/lib/registry/types'
 import ZmkKeymapEditor from './ZmkKeymapEditor'
 import QmkKeymapEditor from './QmkKeymapEditor'
 import BuildPanel from './BuildPanel'
+import { saveZmkKeymap } from './ZmkKeymapEditor'
+import { registerDirtySource } from '@/lib/dirty'
+import { readText } from '@/lib/io'
+import { parseKeymapText } from '@/lib/zmkParser'
+import { useZMKStore } from '@/stores/zmkStore'
+import { useQMKStore } from '@/stores/qmkStore'
 
 const Pointing = lazy(() => import('@/components/Pointing'))
 
@@ -25,6 +31,30 @@ export default function KeyboardSection({ keyboard, onEditInSettings }: Props) {
   // Switching keyboards resets to the keymap tab; an unavailable tab falls back.
   useEffect(() => { setTab('keymap') }, [keyboard.id])
   const isZmk = keyboard.firmware === 'zmk'
+
+  // Unsaved keymap edits live in the store, not in a tab, so the save/discard
+  // hooks are registered here for as long as this keyboard is open.
+  useEffect(() => {
+    const path = keyboard.keymapPath
+    if (keyboard.firmware === 'zmk') {
+      return registerDirtySource(
+        `keymap:${keyboard.name}`,
+        () => useZMKStore.getState().isDirty && useZMKStore.getState().filePath === path,
+        saveZmkKeymap,
+        async () => {
+          const s = useZMKStore.getState()
+          s.setDirty(false)
+          try { s.setKeymap(parseKeymapText(await readText(path)), path) } catch { s.setKeymap(null, path) }
+        },
+      )
+    }
+    return registerDirtySource(
+      `qmk:${keyboard.name}`,
+      () => useQMKStore.getState().isDirty && useQMKStore.getState().filePath === path,
+      () => useQMKStore.getState().save(),
+      () => { useQMKStore.getState().load(path) },
+    )
+  }, [keyboard.keymapPath, keyboard.name, keyboard.firmware])
   useEffect(() => { if ((tab === 'pointing' && !hasPointing) || (tab === 'behaviors' && !isZmk)) setTab('keymap') }, [tab, hasPointing, isZmk])
 
   return (

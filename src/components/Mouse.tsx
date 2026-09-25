@@ -1,260 +1,127 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+/**
+ * This Mac › Scroll & Mouse — the native scroll engine (Rust CGEventTap).
+ * Changes discrete scroll-wheel events only (mice, the keyboard's scroll
+ * layer); the MacBook trackpad's gestures pass through untouched.
+ *
+ * Every change is applied to the engine first and only shown as "on" once
+ * the engine accepted it, so a refusal can never look like a dead switch.
+ */
+import { useEffect, useRef, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { IS_TAURI } from '@/lib/io'
+import { Switch } from '@/components/ui'
 
-const IS_TAURI =
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+const STORE_KEY = 'uk.mouseConfig'
 
-const STORE_KEY = "uk.mouseConfig";
+interface MouseConfig { enabled: boolean; reverse: boolean; speed: number }
+const DEFAULTS: MouseConfig = { enabled: false, reverse: false, speed: 1.0 }
 
-interface MouseConfig {
-  enabled: boolean;
-  reverse: boolean;
-  speed: number;
+function loadSaved(): MouseConfig {
+  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return { ...DEFAULTS, ...JSON.parse(raw) } } catch { /* ignore */ }
+  return DEFAULTS
 }
+function save(c: MouseConfig) { try { localStorage.setItem(STORE_KEY, JSON.stringify(c)) } catch { /* ignore */ } }
 
-const DEFAULTS: MouseConfig = { enabled: false, reverse: false, speed: 1.0 };
-
-function loadConfig(): MouseConfig {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return DEFAULTS;
-}
-
-/// Our own native scroll engine (Rust CGEventTap in src-tauri) — not a fork.
-/// Only discrete scroll-wheel events are touched; the MacBook trackpad's
-/// continuous gestures pass through untouched.
 export default function Mouse() {
-  const [config, setConfig] = useState<MouseConfig>(loadConfig);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [config, setConfig] = useState<MouseConfig>({ ...loadSaved(), enabled: false })
+  const [busy, setBusy] = useState(false)
+  const [needsPermission, setNeedsPermission] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const wanted = useRef<MouseConfig | null>(null)
 
-  // Push config to the engine on mount (so it resumes after an app restart)
-  // and whenever it changes.
-  useEffect(() => {
-    if (!IS_TAURI) return;
-    let cancelled = false;
-    setBusy(true);
-    invoke("set_mouse_config", { config })
-      .then(() => {
-        if (!cancelled) setError(null);
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(String(e));
-          // Reflect reality: if the engine refused (e.g. no Accessibility
-          // grant), don't leave the UI claiming it's on.
-          if (config.enabled) setConfig((c) => ({ ...c, enabled: false }));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(false);
-      });
+  const apply = async (next: MouseConfig) => {
+    if (!IS_TAURI) return
+    setBusy(true); setError(null)
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(config));
-    } catch {
-      /* ignore */
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [config]);
+      await invoke('set_mouse_config', { config: next })
+      setConfig(next); save(next); setNeedsPermission(false); wanted.current = null
+    } catch (e) {
+      const trusted = await invoke<boolean>('accessibility_trusted').catch(() => true)
+      if (!trusted) { setNeedsPermission(true); wanted.current = next }
+      else setError(String(e))
+    } finally { setBusy(false) }
+  }
 
-  const patch = (p: Partial<MouseConfig>) => setConfig((c) => ({ ...c, ...p }));
+  // Resume the saved state on open (the engine does not run until asked).
+  useEffect(() => { const s = loadSaved(); if (s.enabled) apply(s) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // While waiting for the user to grant Accessibility, retry as soon as it is granted.
+  useEffect(() => {
+    if (!needsPermission) return
+    const t = setInterval(async () => {
+      if (await invoke<boolean>('accessibility_trusted').catch(() => false)) {
+        clearInterval(t)
+        if (wanted.current) apply(wanted.current)
+      }
+    }, 1500)
+    return () => clearInterval(t)
+  }, [needsPermission]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const patch = (p: Partial<MouseConfig>) => apply({ ...config, ...p })
+  const on = config.enabled
 
   return (
-    <div style={{ height: "100%", overflow: "auto" }}>
+    <div style={{ height: '100%', overflow: 'auto' }}>
       <div className="section-header">
-        <span className="section-title">Mouse</span>
+        <span className="section-title">Scroll &amp; Mouse</span>
       </div>
 
-      <div style={{ padding: "24px", maxWidth: "640px", margin: "0 auto" }}>
+      <div style={{ padding: 24, maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {!IS_TAURI && (
-          <div
-            className="panel-inset"
-            style={{
-              fontSize: "12px",
-              color: "var(--text-muted)",
-              padding: "10px 14px",
-              marginBottom: "20px",
-            }}
-          >
-            The mouse engine runs in the desktop app only — it needs a native
-            event tap. Open Ultimate Keyboards as the packaged app to use it.
+          <div className="panel-inset" style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 14px' }}>
+            The scroll engine runs in the desktop app only.
           </div>
         )}
 
-        <Section title="Scroll">
-          <ToggleField
-            label="Enable scroll engine"
-            hint={config.enabled ? "Active" : "Off"}
-            checked={config.enabled}
+        <div className="glass" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <Switch
+            checked={on}
             busy={busy}
-            onChange={(v) => patch({ enabled: v })}
-            caption={
-              config.enabled
-                ? "Intercepting scroll-wheel input. Trackpad gestures are left untouched."
-                : "Turn on to reverse direction and adjust scroll speed for mice / the split-keyboard scroll layer."
-            }
+            disabled={!IS_TAURI}
+            onChange={v => patch({ enabled: v })}
+            label="Scroll engine"
+            description={on ? 'On. Mouse wheels and your keyboard’s scroll layer use the settings below.' : 'Off. Turn on to change scroll direction and speed for mice and your keyboard’s scroll layer. The MacBook trackpad is never changed.'}
           />
 
-          <ToggleField
-            label="Reverse direction"
-            hint={config.reverse ? "Reversed" : "Natural"}
-            checked={config.reverse}
-            busy={busy || !config.enabled}
-            onChange={(v) => patch({ reverse: v })}
-            caption="Flip vertical scroll direction for discrete wheels."
-          />
-
-          <div style={{ opacity: config.enabled ? 1 : 0.5 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                justifyContent: "space-between",
-                marginBottom: "6px",
-              }}
-            >
-              <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--text)" }}>
-                Scroll speed
-              </label>
-              <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                {config.speed.toFixed(2)}×
+          {needsPermission && (
+            <div className="panel-inset" role="alert" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, borderColor: 'rgba(251,191,36,0.35)' }}>
+              <strong style={{ fontSize: 13 }}>Allow Accessibility access</strong>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                macOS only lets an app change scrolling after you allow it. Click the button, switch on <strong>Ultimate Keyboards</strong> in the list, and come back. The engine turns on by itself.
               </span>
+              <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => invoke('open_accessibility_settings').catch(e => setError(String(e)))}>
+                Open Accessibility settings
+              </button>
             </div>
-            <input
-              type="range"
-              min={0.25}
-              max={5}
-              step={0.05}
-              value={config.speed}
-              disabled={!config.enabled}
-              onChange={(e) => patch({ speed: parseFloat(e.target.value) })}
-              style={{ width: "100%", accentColor: "var(--accent)", cursor: config.enabled ? "pointer" : "default" }}
+          )}
+          {error && <div className="panel-inset" role="alert" style={{ padding: '10px 14px', fontSize: 12, color: 'var(--danger)' }}>{error}</div>}
+
+          <div style={{ opacity: on ? 1 : 0.45, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <Switch
+              checked={config.reverse}
+              disabled={!on || busy}
+              onChange={v => patch({ reverse: v })}
+              label="Reverse direction"
+              description={config.reverse ? 'Wheel down scrolls up.' : 'Wheel down scrolls down.'}
             />
-            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
-              Multiplies each scroll tick. 1.00× is unchanged.
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Speed</span>
+                <span className="mono" style={{ fontSize: 12, color: 'var(--accent)' }}>{config.speed.toFixed(2)}×</span>
+              </div>
+              <input
+                type="range" min={0.25} max={4} step={0.25} value={config.speed}
+                disabled={!on || busy}
+                onChange={e => setConfig(c => ({ ...c, speed: Number(e.target.value) }))}
+                onPointerUp={() => patch({})}
+                onKeyUp={() => patch({})}
+                aria-label="Scroll speed"
+                style={{ width: '100%', accentColor: 'var(--accent)' }}
+              />
             </div>
           </div>
-        </Section>
-
-        {error && (
-          <div
-            className="panel-inset"
-            style={{
-              fontSize: "12px",
-              color: "var(--danger)",
-              background: "rgba(251,113,133,0.08)",
-              padding: "10px 14px",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "8px", lineHeight: 1.7 }}>
-          Native scroll engine — built into Ultimate Keyboards, no external app.
-          More (smooth scrolling, button remaps, gestures) coming as the engine grows.
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: "32px" }}>
-      <h2 className="section-title" style={{ marginBottom: "12px" }}>
-        {title}
-      </h2>
-      <div
-        className="glass anim-fade-up"
-        style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ToggleField({
-  label,
-  hint,
-  checked,
-  busy,
-  onChange,
-  caption,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  busy?: boolean;
-  onChange: (v: boolean) => void;
-  caption?: string;
-}) {
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          marginBottom: "6px",
-        }}
-      >
-        <label style={{ fontSize: "13px", fontWeight: 500, color: "var(--text)" }}>{label}</label>
-        {hint && <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{hint}</span>}
-      </div>
-      <label
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          cursor: busy ? "not-allowed" : "pointer",
-          opacity: busy ? 0.6 : 1,
-        }}
-      >
-        <span style={{ position: "relative", width: "40px", height: "22px", flexShrink: 0 }}>
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled={busy}
-            onChange={(e) => onChange(e.target.checked)}
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", margin: 0, opacity: 0, cursor: "inherit" }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: 9999,
-              background: checked ? "var(--accent-grad)" : "var(--glass-bg)",
-              border: `1px solid ${checked ? "transparent" : "var(--glass-border)"}`,
-              boxShadow: checked ? "var(--accent-glow)" : "none",
-              transition: "background var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out)",
-              pointerEvents: "none",
-            }}
-          />
-          <span
-            style={{
-              position: "absolute",
-              top: "2px",
-              left: checked ? "20px" : "2px",
-              width: "18px",
-              height: "18px",
-              borderRadius: "50%",
-              background: "#fff",
-              boxShadow: "0 1px 3px rgba(3,4,12,0.45)",
-              transition: "left var(--dur-2) var(--ease-spring)",
-              pointerEvents: "none",
-            }}
-          />
-        </span>
-        {caption && <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>{caption}</span>}
-      </label>
-    </div>
-  );
+  )
 }

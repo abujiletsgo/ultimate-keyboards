@@ -280,8 +280,9 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
 
   useEffect(() => { load(dev) }, [dev])
 
-  const save = async () => {
-    if (!source || !orig || !values) return
+  /** Returns true when saved; with `rethrow`, a failure is thrown so callers (quit guard, Cmd+S) do not move on. */
+  const save = async (rethrow = false): Promise<boolean> => {
+    if (!source || !orig || !values) return true
     try {
       const updated = applyValues(source, dev, orig, values)
       await saveText(dev.overlayPath, updated, {
@@ -296,13 +297,16 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
       setValues(v)
       setStatus({ msg: 'Saved! Rebuild + flash firmware to apply.', ok: true })
       setTimeout(() => setStatus(null), 3500)
+      return true
     } catch (err) {
       const msg = err instanceof ValidationError ? `Not saved — ${err.message}` : `Error saving: ${err}`
       setStatus({ msg, ok: false })
+      if (rethrow) throw new Error(msg)
+      return false
     }
   }
 
-  saveRef.current = save
+  saveRef.current = async () => { await save(true) }
 
   const set = <K extends keyof PointingValues>(k: K, v: PointingValues[K]) =>
     setValues(prev => (prev ? { ...prev, [k]: v } : prev))
@@ -350,7 +354,7 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
         <span style={{ flex: 1 }} />
         {status && <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>}
         {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
-        <button className="btn btn-primary btn-sm" onClick={save} disabled={!dirty}>Save</button>
+        <button className="btn btn-primary btn-sm" onClick={() => save()} disabled={!dirty}>Save</button>
         {onAdd && <button className="btn btn-secondary btn-sm" onClick={onAdd}>Add device…</button>}
         <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRemove(true)} disabled={removing || confirmRemove} title="Remove this device from the firmware config and the app">Remove…</button>
       </div>
@@ -381,7 +385,7 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
             <button className="btn btn-secondary btn-sm" onClick={() => switchDevice(pendingSwitch, true)}>
               Discard &amp; switch
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={async () => { await save(); switchDevice(pendingSwitch, true) }}>
+            <button className="btn btn-secondary btn-sm" onClick={async () => { if (await save()) switchDevice(pendingSwitch, true) }}>
               Save, then switch
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setPendingSwitch(null)}>Cancel</button>

@@ -148,7 +148,9 @@ export default function AddDeviceWizard({ keyboard, onDone }: Props) {
             <strong style={{ color: 'var(--text)' }}>{template.name}</strong>
             {template.tested ? ` — pin defaults are from the tested ${template.tested.controller} build.` : ' — no tested build for this template; check every pin against your wiring.'}
           </div>
-          {!targets ? <div className="skeleton" style={{ height: 60 }} /> : targets.overlays.length === 0 ? (
+          {!targets ? <div className="skeleton" style={{ height: 60 }} /> : targets.error ? (
+            <ErrorPanel>{targets.error}</ErrorPanel>
+          ) : targets.overlays.length === 0 ? (
             <ErrorPanel>No shield overlay found under config/boards/shields. This wizard writes to a shield overlay; add the shield folder to the repo first.</ErrorPanel>
           ) : (
             <Field label="Overlay (the half wired to the sensor)" hint={`conf: ${short(confForOverlay(overlayPath))}`}>

@@ -2,15 +2,11 @@
  * Keyboard registry store. Desktop persists through tauri-plugin-store
  * (app-data dir, survives reinstalls); the web build uses localStorage.
  *
- * First run on an install that predates the registry seeds the two
- * keyboards the app used to hardcode — only if their files still exist —
- * so nothing is compiled in for anyone else.
+ * A read error is reported, never treated as "no keyboards": the store is
+ * then left untouched on disk so a transient failure cannot wipe it.
  */
 import { create } from 'zustand'
-import { exists } from '@tauri-apps/plugin-fs'
-import { homeDir, join } from '@tauri-apps/api/path'
 import { IS_TAURI } from '@/lib/io'
-import { LEGACY_CROSSES, LEGACY_CORNE_PROCYON } from '@/lib/layout'
 import { EMPTY_REGISTRY, newKeyboardId, type KeyboardDef, type RegistryData } from '@/lib/registry/types'
 
 const LS_KEY = 'uk.registry'
@@ -28,8 +24,8 @@ async function readPersisted(): Promise<RegistryData | null> {
     }
     const raw = localStorage.getItem(LS_KEY)
     return raw ? (JSON.parse(raw) as RegistryData) : null
-  } catch {
-    return null
+  } catch (e) {
+    throw new Error(`Could not read your keyboard list: ${e}`)
   }
 }
 
@@ -44,57 +40,12 @@ async function writePersisted(data: RegistryData): Promise<void> {
   localStorage.setItem(LS_KEY, JSON.stringify(data))
 }
 
-// ── legacy seed (pre-registry installs) ─────────────────────────────────────
-
-async function legacySeed(): Promise<KeyboardDef[]> {
-  if (!IS_TAURI) return []
-  const home = await homeDir()
-  const now = new Date().toISOString()
-  const out: KeyboardDef[] = []
-  const tryAdd = async (def: Omit<KeyboardDef, 'id' | 'createdAt'>) => {
-    if (await exists(def.keymapPath).catch(() => false)) {
-      out.push({ ...def, id: newKeyboardId(def.name), createdAt: now })
-    }
-  }
-  const corneRepo = await join(home, 'Documents', 'cross_keyboard')
-  await tryAdd({
-    name: 'Corne', firmware: 'zmk', shield: 'corne_tp', repoPath: corneRepo,
-    keymapPath: await join(corneRepo, 'config', 'corne_tp.keymap'),
-    layout: LEGACY_CROSSES,
-    pointing: [{
-      id: 'trackpad', name: 'Trackpad', chip: 'Azoteq IQS5XX', compatible: 'azoteq,iqs5xx',
-      overlayPath: await join(corneRepo, 'config', 'boards', 'shields', 'corne_tp', 'corne_tp_right.overlay'),
-      sensorNodeRe: 'trackpad\\s*:\\s*iqs5xx@74\\s*\\{', listenerNodeRe: 'trackpad_listener\\s*\\{',
-      supports: { cursorScaler: true, chipSensitivity: false, cpi: false, invertXY: false, smartMode: false, scrollToggles: true, gestures: true, advancedAzoteq: true, snipe: true, scrollLayer: false },
-    }],
-  })
-  const crossesRepo = await join(home, 'Documents', 'cross_keyboard-crosses')
-  await tryAdd({
-    name: 'Crosses', firmware: 'zmk', shield: 'crosses', repoPath: crossesRepo,
-    keymapPath: await join(crossesRepo, 'config', 'crosses.keymap'),
-    layout: LEGACY_CROSSES,
-    pointing: [{
-      id: 'trackball', name: 'Trackball', chip: 'Pixart PMW3610', compatible: 'pixart,pmw3610',
-      overlayPath: await join(crossesRepo, 'config', 'boards', 'shields', 'crosses', 'crosses_right.overlay'),
-      sensorNodeRe: 'trackball\\s*:\\s*trackball@0\\s*\\{', listenerNodeRe: 'trackball_listener\\s*\\{',
-      supports: { cursorScaler: true, chipSensitivity: false, cpi: true, invertXY: true, smartMode: true, scrollToggles: false, gestures: false, advancedAzoteq: false, snipe: true, scrollLayer: true },
-    }],
-  })
-  const procyonDir = await join(home, 'Documents', 'splitkey2', 'corne_procyon')
-  await tryAdd({
-    name: 'Corne Procyon', firmware: 'qmk', shield: 'corne_procyon36', repoPath: procyonDir,
-    keymapPath: await join(procyonDir, 'corne_procyon.layout.json'),
-    keymapCPath: await join(procyonDir, 'corne_procyon36', 'keymaps', 'default', 'keymap.c'),
-    layout: LEGACY_CORNE_PROCYON,
-    pointing: [],
-  })
-  return out
-}
-
 // ── store ────────────────────────────────────────────────────────────────────
 
 interface RegistryState {
   loaded: boolean
+  /** set when the list could not be read or saved; shown to the user */
+  error: string | null
   keyboards: KeyboardDef[]
   selectedId: string | null
   load: () => Promise<void>
@@ -106,26 +57,35 @@ interface RegistryState {
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+/** true after a failed read: never write over a file we could not read */
+let readFailed = false
 function schedulePersist(get: () => RegistryState) {
+  if (readFailed) return
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
     const { keyboards, selectedId } = get()
-    writePersisted({ version: 1, keyboards, selectedId }).catch(err => console.error('registry persist failed', err))
+    writePersisted({ version: 1, keyboards, selectedId })
+      .then(() => { if (useRegistryStore.getState().error) useRegistryStore.setState({ error: null }) })
+      .catch(err => useRegistryStore.setState({ error: `Your keyboard list could not be saved, so this change will be lost when you quit: ${err}` }))
   }, 50)
 }
 
 export const useRegistryStore = create<RegistryState>((set, get) => ({
   loaded: false,
+  error: null,
   keyboards: [],
   selectedId: null,
 
   load: async () => {
     if (get().loaded) return
-    let data = await readPersisted()
-    if (!data) {
-      const seeded = await legacySeed()
-      data = { ...EMPTY_REGISTRY, keyboards: seeded, selectedId: seeded[0]?.id ?? null }
-      if (seeded.length) await writePersisted(data).catch(() => {})
+    let data: RegistryData
+    try {
+      data = (await readPersisted()) ?? EMPTY_REGISTRY
+    } catch (e) {
+      // leave the file alone; editing is still possible but nothing is written over it until a change is made
+      readFailed = true
+      set({ loaded: true, error: `${e instanceof Error ? e.message : e}. Changes are not saved until the app can read it; restart the app to retry.` })
+      return
     }
     // Drop stale selection.
     const selectedId = data.keyboards.some(k => k.id === data!.selectedId) ? data.selectedId : (data.keyboards[0]?.id ?? null)

@@ -5,7 +5,7 @@
  */
 import React, { useEffect, useState } from 'react'
 import { useQMKStore } from '@/stores/qmkStore'
-import { registerDirtySource, syncDirty } from '@/lib/dirty'
+import { syncDirty } from '@/lib/dirty'
 import type { KeyboardDef } from '@/lib/registry/types'
 import QMKKeyboard from '@/components/ZMKEditor/QMKKeyboard'
 import QMKComboEditor from '@/components/ZMKEditor/QMKComboEditor'
@@ -28,12 +28,6 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboard.keymapPath])
 
-  useEffect(() => registerDirtySource(
-    `qmk:${keyboard.name}`,
-    () => useQMKStore.getState().isDirty && useQMKStore.getState().filePath === keyboard.keymapPath,
-    () => useQMKStore.getState().save(),
-    () => { useQMKStore.getState().load(keyboard.keymapPath) },
-  ), [keyboard.keymapPath, keyboard.name])
   useEffect(() => { syncDirty() }, [isDirty])
 
   const handleSave = async () => {

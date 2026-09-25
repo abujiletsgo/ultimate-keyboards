@@ -32,7 +32,7 @@ function GroupLabel({ children }: { children: string }) {
 
 export default function Sidebar({ keyboards, active, onNavigate }: Props) {
   let i = 0
-  const item = (section: Section, label: string, Icon: typeof Command, extra?: CSSProperties) => {
+  const item = (section: Section, label: string, Icon: typeof Command, extra?: CSSProperties, badge?: string) => {
     const isActive = sameSection(section, active)
     const idx = i++
     return (
@@ -44,7 +44,8 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
         aria-current={isActive ? 'page' : undefined}
       >
         <Icon size={15} strokeWidth={isActive ? 1.9 : 1.6} />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>{label}</span>
+        {badge && <span className={`fw-badge fw-${badge.toLowerCase()}`}>{badge}</span>}
       </button>
     )
   }
@@ -81,8 +82,8 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
             No keyboards yet.
           </div>
         )}
-        {keyboards.map(kb => item({ kind: 'keyboard', id: kb.id }, kb.name, Keyboard))}
-        {item({ kind: 'settings', add: true }, 'Add keyboard…', Plus, { color: 'var(--text-muted)' })}
+        {keyboards.map(kb => item({ kind: 'keyboard', id: kb.id }, kb.name, Keyboard, undefined, kb.firmware.toUpperCase()))}
+        {item({ kind: 'settings', add: 'folder' }, 'Add keyboard…', Plus, { color: 'var(--text-muted)' })}
 
         <GroupLabel>This Mac</GroupLabel>
         {HOST_NAV.map(h => item(h.section, h.label, h.icon))}

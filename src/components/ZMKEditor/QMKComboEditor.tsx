@@ -179,7 +179,7 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
 
   useEffect(() => { loadSource() }, [loadSource])
 
-  const saveBack = async (newCombos: QMKCombo[]) => {
+  const saveBack = async (newCombos: QMKCombo[]): Promise<boolean> => {
     try {
       const newSource = updateQMKCombosInSource(source, newCombos)
       await saveText(KEYMAP_C_PATH, newSource, {
@@ -192,16 +192,18 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
       setCombos(newCombos)
       setStatus({ msg: 'Saved to keymap.c', ok: true })
       setTimeout(() => setStatus(null), 2500)
+      return true
     } catch (err) {
       const msg = err instanceof ValidationError ? `Not saved — ${err.message}` : `Error: ${err}`
       setStatus({ msg, ok: false })
+      return false
     }
   }
 
-  const handleAdd = (combo: QMKCombo) => { saveBack([...combos, combo]); setShowAddForm(false) }
-  const handleEdit = (updated: QMKCombo) => {
-    saveBack(combos.map((c) => (c.name === updated.name ? updated : c)))
-    setEditingCombo(null)
+  // the form stays open when the write fails, so nothing typed is lost
+  const handleAdd = async (combo: QMKCombo) => { if (await saveBack([...combos, combo])) setShowAddForm(false) }
+  const handleEdit = async (updated: QMKCombo) => {
+    if (await saveBack(combos.map((c) => (c.name === updated.name ? updated : c)))) setEditingCombo(null)
   }
   const handleDelete = (name: string) => {
     setConfirmName(name)
@@ -290,6 +292,7 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
       )}
       {editingCombo && (
         <ComboForm
+          key={editingCombo.name}
           layout={layout}
           editing={editingCombo}
           existingCombos={combos}

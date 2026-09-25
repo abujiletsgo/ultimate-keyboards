@@ -88,9 +88,10 @@ export default function Updates() {
             <span style={{ color: 'var(--success)' }}>Installed. Restart to use the new version.</span>
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => relaunch()}
-              disabled={hasUnsavedChanges()}
-              title={hasUnsavedChanges() ? 'Save or discard your unsaved changes first' : undefined}
+              onClick={async () => {
+                if (hasUnsavedChanges()) { setState({ kind: 'error', message: 'You have unsaved changes. Save them, then restart.' }); return }
+                await relaunch()
+              }}
             >Restart now</button>
           </div>
         )}

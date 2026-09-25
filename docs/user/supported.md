@@ -57,5 +57,5 @@
 | Feature | Supported | Notes |
 |---|---|---|
 | macOS 12+ (Apple silicon) | Yes | Builds are not signed yet: macOS asks again for Documents and Accessibility access after each update. |
-| Automatic updates | Yes | Settings › Updates checks GitHub Releases; updates are verified with the release signing key. |
+| Automatic updates | Partly | Settings › Updates checks GitHub Releases and verifies each download with the release signing key. Works once signed releases are published. |
 | Windows / Linux / web | No | Not in version 1. |

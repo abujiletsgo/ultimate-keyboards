@@ -54,7 +54,7 @@ pub struct RepoStatus {
     github: Option<String>,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_repo_status(repo: String) -> Result<RepoStatus, String> {
     let p = check_repo(&repo)?;
     let branch = run(git(), &["rev-parse", "--abbrev-ref", "HEAD"], Some(&p))?.trim().to_string();
@@ -77,7 +77,7 @@ pub fn git_repo_status(repo: String) -> Result<RepoStatus, String> {
 }
 
 /// Unified diff of one file inside the repo (working tree vs HEAD).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn git_diff_file(repo: String, path: String) -> Result<String, String> {
     let p = check_repo(&repo)?;
     let rel = Path::new(&path)
@@ -95,7 +95,7 @@ pub struct GhInfo {
     detail: String,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn gh_info() -> GhInfo {
     let Some(gh) = find_gh() else {
         return GhInfo { available: false, logged_in: false, detail: "gh CLI not found (brew install gh)".into() };
@@ -110,7 +110,7 @@ pub fn gh_info() -> GhInfo {
 }
 
 /// Recent workflow runs for a branch (JSON from `gh run list`).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn gh_run_list(repo: String, branch: String, limit: u32) -> Result<String, String> {
     let gh = find_gh().ok_or("gh CLI not found")?;
     let lim = limit.clamp(1, 20).to_string();
@@ -126,7 +126,7 @@ pub fn gh_run_list(repo: String, branch: String, limit: u32) -> Result<String, S
 }
 
 /// Download every artifact of a run into `<repo>/firmware/` and list the uf2 files found.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn gh_run_download(repo: String, run_id: u64) -> Result<Vec<String>, String> {
     let gh = find_gh().ok_or("gh CLI not found")?;
     let p = check_repo(&repo)?;
@@ -158,7 +158,7 @@ pub fn gh_run_download(repo: String, run_id: u64) -> Result<Vec<String>, String>
 }
 
 /// List uf2 files already in `<repo>/firmware/`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_firmware(repo: String) -> Result<Vec<String>, String> {
     let p = check_repo(&repo)?;
     let dir = p.join("firmware");
@@ -177,7 +177,7 @@ pub fn list_firmware(repo: String) -> Result<Vec<String>, String> {
 
 /// Wait (up to `timeout_secs`) for a UF2 bootloader volume to mount, copy the
 /// file onto it, and report. The user triggers this explicitly per half.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn flash_uf2(path: String, timeout_secs: u64) -> Result<String, String> {
     let src = PathBuf::from(&path);
     if !src.is_file() || src.extension().map(|x| x != "uf2").unwrap_or(true) {

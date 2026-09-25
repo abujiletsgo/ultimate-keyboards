@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react'
 import { parseKeymapText, updateCombosInSource, updateLayerBindingsInSource } from '@/lib/zmkParser'
 import { readText, saveText, backupExists, restoreBackup, ValidationError } from '@/lib/io'
 import { checkZmkCompatibility, type CompatReport } from '@/lib/compat'
-import { registerDirtySource, syncDirty } from '@/lib/dirty'
+import { syncDirty } from '@/lib/dirty'
 import { useZMKStore } from '@/stores/zmkStore'
 import type { KeyboardDef } from '@/lib/registry/types'
 import SplitKeyboard from '@/components/ZMKEditor/SplitKeyboard'
@@ -29,6 +29,8 @@ interface Props {
 export async function saveZmkKeymap(): Promise<void> {
   const { keymap, filePath, setKeymap, setDirty, selectedLayer, setSelectedLayer } = useZMKStore.getState()
   if (!keymap || !filePath) return
+  if (!checkZmkCompatibility(keymap.rawSource, keymap.syntaxErrors).editable)
+    throw new Error('this keymap is read-only here (it uses constructs the editor cannot rewrite safely)')
   let updated = updateLayerBindingsInSource(keymap.rawSource, keymap.layers)
   updated = updateCombosInSource(updated, keymap.combos)
   await saveText(filePath, updated, {
@@ -88,7 +90,10 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
 
   // (Re)load whenever this keyboard's file is not the one in the store.
   useEffect(() => {
-    if (keymap && filePath === keyboard.keymapPath) { setLoading(false); return }
+    if (keymap && filePath === keyboard.keymapPath) {
+      setCompat(checkZmkCompatibility(keymap.rawSource, keymap.syntaxErrors))
+      setLoading(false); return
+    }
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboard.keymapPath])
@@ -99,14 +104,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     return () => { alive = false }
   }, [keyboard.keymapPath, isDirty])
 
-  // Register save/discard with the app-wide dirty registry.
-  useEffect(() => registerDirtySource(
-    `keymap:${keyboard.name}`,
-    () => useZMKStore.getState().isDirty && useZMKStore.getState().filePath === keyboard.keymapPath,
-    saveZmkKeymap,
-    () => { useZMKStore.getState().setDirty(false); load() },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [keyboard.keymapPath])
+  // The dirty source is registered by KeyboardSection, which stays mounted across tabs.
   useEffect(() => { syncDirty() }, [isDirty])
 
   const editable = compat?.editable ?? true
@@ -332,11 +330,11 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
           </div>
         </>
       ) : view === 'behaviors' ? (
-        <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+        <div className="glass anim-fade-up" inert={!editable} style={{ padding: '12px 16px', opacity: editable ? 1 : 0.55 }}>
           <BehaviorsEditor />
         </div>
       ) : (
-        <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+        <div className="glass anim-fade-up" inert={!editable} style={{ padding: '12px 16px', opacity: editable ? 1 : 0.55 }}>
           <ComboEditor layout={keyboard.layout} />
         </div>
       )}

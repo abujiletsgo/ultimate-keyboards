@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy, Component, type ReactNode } from "react";
+import { useState, useEffect, useRef, Suspense, lazy, Component, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
@@ -6,6 +6,7 @@ import { useQMKStore } from "@/stores/qmkStore";
 import { useRegistryStore } from "@/stores/registryStore";
 import { syncDirty, isAnyDirty, dirtySources, saveAllDirty, discardAllDirty, onDirtyChange } from "@/lib/dirty";
 import { IS_TAURI } from "@/lib/io";
+import { useToast } from "@/components/ui";
 import { loadSection, saveSection, sameSection, type Section } from "@/lib/nav";
 import { initDevicetree } from "@/lib/zmkParser";
 import treeSitterWasm from "web-tree-sitter/web-tree-sitter.wasm?url";
@@ -60,6 +61,10 @@ export default function App() {
   const registry = useRegistryStore();
   const [section, setSection] = useState<Section | null>(null);
   const [pending, setPending] = useState<Section | null>(null);
+  const toast = useToast();
+  // latest values for the global key handler (registered once)
+  const sectionRef = useRef(section); sectionRef.current = section;
+  const registryRef = useRef(registry); registryRef.current = registry;
   const [dirtyNames, setDirtyNames] = useState<string[]>([]);
   const [parserState, setParserState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const [parserError, setParserError] = useState<string | null>(null);
@@ -101,7 +106,7 @@ export default function App() {
 
   /** Navigate, but hold at a banner when leaving unsaved edits behind. */
   const navigate = (s: Section) => {
-    if (section && sameSection(s, section)) { if (s.kind === 'settings' && s.add) setSection(s); return; }
+    if (section && sameSection(s, section)) { if (s.kind === 'settings' && (s.add || s.edit)) setSection({ ...s, n: Date.now() }); return; }
     if (isAnyDirty()) { setPending(s); return; }
     go(s);
   };
@@ -122,7 +127,8 @@ export default function App() {
       if (!raw) return;
       const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number };
       if (config.enabled) {
-        invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 } }).catch(() => {});
+        invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 } })
+          .catch(() => toast.error("The scroll engine could not start. Open This Mac › Scroll & Mouse to allow Accessibility access."));
       }
     } catch { /* ignore corrupt config */ }
   }, []);
@@ -136,12 +142,16 @@ export default function App() {
       const k = e.key.toLowerCase();
       if (k === 's') {
         e.preventDefault();
-        if (isAnyDirty()) saveAllDirty().catch(err => console.error(err));
+        if (isAnyDirty()) saveAllDirty().then(() => toast.success('Saved')).catch(err => toast.error(`Not saved: ${err instanceof Error ? err.message : err}`));
         return;
       }
       if (k === 'z') {
         const t = e.target as HTMLElement | null;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        // only the ZMK keymap editor has undo; elsewhere leave the key alone
+        const cur = sectionRef.current;
+        const kb = cur?.kind === 'keyboard' ? registryRef.current.keyboards.find(k => k.id === cur.id) : null;
+        if (kb?.firmware !== 'zmk') return;
         e.preventDefault();
         if (e.shiftKey) useZMKStore.getState().redo(); else useZMKStore.getState().undo();
       }
@@ -157,6 +167,11 @@ export default function App() {
     <div className="app-layout">
       <Sidebar keyboards={registry.keyboards} active={section ?? { kind: 'onboarding' }} onNavigate={navigate} />
       <main className="app-main">
+        {registry.error && (
+          <div className="panel-inset" role="alert" style={{ margin: '12px 24px 0', padding: '10px 14px', fontSize: 12, color: 'var(--danger)', borderColor: 'rgba(251,113,133,0.35)' }}>
+            {registry.error}
+          </div>
+        )}
         {pending && (
           <div className="glass anim-fade-up" role="alertdialog" style={{
             display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
@@ -164,7 +179,7 @@ export default function App() {
             borderColor: 'rgba(251,191,36,0.35)',
           }}>
             <span>Unsaved changes in <strong>{dirtyNames.join(', ') || 'this section'}</strong>.</span>
-            <button className="btn btn-secondary btn-sm" onClick={async () => { try { await saveAllDirty(); go(pending) } catch (e) { console.error(e) } }}>Save, then switch</button>
+            <button className="btn btn-secondary btn-sm" onClick={async () => { try { await saveAllDirty(); go(pending) } catch (e) { toast.error(`Not saved, so you are still here: ${e instanceof Error ? e.message : e}`) } }}>Save, then switch</button>
             <button className="btn btn-secondary btn-sm" onClick={() => { discardAllDirty(); go(pending) }}>Discard &amp; switch</button>
             <button className="btn btn-ghost btn-sm" onClick={() => setPending(null)}>Cancel</button>
           </div>
@@ -179,12 +194,12 @@ export default function App() {
                       The keymap parser failed to load: {parserError}
                     </div>
                   ) : parserState === 'loading' || !activeKeyboard ? <LoadingFallback /> :
-                  <KeyboardSection keyboard={activeKeyboard} onEditInSettings={() => navigate({ kind: 'settings' })} />
+                  <KeyboardSection keyboard={activeKeyboard} onEditInSettings={() => navigate({ kind: 'settings', edit: activeKeyboard.id })} />
                 ) :
                 section.kind === 'karabiner' ? <KarabinerEditor /> :
                 section.kind === 'mouse' ? <Mouse /> :
-                section.kind === 'settings' ? <Settings startAdd={section.add} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
-                <Onboarding onAddFromFolder={() => go({ kind: 'settings', add: true })} onAddFromFile={() => go({ kind: 'settings', add: true })} />}
+                section.kind === 'settings' ? <Settings key={section.n ?? 0} startAdd={section.add} startEdit={section.edit} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
+                <Onboarding onAddFromFolder={() => go({ kind: 'settings', add: 'folder' })} onAddFromFile={() => go({ kind: 'settings', add: 'file' })} />}
             </div>
           </SectionErrorBoundary>
         </Suspense>

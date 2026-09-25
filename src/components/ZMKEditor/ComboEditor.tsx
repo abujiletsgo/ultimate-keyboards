@@ -268,6 +268,7 @@ const ComboEditor: React.FC<{ layout?: PhysicalLayout }> = ({ layout }) => {
       {/* Edit form */}
       {editingCombo && (
         <ComboForm
+          key={editingCombo.name}
           layout={layout}
           existingNames={existingNames}
           layerNames={layerNames}

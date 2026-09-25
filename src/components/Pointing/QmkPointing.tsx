@@ -38,19 +38,25 @@ export default function QmkPointing({ keyboard }: { keyboard: KeyboardDef }) {
   useEffect(() => registerDirtySource('pointing-qmk', () => dirtyRef.current, () => saveRef.current(), () => load()), []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { syncDirty() }, [dirty])
 
-  const save = async () => {
+  const save = async (rethrow = false) => {
     if (!files || !orig || !model || !rulesPath || !configPath) return
     try {
       const out = applyQmkPointing(files.rules, files.config, orig, model)
       if (out.rules !== files.rules) await saveText(rulesPath, out.rules)
-      if (out.config !== files.config) await saveText(configPath, out.config)
+      if (out.config !== files.config) {
+        try { await saveText(configPath, out.config) } catch (e) {
+          // keep the pair consistent: put rules.mk back when config.h could not be written
+          if (out.rules !== files.rules) await saveText(rulesPath, files.rules).catch(() => {})
+          throw e
+        }
+      }
       setFiles(out)
       const m = parseQmkPointing(out.rules, out.config)
       setOrig(m); setModel(m)
       toast.success('Saved — run `qmk compile` and flash to apply')
-    } catch (e) { toast.error(`Error saving: ${e}`) }
+    } catch (e) { toast.error(`Not saved: ${e}`); if (rethrow) throw e }
   }
-  saveRef.current = save
+  saveRef.current = () => save(true)
   const set = <K extends keyof Model>(k: K, v: Model[K]) => setModel(m => (m ? { ...m, [k]: v } : m))
 
   if (!dir) {
@@ -65,7 +71,7 @@ export default function QmkPointing({ keyboard }: { keyboard: KeyboardDef }) {
         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Editing <span className="mono">{dir.split('/').slice(-3).join('/')}/</span> rules.mk + config.h</span>
         <span style={{ flex: 1 }} />
         {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
-        <button className="btn btn-primary btn-sm" onClick={save} disabled={!dirty}>Save</button>
+        <button className="btn btn-primary btn-sm" onClick={() => save()} disabled={!dirty}>Save</button>
       </div>
       <div className="glass anim-fade-up" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

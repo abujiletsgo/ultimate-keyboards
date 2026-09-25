@@ -69,7 +69,7 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
     const desc = `${fromKeys.join('+')} → ${toMods.length ? toMods.join('+')+'+' : ''}${toKey}`
     onSave({
       type: 'combo',
-      description: editing?.description ?? desc,
+      description: desc,
       fromKeys,
       toKey: toKey.trim(),
       toModifiers: toMods.length > 0 ? toMods : undefined,
@@ -243,7 +243,7 @@ const MacComboEditor: React.FC = () => {
         <ComboForm onSave={handleAdd} onCancel={() => setShowForm(false)} />
       )}
       {editing && (
-        <ComboForm editing={editing.combo} onSave={handleEdit} onCancel={() => setEditing(null)} />
+        <ComboForm key={editing.idx} editing={editing.combo} onSave={handleEdit} onCancel={() => setEditing(null)} />
       )}
 
       {/* Combo list */}

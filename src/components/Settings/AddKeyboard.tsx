@@ -27,6 +27,12 @@ function fallbackGrid(keyCount: number, name: string): PhysicalLayout {
   return { ...gridLayoutFromTransform({ label: name, rows, columns: cols, map }), name: `${cols}-column grid`, source: 'matrix-grid' }
 }
 
+/** A keymap inside `<repo>/config/` belongs to `<repo>`; anywhere else there is no known config repo. */
+function repoOfKeymap(file: string): string | undefined {
+  const dir = file.slice(0, file.lastIndexOf('/'))
+  return dir.endsWith('/config') ? dir.slice(0, -'/config'.length) : undefined
+}
+
 export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,7 +60,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
         if (!file || Array.isArray(file)) { onCancel(); return }
         const base = file.split('/').pop()!.replace(/\.keymap$/, '')
         const d: DetectedKeyboard = {
-          firmware: 'zmk', repoPath: file.slice(0, file.lastIndexOf('/')), suggestedName: base.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          firmware: 'zmk', repoPath: repoOfKeymap(file), suggestedName: base.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
           shield: base, keymapCandidates: [file], layoutCandidates: [], pointing: [], notes: [],
         }
         const cat = findCatalogueLayout(base)
@@ -126,7 +132,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
   return (
     <div className="glass anim-fade-up" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ fontSize: 13, fontWeight: 600 }}>New keyboard <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>· {detected.firmware.toUpperCase()}{detected.shield ? ` · ${detected.shield}` : ''}</span></div>
-      <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-all' }}>{detected.repoPath}</div>
+      <div className="mono" style={{ fontSize: 11, color: 'var(--text-muted)', wordBreak: 'break-all' }}>{detected.repoPath ?? keymapPath}</div>
 
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
         <span style={{ color: 'var(--text-secondary)' }}>Name</span>
