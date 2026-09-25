@@ -13,8 +13,10 @@ MIT licensed. See [what is supported](docs/user/supported.md) and the
 
 1. Download `Ultimate Keyboards_<version>_aarch64.dmg` from
    [Releases](https://github.com/abujiletsgo/ultimate-keyboards/releases) and drag the app to Applications.
-2. The app is not signed by Apple yet. On first launch, right-click it, choose **Open**,
-   then **Open** again.
+2. The app is not signed by Apple yet, so macOS blocks the first launch. Open it once,
+   then go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**
+   (on macOS 14 and earlier: right-click the app, choose **Open**, then **Open** again).
+   It needs a Mac with Apple silicon (M1 or newer).
 3. Click **Add keyboard…** and pick your config repo folder (for ZMK, the folder
    that holds `config/` and `build.yaml`). The keymap, physical layout and any
    trackpad or trackball are detected.
