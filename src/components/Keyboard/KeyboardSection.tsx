@@ -1,7 +1,7 @@
 /**
  * One keyboard, top-level: Keymap / Combos / Pointing tabs driven entirely by
- * its registry descriptor. Pointing appears only when the keyboard has a
- * pointing device.
+ * its registry descriptor. Pointing appears when the keyboard has a pointing
+ * device, or when one could be added (ZMK config repo).
  */
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { KeyboardDef } from '@/lib/registry/types'
@@ -20,7 +20,7 @@ interface Props {
 
 export default function KeyboardSection({ keyboard, onEditInSettings }: Props) {
   const [tab, setTab] = useState<Tab>('keymap')
-  const hasPointing = keyboard.pointing.length > 0
+  const hasPointing = keyboard.pointing.length > 0 || (keyboard.firmware === 'zmk' && !!keyboard.repoPath) || (keyboard.firmware === 'qmk' && !!keyboard.keymapCPath)
 
   // Switching keyboards resets to the keymap tab; an unavailable tab falls back.
   useEffect(() => { setTab('keymap') }, [keyboard.id])
@@ -61,7 +61,7 @@ export default function KeyboardSection({ keyboard, onEditInSettings }: Props) {
           <ZmkKeymapEditor key={keyboard.id} keyboard={keyboard} view="behaviors" />
         ) : tab === 'pointing' && hasPointing ? (
           <Suspense fallback={<div className="skeleton" style={{ height: 120 }} />}>
-            <Pointing key={keyboard.id} devices={keyboard.pointing} />
+            <Pointing key={keyboard.id} keyboard={keyboard} />
           </Suspense>
         ) : keyboard.firmware === 'zmk' ? (
           <ZmkKeymapEditor key={keyboard.id} keyboard={keyboard} view={tab === 'combos' ? 'combos' : 'keymap'} />

@@ -21,6 +21,10 @@ export interface PointingDescriptor {
   sensorNodeRe: string
   /** regex source for the input-listener node opener */
   listenerNodeRe: string
+  /** set when the device was added from a template: the files the template touched, for exact removal */
+  confPath?: string
+  westPath?: string
+  templateId?: string
   supports: {
     cursorScaler: boolean
     chipSensitivity: boolean

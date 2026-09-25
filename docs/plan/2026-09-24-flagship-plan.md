@@ -209,3 +209,16 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | Custom binding type | listed from the keymap's own behaviors with `#binding-cells` params (unit-tested parse; UI not exercised) |
 | add hold-tap / macro from the UI | NOT exercised in the GUI (add/remove round-trips are unit-tested) |
 
+
+### Phase 5 verification (2026-09-24/25, packaged build)
+
+| check | result |
+|---|---|
+| tsc -b / bun test | clean / 89 pass (templates render + parse + detect, add→remove byte-exact for all 3 templates, west.yml add/idempotent/remove, QMK flags round-trip) |
+| 5.2 acceptance: container build | both tested templates applied on the OPPOSITE half of a repo copy (pmw3610 → corne_tp_left, azoteq → crosses_left) compiled in `zmkfirmware/zmk-build-arm:stable` (ZMK 0.9.1): corne_left FLASH 24.11 %, crosses_left 23.97 %; `.config` has `CONFIG_INPUT_PMW3610=y` / `CONFIG_INPUT_AZOTEQ_IQS5XX=y`, generated `zephyr.dts` contains the sensor + listener nodes. Cirque template NOT built (labelled untested in the UI) |
+| Add device (GUI, real corne_tp repo) | wizard: 3 templates with Tested/Untested badges → pin fields with defaults; invalid CS `2 99` shows `expected "port pin"` and disables Preview; overlay select switched to `_left`; review shows per-file diffs; Apply wrote overlay + conf (+55/+8 lines), created `.bak`s, registered "Trackball · Pixart PMW3610" as a second device and its tuner loaded (CPI, invert) |
+| Remove device (GUI) | ConfirmBanner → `git status` in cross_keyboard clean afterwards except the two `.bak` files (deleted by hand) |
+| Diff preview rendering | FAILED first: added lines rendered inline (inline-block spans); fixed to one block per line, re-verified in the rebuilt app |
+| QMK flags (GUI, corne_procyon36) | enable + rotation 90 → `rules.mk` gains `POINTING_DEVICE_ENABLE = yes` (and a trailing newline the file lacked), `config.h` created; the bare file was missing `#pragma once` → fixed (unit-tested), NOT re-exercised in the GUI. Repo reverted after QA |
+| NOT verified | Cirque template compile; a west.yml edit through the GUI (corne_tp's west.yml already lists the Azoteq module, so the tested add/remove of a module is unit-level only); split `zmk,input-split` central/peripheral forwarding (templates put the listener on the half that owns the sensor, as the tested repos do) |
+| side effects | rebuilt app re-prompted macOS for Documents access (ad-hoc signature changes per build; Phase 6.1 signing fixes this); Docker Desktop was started for the container build and left running; `zmkfirmware/zmk-build-arm:stable` image kept (workspace deleted) |
