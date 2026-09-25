@@ -66,5 +66,7 @@ def png(rows, w, h):
 if __name__ == '__main__':
     rows = render()
     OUT.write_bytes(png(rows, SIZE, SIZE))
+    # Raw RGBA next to it: the tray uses this directly (no PNG decode path).
+    OUT.with_suffix('.rgba').write_bytes(b''.join(rows))
     opaque = sum(1 for r in rows for k in range(3, len(r), 4) if r[k] > 0)
     print(f'wrote {OUT} ({SIZE}×{SIZE}, {opaque} opaque px of {SIZE * SIZE})')

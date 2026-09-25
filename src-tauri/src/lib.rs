@@ -153,8 +153,10 @@ fn write_atomic_with_backup(
 
 // ── Status-bar icon ─────────────────────────────────────────────────────────
 // The split-keyboard glyph from design/tray-template.svg, rendered at 2× (72 px)
-// as a macOS template image: black where opaque, so the system tints it.
-const TRAY_ICON_PNG: &[u8] = include_bytes!("../icons/tray-template.png");
+// by scripts/render-tray-icon.py as raw RGBA — a macOS template image: black
+// where opaque, so the system tints it.
+const TRAY_ICON_RGBA: &[u8] = include_bytes!("../icons/tray-template.rgba");
+const TRAY_ICON_SIZE: u32 = 72;
 
 /// Apply a new built-in-keyboard state everywhere: run `hidutil`, update the
 /// shared flag, sync the tray checkbox + tooltip, and notify the frontend.
@@ -370,8 +372,7 @@ pub fn run() {
                 }
             });
 
-            let icon = tauri::image::Image::from_bytes(TRAY_ICON_PNG)
-                .expect("tray icon PNG is embedded at build time");
+            let icon = tauri::image::Image::new(TRAY_ICON_RGBA, TRAY_ICON_SIZE, TRAY_ICON_SIZE);
             let tray = TrayIconBuilder::with_id("main")
                 .icon(icon)
                 .icon_as_template(true)
