@@ -148,3 +148,9 @@ pre.diff div { min-height: 1.5em; }
 .diff-add { color: var(--success); background: rgba(74, 222, 128, 0.08); }
 .diff-del { color: var(--danger); background: rgba(251, 113, 133, 0.08); }
 .diff-hunk { color: var(--text-muted); font-style: italic; }
+
+/* ── Support matrix ──────────────────────────────────────────────────────── */
+.support-table { width: 100%; border-collapse: collapse; font-size: var(--text-12); }
+.support-table th, .support-table td { text-align: left; vertical-align: top; padding: 6px 10px; border-top: 1px solid var(--border); }
+.support-table th { font-weight: 500; color: var(--text); width: 38%; }
+.support-table td:last-child { color: var(--text-secondary); }

@@ -222,3 +222,15 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | QMK flags (GUI, corne_procyon36) | enable + rotation 90 → `rules.mk` gains `POINTING_DEVICE_ENABLE = yes` (and a trailing newline the file lacked), `config.h` created; the bare file was missing `#pragma once` → fixed (unit-tested), NOT re-exercised in the GUI. Repo reverted after QA |
 | NOT verified | Cirque template compile; a west.yml edit through the GUI (corne_tp's west.yml already lists the Azoteq module, so the tested add/remove of a module is unit-level only); split `zmk,input-split` central/peripheral forwarding (templates put the listener on the half that owns the sensor, as the tested repos do) |
 | side effects | rebuilt app re-prompted macOS for Documents access (ad-hoc signature changes per build; Phase 6.1 signing fixes this); Docker Desktop was started for the container build and left running; `zmkfirmware/zmk-build-arm:stable` image kept (workspace deleted) |
+
+### Phase 6 verification (2026-09-25, packaged build) — scope: 6.2 + 6.4 (Tom's gate: "Docs + updater")
+
+| check | result |
+|---|---|
+| tsc -b / bun test | clean / 91 pass (adds a drift test: docs/user/supported.md must equal the generator output) |
+| Settings › Updates (packaged 0.2.0) | checks on open; with the repo private and no release, `latest.json` is unreachable → neutral "No release has been published yet" (first build showed it as a red error; fixed) |
+| Settings › What is supported | 6 groups rendered from `src/lib/supported.ts`; pointing rows derived from the template table (Cirque = "Partly") |
+| local `bun run build` | FAILED first with `createUpdaterArtifacts: true` and no private key ("A public key has been found, but no private key"); now off in tauri.conf.json and switched on only in the Release workflow via `--config`; local build exit 0 |
+| Release workflow | YAML parses; inputs checked against tauri-action@v0 `action.yml` (no `releaseBodyPath` → notes passed via step output); guards: tag = app version, CHANGELOG section exists, pubkey non-empty. NOT run (no tag pushed) |
+| docs | LICENSE (MIT), CHANGELOG 0.2.0, README rewritten for users (install, unsigned-app open, permissions, releasing), docs/user/supported.md |
+| NOT done | updater signing key: `tauri signer generate` writes `*.key`, which the damage-control hook blocks for the agent → Tom runs `scripts/setup-updater-key.sh`. In-app update vN→vN+1 (6.2 acceptance) NOT verified: needs the key and a reachable release (repo is PRIVATE; unauthenticated `latest.json` downloads 404 until the repo is public). Docs site NOT published (repo private). 6.1 signing and 6.3 web build out of scope for this gate |
