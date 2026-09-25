@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, selectedKeys, comboHighlights, selectorMode }: Props) {
-  const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number; top: number } | null>(null)
 
   // Build set of mapped key codes for highlighting
   const mappedFrom = new Set<string>()
@@ -103,6 +103,8 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
       <ScaledBoard width={BOARD_WIDTH} height={BOARD_HEIGHT}>
       <div
         className="glass"
+        role="group"
+        aria-label="MacBook keyboard"
         style={{
           position: 'relative',
           width: BOARD_WIDTH,
@@ -117,14 +119,17 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           const style = getKeyStyle(key)
           const isSelected = selectedKey?.code === key.code || selectedKeys?.has(key.code)
           return (
-            <div
+            <button
+              type="button"
               key={key.code}
+              aria-label={`${key.label} (${key.code})`}
+              aria-pressed={isSelected}
               className={['keycap', isSelected ? 'selected' : ''].filter(Boolean).join(' ')}
               onClick={(e) => {
                 onKeyClick?.(key)
                 if (!selectorMode) {
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  setEditing({ key, x: rect.left, y: rect.bottom + 4 })
+                  setEditing({ key, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
                 }
               }}
               title={key.code}
@@ -139,8 +144,8 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
                 letterSpacing: key.small ? '0.02em' : 0,
               } as CSSProperties}
             >
-              {key.label}
-            </div>
+              <span className="key-main">{key.label}</span>
+            </button>
           )
         })}
       </div>
@@ -150,6 +155,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           macKey={editing.key}
           anchorX={editing.x}
           anchorY={editing.y}
+          anchorTop={editing.top}
           onClose={() => setEditing(null)}
         />
       )}

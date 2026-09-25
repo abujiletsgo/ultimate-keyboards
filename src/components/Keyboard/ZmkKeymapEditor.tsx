@@ -13,6 +13,8 @@ import { useZMKStore } from '@/stores/zmkStore'
 import type { KeyboardDef } from '@/lib/registry/types'
 import SplitKeyboard from '@/components/ZMKEditor/SplitKeyboard'
 import ComboEditor from '@/components/ZMKEditor/ComboEditor'
+import { ConfirmBanner, useToast } from '@/components/ui'
+import { Undo2, Redo2 } from 'lucide-react'
 
 interface Props {
   keyboard: KeyboardDef
@@ -46,20 +48,21 @@ export async function saveZmkKeymap(): Promise<void> {
 }
 
 const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
-  const { keymap, filePath, isDirty, setKeymap, updateLayerKey, selectedLayer, setSelectedLayer, addLayer, renameLayer, deleteLayer } = useZMKStore()
+  const { keymap, filePath, isDirty, setKeymap, updateLayerKey, selectedLayer, setSelectedLayer, addLayer, renameLayer, deleteLayer, layerReferences, undo, redo, past, future } = useZMKStore()
+  const toast = useToast()
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
   const [addingLayer, setAddingLayer] = useState(false)
   const [newLayerName, setNewLayerName] = useState('')
   const [renamingLayer, setRenamingLayer] = useState(false)
   const [renameValue, setRenameValue] = useState('')
-  const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasBackup, setHasBackup] = useState(false)
   const [compat, setCompat] = useState<CompatReport | null>(null)
 
-  const flash = (msg: string, ok = true, ms = 2000) => {
-    setStatus({ msg, ok })
-    if (ok) setTimeout(() => setStatus(null), ms)
+  const flash = (msg: string, ok = true) => {
+    if (ok) toast.success(msg); else toast.error(msg)
   }
 
   const load = async () => {
@@ -172,10 +175,46 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
             Restore backup
           </button>
         )}
-        {status && (
-          <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>
+        <span style={{ flex: 1 }} />
+        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Undo" title="Undo (⌘Z)" disabled={past.length === 0 || !editable} onClick={undo}><Undo2 size={13} /></button>
+        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={future.length === 0 || !editable} onClick={redo}><Redo2 size={13} /></button>
+        {isDirty && (
+          <button className="btn btn-ghost btn-sm" title="Discard unsaved edits and reload from disk" onClick={() => { useZMKStore.getState().setDirty(false); load() }}>Revert</button>
         )}
       </div>
+
+      {confirmDelete !== null && keymap.layers[confirmDelete] && (() => {
+        const refs = layerReferences(confirmDelete)
+        const l = keymap.layers[confirmDelete]
+        return refs.length > 0 ? (
+          <div className="panel-inset" role="alert" style={{ padding: '10px 14px', fontSize: 12, borderColor: 'rgba(251,191,36,0.35)' }}>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Layer {confirmDelete} "{l.displayName ?? l.name}" can't be deleted yet — it is still referenced:</div>
+            <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
+              {refs.map((r, i) => (
+                <li key={i}>
+                  {r.where}: <code className="mono">{r.binding}</code>
+                  {r.layer !== undefined && r.pos !== undefined && (
+                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 6 }} onClick={() => { setSelectedLayer(r.layer!); setConfirmDelete(null) }}>Go to key</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>Close</button>
+          </div>
+        ) : (
+          <ConfirmBanner
+            danger
+            message={<>Delete layer {confirmDelete} <strong>{l.displayName ?? l.name}</strong>? References to higher layers will be renumbered.</>}
+            confirmLabel="Delete layer"
+            onConfirm={() => {
+              const err = deleteLayer(confirmDelete)
+              setConfirmDelete(null)
+              if (err) flash(err, false); else flash('Layer deleted — higher layer references renumbered')
+            }}
+            onCancel={() => setConfirmDelete(null)}
+          />
+        )
+      })()}
 
       {compat && compat.issues.length > 0 && (
         <div className="panel-inset" role={editable ? undefined : 'alert'} style={{ padding: '10px 14px', fontSize: 12, color: editable ? 'var(--text-secondary)' : 'var(--warning)', borderColor: editable ? undefined : 'rgba(251,191,36,0.35)' }}>
@@ -218,7 +257,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
                 if (!name) return
                 if (keymap.layers.some(l => l.name === name || l.displayName === name)) { flash(`Layer "${name}" already exists`, false); return }
                 const idx = addLayer(name)
-                if (idx >= 0) flash(`Layer ${idx} "${name}" created — all keys transparent`, true, 2500)
+                if (idx >= 0) flash(`Layer ${idx} "${name}" created — all keys transparent`, true)
                 setNewLayerName(''); setAddingLayer(false)
               }}>
                 <input autoFocus value={newLayerName} onChange={e => setNewLayerName(e.target.value)}
@@ -233,13 +272,16 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
                 const name = renameValue.trim().replace(/[^\w+]/g, '_')
                 if (!name) return
                 const err = renameLayer(selectedLayer, name)
-                if (err) { flash(err, false); return }
+                if (err) { setRenameError(err); return }
+                setRenameError(null)
                 flash(`Renamed to "${name}"`)
                 setRenamingLayer(false); setRenameValue('')
               }}>
-                <input autoFocus value={renameValue} onChange={e => setRenameValue(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Escape') { setRenamingLayer(false); setRenameValue('') } }}
+                <input autoFocus value={renameValue} onChange={e => { setRenameValue(e.target.value); setRenameError(null) }}
+                  aria-invalid={!!renameError} aria-describedby={renameError ? 'rename-error' : undefined}
+                  onKeyDown={e => { if (e.key === 'Escape') { setRenamingLayer(false); setRenameValue(''); setRenameError(null) } }}
                   placeholder="new_name" style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }} />
+                {renameError && <span id="rename-error" role="alert" style={{ fontSize: 11, color: 'var(--danger)' }}>{renameError}</span>}
                 <button type="submit" className="btn btn-primary btn-sm">Rename</button>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRenamingLayer(false); setRenameValue('') }}>Cancel</button>
               </form>
@@ -250,12 +292,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
                   setRenameValue(keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name ?? '')
                   setRenamingLayer(true)
                 }}>Rename</button>
-                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} title={`Delete layer ${selectedLayer} (blocked if referenced)`} onClick={() => {
-                  const l = keymap.layers[selectedLayer]
-                  if (!window.confirm(`Delete layer ${selectedLayer} "${l?.displayName ?? l?.name}"? References to higher layers will be renumbered.`)) return
-                  const err = deleteLayer(selectedLayer)
-                  if (err) flash(err, false); else flash('Layer deleted — higher layer references renumbered', true, 3000)
-                }}>Delete</button>
+                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} title={`Delete layer ${selectedLayer} (blocked if referenced)`} onClick={() => setConfirmDelete(selectedLayer)}>Delete</button>
               </>
             ))}
           </div>

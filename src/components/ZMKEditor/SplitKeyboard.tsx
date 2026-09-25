@@ -3,7 +3,8 @@ import type { ZMKLayer } from '@/lib/zmkParser'
 import PhysicalBoard, { type KeyVisual } from '@/components/board/PhysicalBoard'
 import { LEGACY_CROSSES, type PhysicalLayout } from '@/lib/layout'
 import BindingEditor from './BindingEditor'
-import { bindingLabel } from '@/lib/keyLabel'
+import { bindingLabel, bindingSubLabel } from '@/lib/keyLabel'
+import { BoardLegend } from '@/components/ui'
 
 interface Props {
   layer: ZMKLayer | null
@@ -49,14 +50,6 @@ function getKeyVars(binding: string): { bg?: string; border?: string; text?: str
 }
 
 
-const LEGEND = [
-  { color: 'rgba(96,165,250,0.65)', label: 'Layer' },
-  { color: 'rgba(245,158,11,0.60)', label: 'Toggle' },
-  { color: 'rgba(251,146,60,0.55)', label: 'Mod-tap' },
-  { color: 'rgba(251,191,36,0.55)', label: 'Sticky' },
-  { color: 'rgba(34,211,238,0.60)', label: 'BT' },
-  { color: 'rgba(244,114,182,0.55)', label: 'Mouse' },
-]
 
 export default function SplitKeyboard({ layer, layout = LEGACY_CROSSES, highlightedPositions, onKeyClick, onBindingChange }: Props) {
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
@@ -71,10 +64,11 @@ export default function SplitKeyboard({ layer, layout = LEGACY_CROSSES, highligh
     const binding = layer?.keys[pos] ?? '&trans'
     const label = bindingLabel(binding)
     const vars = getKeyVars(binding)
+    const sub = bindingSubLabel(binding)
     return {
-      label, title: binding,
+      label, sub, title: binding,
       bg: vars.bg, border: vars.border, text: vars.text, dashed: vars.dashed,
-      fontSize: label.length <= 3 ? 11 : label.length <= 5 ? 9 : 8,
+      fontSize: label.length <= 3 ? (sub ? 10 : 11) : label.length <= 5 ? 9 : 8,
     }
   }
 
@@ -89,20 +83,7 @@ export default function SplitKeyboard({ layer, layout = LEGACY_CROSSES, highligh
           Editing is disabled so the file can't be corrupted. Pick a matching layout in Settings.
         </div>
       )}
-      {/* Legend */}
-      {onBindingChange && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 10, color: 'var(--text-muted)', flexWrap: 'wrap', paddingLeft: 2 }}>
-          {LEGEND.map(({ color, label }) => (
-            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{
-                width: 9, height: 9, borderRadius: 3, background: color,
-                boxShadow: `0 0 6px ${color}`, display: 'inline-block',
-              }} />
-              {label}
-            </span>
-          ))}
-        </div>
-      )}
+      {onBindingChange && <BoardLegend />}
       {onKeyClick && !onBindingChange && (
         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10, paddingLeft: 4 }}>
           Click a key to configure its position in combos
@@ -110,6 +91,7 @@ export default function SplitKeyboard({ layer, layout = LEGACY_CROSSES, highligh
       )}
 
       <PhysicalBoard
+        label="ZMK keymap"
         layout={layout}
         keyAt={keyAt}
         selected={highlighted}

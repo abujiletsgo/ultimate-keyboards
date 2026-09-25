@@ -4,6 +4,7 @@ import { parseQMKCombos, updateQMKCombosInSource, makeComboNames, type QMKCombo 
 import { useQMKStore } from '../../stores/qmkStore'
 import QMKKeyboard from './QMKKeyboard'
 import type { PhysicalLayout } from '@/lib/layout'
+import { ConfirmBanner } from '@/components/ui'
 
 const COMMON_TO_KEYS = [
   'KC_ENT', 'KC_ESC', 'KC_BSPC', 'KC_DEL', 'KC_TAB', 'KC_SPC',
@@ -149,6 +150,7 @@ const ComboForm: React.FC<ComboFormProps & { layout?: PhysicalLayout }> = ({ edi
 
 const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }> = ({ keymapCPath, layout }) => {
   const KEYMAP_C_PATH = keymapCPath
+  const [confirmName, setConfirmName] = useState<string | null>(null)
   const { keymap } = useQMKStore()
   const layerKeys = keymap?.layers[0]?.keys ?? []
 
@@ -202,7 +204,8 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
     setEditingCombo(null)
   }
   const handleDelete = (name: string) => {
-    if (!window.confirm(`Delete combo "${name}"?`)) return
+    setConfirmName(name)
+    return
     saveBack(combos.filter((c) => c.name !== name))
   }
 
@@ -253,6 +256,12 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
         </div>
       </div>
 
+
+      {confirmName && (
+        <ConfirmBanner danger message={<>Delete combo <strong>{confirmName}</strong> from keymap.c?</>} confirmLabel="Delete"
+          onConfirm={() => { const name = confirmName; setConfirmName(null); saveBack(combos.filter((c) => c.name !== name)) }}
+          onCancel={() => setConfirmName(null)} />
+      )}
       {/* Keyboard preview — hover a combo to see its keys lit up */}
       {combos.length > 0 && !showAddForm && !editingCombo && (
         <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>

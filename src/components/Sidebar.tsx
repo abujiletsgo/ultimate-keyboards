@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Keyboard, Command, MousePointer2, Settings, Plus, Laptop } from 'lucide-react'
+import LogoMark from '@/components/ui/LogoMark'
 import type { KeyboardDef } from '@/lib/registry/types'
 import { sameSection, type Section } from '@/lib/nav'
 
@@ -67,7 +68,7 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
       <div data-tauri-drag-region style={{ height: 'var(--titlebar-h)', flexShrink: 0 }} />
 
       <div style={{ padding: '10px 14px 10px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className="logo-mark"><Keyboard size={14} strokeWidth={2} /></span>
+        <span className="logo-mark"><LogoMark size={16} color="#fff" accent="#0a0c16" /></span>
         <span style={{ fontSize: 'var(--text-13)', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.02em' }}>
           Ultimate Keyboards
         </span>

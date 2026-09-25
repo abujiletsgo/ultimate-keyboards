@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import BindingEditor from './BindingEditor'
 import PhysicalBoard, { type KeyVisual } from '@/components/board/PhysicalBoard'
+import { BoardLegend } from '@/components/ui'
 import { LEGACY_CORNE_PROCYON, type PhysicalLayout } from '@/lib/layout'
 
 // ── Behavior type detection ───────────────────────────────────────────────────
@@ -122,16 +123,19 @@ export default function QMKKeyboard({ keys, layout = LEGACY_CORNE_PROCYON, highl
     const behavior = getBehavior(fullKc)
     const label = abbreviateQMK(fullKc)
     const vars = getKeyVars(behavior)
+    const sub = behavior === 'layer' ? 'hold layer' : behavior === 'layer-tap' ? 'tap/hold layer' : behavior === 'mod-tap' ? 'mod-tap' : behavior === 'toggle' ? 'toggle' : behavior === 'shifted' ? 'shifted' : undefined
     return {
-      label, title: fullKc,
+      label, sub, title: fullKc,
       bg: vars.bg, border: vars.border, text: vars.text, dashed: vars.dashed,
-      fontSize: label.length <= 2 ? 12 : label.length <= 4 ? 10 : 8,
+      fontSize: label.length <= 2 ? (sub ? 11 : 12) : label.length <= 4 ? 10 : 8,
     }
   }
 
   return (
     <div style={{ padding: '16px 0' }}>
+      {onBindingChange && <BoardLegend />}
       <PhysicalBoard
+        label="QMK keymap"
         layout={layout}
         keyAt={keyAt}
         selected={highlighted}

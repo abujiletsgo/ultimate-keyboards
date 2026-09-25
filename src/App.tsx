@@ -127,12 +127,23 @@ export default function App() {
     } catch { /* ignore corrupt config */ }
   }, []);
 
-  // Cmd+S saves everything dirty.
+  // Cmd+S saves everything dirty; Cmd+Z / Shift+Cmd+Z undo/redo keymap edits
+  // (unless focus is in a text field, where the browser's own undo applies).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === 's') {
         e.preventDefault();
         if (isAnyDirty()) saveAllDirty().catch(err => console.error(err));
+        return;
+      }
+      if (k === 'z') {
+        const t = e.target as HTMLElement | null;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        e.preventDefault();
+        if (e.shiftKey) useZMKStore.getState().redo(); else useZMKStore.getState().undo();
       }
     };
     window.addEventListener('keydown', onKey);

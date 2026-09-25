@@ -1,4 +1,6 @@
-import { ArrowRight, Zap, Layers, Command, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Zap, Layers, Command, ChevronUp, ChevronDown } from 'lucide-react';
+import { ConfirmBanner, DeleteButton } from '@/components/ui';
 import { useKarabinerStore } from '../../stores/karabinerStore';
 import type { Rule } from '../../lib/karabinerGenerator';
 
@@ -33,7 +35,8 @@ function getRuleKind(rule: Rule): { label: string; icon: 'arrow' | 'zap' | 'laye
 }
 
 export function RuleList() {
-  const { rules, removeRule } = useKarabinerStore();
+  const { rules, removeRule, moveRule } = useKarabinerStore();
+  const [confirmIdx, setConfirmIdx] = useState<number | null>(null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -43,6 +46,18 @@ export function RuleList() {
           {rules.length} {rules.length === 1 ? 'rule' : 'rules'} configured
         </span>
       </div>
+
+      {confirmIdx !== null && rules[confirmIdx] && (
+        <div style={{ padding: '8px 14px 0' }}>
+          <ConfirmBanner
+            danger
+            message={<>Delete rule <strong>{rules[confirmIdx].description}</strong>?</>}
+            confirmLabel="Delete"
+            onConfirm={() => { removeRule(confirmIdx); setConfirmIdx(null); }}
+            onCancel={() => setConfirmIdx(null)}
+          />
+        </div>
+      )}
 
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -69,7 +84,7 @@ export function RuleList() {
           </div>
         ) : (
           rules.map((rule, idx) => (
-            <RuleItem key={idx} rule={rule} idx={idx} onDelete={removeRule} />
+            <RuleItem key={idx} rule={rule} idx={idx} onDelete={(i) => setConfirmIdx(i)} onMove={moveRule} isFirst={idx === 0} isLast={idx === rules.length - 1} />
           ))
         )}
       </div>
@@ -80,12 +95,10 @@ export function RuleList() {
 function RuleItem({
   rule,
   idx,
-  onDelete,
-}: {
+  onDelete, onMove, isFirst, isLast }: {
   rule: Rule;
   idx: number;
-  onDelete: (idx: number) => void;
-}) {
+  onDelete: (idx: number) => void; onMove: (idx: number, delta: -1 | 1) => void; isFirst: boolean; isLast: boolean }) {
   const summary = getRuleSummary(rule);
   const kind = getRuleKind(rule);
   const tintColor = {
@@ -157,16 +170,14 @@ function RuleItem({
         {kind.label}
       </span>
 
+      {/* Order (Karabiner evaluates rules top to bottom) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Move rule up" title="Move up" disabled={isFirst} onClick={() => onMove(idx, -1)} style={{ height: 18 }}><ChevronUp size={12} /></button>
+        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Move rule down" title="Move down" disabled={isLast} onClick={() => onMove(idx, 1)} style={{ height: 18 }}><ChevronDown size={12} /></button>
+      </div>
+
       {/* Delete */}
-      <button
-        className="btn btn-danger btn-sm"
-        onClick={() => {
-          if (window.confirm(`Delete rule "${rule.description}"?`)) onDelete(idx);
-        }}
-        title="Delete rule"
-      >
-        <Trash2 size={12} />
-      </button>
+      <DeleteButton label={`Delete rule: ${rule.description}`} onClick={() => onDelete(idx)} />
     </div>
   );
 }

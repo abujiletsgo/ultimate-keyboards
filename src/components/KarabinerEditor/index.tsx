@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react'
 import { Download, Copy, Check } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
+import { IS_TAURI } from '@/lib/io'
+import { useToast } from '@/components/ui'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { RuleList } from './RuleList'
 import MacbookKeyboard from './MacbookKeyboard'
@@ -8,17 +11,22 @@ import HomerowModEditor from './HomerowModEditor'
 
 export default function KarabinerEditor() {
   const { profileTitle, setTitle, exportJSON, rules } = useKarabinerStore()
-  const [toast, setToast] = useState<string | null>(null)
+  const toast = useToast()
   const [copied, setCopied] = useState(false)
-  const [showInstall, setShowInstall] = useState(false)
+  const [installedPath, setInstalledPath] = useState<string | null>(null)
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 4000)
-  }, [])
-
-  const handleExportAndInstall = useCallback(() => {
+  const handleExportAndInstall = useCallback(async () => {
     const json = exportJSON()
+    if (IS_TAURI) {
+      try {
+        const path = await invoke<string>('install_karabiner_rules', { title: profileTitle || 'Ultimate Keyboards', json })
+        setInstalledPath(path)
+        toast.success('Installed — enable it in Karabiner-Elements → Complex Modifications → Add rule')
+      } catch (e) {
+        toast.error(`Install failed: ${e}`)
+      }
+      return
+    }
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -26,8 +34,8 @@ export default function KarabinerEditor() {
     a.download = 'ultimate-keyboards.json'
     a.click()
     URL.revokeObjectURL(url)
-    setShowInstall(true)
-  }, [exportJSON])
+    setInstalledPath('download')
+  }, [exportJSON, profileTitle, toast])
 
   const handleCopyJSON = useCallback(async () => {
     const json = exportJSON()
@@ -44,13 +52,14 @@ export default function KarabinerEditor() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [exportJSON])
+  const showToast = (m: string) => toast.success(m)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-      {/* Toolbar */}
-      <div className="toolbar">
-        <span className="toolbar-title">MacBook Keys</span>
+      {/* Header */}
+      <div className="section-header">
+        <span className="section-title">MacBook Keys</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             value={profileTitle}
@@ -62,14 +71,14 @@ export default function KarabinerEditor() {
             {copied ? <Check size={13} /> : <Copy size={13} />}
             {copied ? 'Copied!' : 'Copy JSON'}
           </button>
-          <button className="btn btn-primary" onClick={handleExportAndInstall}>
+          <button className="btn btn-primary" onClick={handleExportAndInstall} disabled={rules.length === 0}>
             <Download size={13} />
-            Download JSON
+            {IS_TAURI ? 'Install to Karabiner' : 'Download JSON'}
           </button>
         </div>
       </div>
 
-      {showInstall && (
+      {installedPath && (
         <div className="panel-inset anim-fade-up" style={{
           margin: '0 20px',
           padding: '12px 16px',
@@ -81,16 +90,17 @@ export default function KarabinerEditor() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
-              Downloaded! Run this in Terminal to install:
+              {installedPath === 'download' ? 'Downloaded! Run this in Terminal to install:' : 'Installed. Now enable it in Karabiner-Elements:'}
             </span>
             <button
-              onClick={() => setShowInstall(false)}
+              aria-label="Dismiss"
+              onClick={() => setInstalledPath(null)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1 }}
             >×</button>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <code className="mono" style={{ flex: 1, userSelect: 'all', wordBreak: 'break-all' }}>
-              cp ~/Downloads/ultimate-keyboards.json ~/.config/karabiner/assets/complex_modifications/
+              {installedPath === 'download' ? 'cp ~/Downloads/ultimate-keyboards.json ~/.config/karabiner/assets/complex_modifications/' : installedPath}
             </code>
             <button
               className="btn btn-secondary"
@@ -106,7 +116,7 @@ export default function KarabinerEditor() {
             </button>
           </div>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            Then open Karabiner-Elements → Complex Modifications → Add rule → enable "Ultimate Keyboards"
+            Open Karabiner-Elements → Complex Modifications → Add rule → enable "{profileTitle || 'Ultimate Keyboards'}". Re-install after every change here.
           </span>
         </div>
       )}
@@ -114,8 +124,7 @@ export default function KarabinerEditor() {
       {/* MacBook keyboard visual — click any key to open binding popover */}
       <div className="anim-fade-up" style={{
         padding: '20px 28px 0',
-        borderBottom: '.5px solid var(--border)',
-        background: 'var(--bg-grouped)',
+        borderBottom: '1px solid var(--border)',
         flexShrink: 0,
         overflowX: 'auto',
       }}>
@@ -135,13 +144,6 @@ export default function KarabinerEditor() {
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div className="toast">
-          <span style={{ color: 'var(--success)', marginRight: 8 }}>✓</span>
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

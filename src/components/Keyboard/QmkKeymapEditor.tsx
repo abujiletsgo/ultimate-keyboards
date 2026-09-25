@@ -9,6 +9,7 @@ import { registerDirtySource, syncDirty } from '@/lib/dirty'
 import type { KeyboardDef } from '@/lib/registry/types'
 import QMKKeyboard from '@/components/ZMKEditor/QMKKeyboard'
 import QMKComboEditor from '@/components/ZMKEditor/QMKComboEditor'
+import { ConfirmBanner, useToast } from '@/components/ui'
 
 interface Props {
   keyboard: KeyboardDef
@@ -18,7 +19,8 @@ interface Props {
 const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   const { keymap, filePath, isDirty, loadError, load, updateLayerKey, save } = useQMKStore()
   const [selectedLayer, setSelectedLayer] = useState(0)
-  const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null)
+  const toast = useToast()
+  const [confirmReload, setConfirmReload] = useState(false)
 
   useEffect(() => {
     if (keymap && filePath === keyboard.keymapPath) return
@@ -37,10 +39,9 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   const handleSave = async () => {
     try {
       await save()
-      setStatus({ msg: 'Saved!', ok: true })
-      setTimeout(() => setStatus(null), 2000)
+      toast.success('Saved!')
     } catch (err) {
-      setStatus({ msg: `Error: ${err}`, ok: false })
+      toast.error(`Error: ${err}`)
     }
   }
 
@@ -67,9 +68,12 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
           <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>Unsaved</span>
         )}
         <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!isDirty}>Save</button>
-        <button className="btn btn-secondary btn-sm" onClick={() => { if (!isDirty || window.confirm('Discard unsaved edits and reload from disk?')) load(keyboard.keymapPath) }}>Reload</button>
-        {status && <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>}
+        <button className="btn btn-secondary btn-sm" onClick={() => { if (!isDirty) load(keyboard.keymapPath); else setConfirmReload(true) }}>Reload</button>
       </div>
+      {confirmReload && (
+        <ConfirmBanner message="Discard unsaved edits and reload from disk?" confirmLabel="Discard & reload"
+          onConfirm={() => { setConfirmReload(false); load(keyboard.keymapPath) }} onCancel={() => setConfirmReload(false)} />
+      )}
 
       {loadError ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12 }}>

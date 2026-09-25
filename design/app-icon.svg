@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Ultimate Keyboards app icon: minimal split keyboard, two staggered 3×3 clusters + thumb keys -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151a33"/>
+      <stop offset="1" stop-color="#0a0c16"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#2dd4bf" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="228" fill="url(#glow)"/>
+  <rect x="1.5" y="1.5" width="1021" height="1021" rx="227" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="3"/>
+  <g fill="#e2e6ff" fill-opacity="0.92">
+    <!-- left half: columns staggered upward toward the middle finger -->
+    <g transform="translate(160 300)">
+      <rect x="0"   y="56" width="88" height="88" rx="20"/>
+      <rect x="112" y="28" width="88" height="88" rx="20"/>
+      <rect x="224" y="0"  width="88" height="88" rx="20"/>
+      <rect x="0"   y="168" width="88" height="88" rx="20"/>
+      <rect x="112" y="140" width="88" height="88" rx="20"/>
+      <rect x="224" y="112" width="88" height="88" rx="20"/>
+      <rect x="0"   y="280" width="88" height="88" rx="20"/>
+      <rect x="112" y="252" width="88" height="88" rx="20"/>
+      <rect x="224" y="224" width="88" height="88" rx="20"/>
+    </g>
+    <!-- right half (mirrored) -->
+    <g transform="translate(552 300)">
+      <rect x="0"   y="0"  width="88" height="88" rx="20"/>
+      <rect x="112" y="28" width="88" height="88" rx="20"/>
+      <rect x="224" y="56" width="88" height="88" rx="20"/>
+      <rect x="0"   y="112" width="88" height="88" rx="20"/>
+      <rect x="112" y="140" width="88" height="88" rx="20"/>
+      <rect x="224" y="168" width="88" height="88" rx="20"/>
+      <rect x="0"   y="224" width="88" height="88" rx="20"/>
+      <rect x="112" y="252" width="88" height="88" rx="20"/>
+      <rect x="224" y="280" width="88" height="88" rx="20"/>
+    </g>
+  </g>
+  <!-- thumb keys in teal: the signature -->
+  <g fill="url(#teal)">
+    <rect x="352" y="672" width="120" height="88" rx="22" transform="rotate(12 412 716)"/>
+    <rect x="552" y="672" width="120" height="88" rx="22" transform="rotate(-12 612 716)"/>
+  </g>
+</svg>

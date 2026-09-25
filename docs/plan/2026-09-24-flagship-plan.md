@@ -181,3 +181,19 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | end-to-end save in the packaged app | X → `&trans` saved through the new parser: exactly one changed line on disk, `.bak` written; file reset afterwards |
 | NOT verified | `#include`d `.dtsi` layer files (parser reads one file; includes are flagged, not followed); Phase 2.3 exporters exercised by unit tests only; `qmk json2c` compile fixtures (qmk CLI not installed here) |
 
+### Phase 3 verification (2026-09-24)
+
+| check | result |
+|---|---|
+| tsc / bun test | clean / 64 pass |
+| `window.confirm` / JS hover hacks left in `src/` | 0 / 0 |
+| MacBook key popover (audit P0 F3) | browser at 820×620: anchored under the key, fully visible; nested key dropdown opens above it with focus in its search box |
+| in-app confirm | rule delete shows the banner (Delete / Cancel) inline; same primitive for combos (ZMK/QMK/Mac), layer delete, QMK reload, homerow presets |
+| keys as buttons (packaged app) | 42 accessible `toggle button Key n: <binding>` entries; Tab reaches the board (23 tabs from the sidebar), ArrowRight Q→W, ArrowDown W→S (geometry-based), Enter opens the editor, Esc closes it with focus back on the key |
+| layer-delete dry-run | Delete on layer 3 (Gesture) shows the references (combo "gesture" `&mo 3`, combo "delete" layer filter) instead of a confirm; "Go to key" appears only for key references |
+| Install to Karabiner | wrote `~/.config/karabiner/assets/complex_modifications/ultimate-keyboards.json` (33 rules from the example profile) with a `.bak` of the pre-existing file; test file removed and the previous file restored |
+| tray glyph | NOT visually verified: the white square first blamed on the icon belongs to another app (still there with ours quit), and this Mac's menu bar is full, so macOS hides our status item in the overflow (System Events reports it at x=2973, off the visible strip). The glyph is now rendered by `scripts/render-tray-icon.py` as raw RGBA (72×72, transparent background, 1364 opaque px) and fed through `Image::new`, the same path the previous hand-drawn glyph used |
+| homerow threshold | now emitted as `basic.to_if_held_down_threshold_milliseconds` = 150 and the UI copy reads from the same constant |
+| NOT verified | undo/redo in the packaged app (unit-tested); screen-reader announcement of the toasts and dialogs; the Switch on the Pointing tab in the packaged app; 800×600 legibility (audit P2) |
+| side effect to note | "Load example profile" was clicked during QA, so the MacBook Keys section now holds the 33-rule example set (which equals the pre-Phase-1 default rules) |
+

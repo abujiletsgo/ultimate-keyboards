@@ -4,8 +4,8 @@
  * Shows behavior-type pills + contextual param fields anchored to a clicked key.
  * Works for both ZMK and QMK firmware.
  */
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useRef, useMemo } from 'react'
+import { Popover } from '@/components/ui'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -177,10 +177,8 @@ function ParamPicker({
 }: { options: string[]; value: string; onChange: (v: string) => void }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0 })
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, top: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
-  const ref = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
     if (!query) return options.slice(0, 40)
@@ -191,28 +189,10 @@ function ParamPicker({
   function handleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      const dropH = 260
-      const spaceBelow = window.innerHeight - r.bottom
-      const top = spaceBelow >= dropH ? r.bottom + 4 : r.top - dropH - 4
-      setDropPos({ top, left: r.left })
+      setAnchor({ x: r.left, y: r.bottom + 4, top: r.top - 4 })
     }
     setOpen(v => !v)
   }
-
-  useEffect(() => {
-    if (open) inputRef.current?.focus()
-  }, [open])
-
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (
-        ref.current && !ref.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
-      ) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
 
   const display = value || '—'
 
@@ -230,17 +210,18 @@ function ParamPicker({
       >
         {display} ▾
       </button>
-      {open && createPortal(
-        <div
-          ref={ref}
-          className="glass-strong anim-scale-in"
-          style={{
-            position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 2000,
-            width: 220, maxHeight: 260, display: 'flex', flexDirection: 'column',
-          }}
+      {open && (
+        <Popover
+          anchor={anchor}
+          width={220}
+          layer="menu"
+          noBackdrop
+          label="Choose a value"
+          onClose={() => setOpen(false)}
+          onOutsideMouseDown={(t) => { if (!btnRef.current?.contains(t)) setOpen(false) }}
         >
+        <div style={{ maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
           <input
-            ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search or type any keycode…"
@@ -252,7 +233,6 @@ function ParamPicker({
                   : filtered.find(o => o.toLowerCase() === query.toLowerCase()) ?? (query.trim() || filtered[0])
                 if (pick) { onChange(pick); setOpen(false); setQuery('') }
               }
-              if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) }
             }}
             style={{ margin: 6, fontSize: 11 }}
           />
@@ -274,15 +254,9 @@ function ParamPicker({
               <div
                 key={opt}
                 onClick={() => { onChange(opt); setOpen(false); setQuery('') }}
-                style={{
-                  padding: '5px 10px', cursor: 'pointer', fontSize: 11,
-                  fontFamily: 'var(--font-mono)',
-                  color: opt === value ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                  background: opt === value ? 'var(--accent-soft)' : 'transparent',
-                  transition: 'background var(--dur-1) var(--ease-out)',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'var(--glass-bg-hover)')}
-                onMouseLeave={e => (e.currentTarget.style.background = opt === value ? 'var(--accent-soft)' : 'transparent')}
+                className="menu-item"
+                role="option"
+                aria-selected={opt === value}
               >
                 {opt}
               </div>
@@ -291,8 +265,8 @@ function ParamPicker({
           <div style={{ padding: '5px 10px', fontSize: 9.5, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
             Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable
           </div>
-        </div>,
-        document.body,
+        </div>
+        </Popover>
       )}
     </div>
   )
@@ -429,20 +403,10 @@ function defaultQMKParams(type: string): string[] {
 export default function BindingEditor({ firmware, currentBinding, anchorX, anchorY, anchorTop, onUpdate, onCancel }: Props) {
   const behaviors = firmware === 'zmk' ? ZMK_BEHAVIORS : QMK_BEHAVIORS
 
-  // Esc dismisses the popover (nested dropdowns stopPropagation their own Esc)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onCancel])
-
   // Parse current binding
   const parsed = firmware === 'zmk' ? parseZMK(currentBinding) : parseQMK(currentBinding)
   const [selBehavior, setSelBehavior] = useState('behavior' in parsed ? parsed.behavior : parsed.type)
   const [params, setParams] = useState<string[]>(parsed.params)
-  const [hoveredBehavior, setHoveredBehavior] = useState<string | null>(null)
 
   // When behavior changes, reset params to sensible defaults
   function handleBehaviorChange(code: string) {
@@ -458,59 +422,11 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
     onUpdate(binding)
   }
 
-  // Popover placement. Rendered through a portal into <body> so position:fixed
-  // is viewport-relative (the keyboard panels animate with a transform, which
-  // would otherwise become the containing block and push the popover
-  // off-screen). Placed from the popover's *measured* size — the height varies
-  // with the selected behavior — and clamped so it is always fully visible.
-  const W = 300, MARGIN = 8
-  const popRef = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
-  useLayoutEffect(() => {
-    const el = popRef.current
-    if (!el) return
-    const place = () => {
-      const vw = window.innerWidth, vh = window.innerHeight
-      // offsetWidth/Height: layout size, unaffected by the scale-in animation
-      const w = el.offsetWidth || W
-      const h = el.offsetHeight
-      let left = anchorX
-      if (left + w > vw - MARGIN) left = vw - w - MARGIN
-      if (left < MARGIN) left = MARGIN
-      let top = anchorY
-      if (top + h > vh - MARGIN) {
-        const above = (anchorTop ?? anchorY - 44) - h
-        top = above >= MARGIN ? above : vh - MARGIN - h
-      }
-      if (top < MARGIN) top = MARGIN
-      setPos(prev => (prev && prev.left === left && prev.top === top) ? prev : { left, top })
-    }
-    place()
-    const ro = new ResizeObserver(place)
-    ro.observe(el)
-    window.addEventListener('resize', place)
-    return () => { ro.disconnect(); window.removeEventListener('resize', place) }
-  }, [anchorX, anchorY, anchorTop])
-
   const selDef = behaviors.find(b => b.code === selBehavior) ?? behaviors[0]
 
-  return createPortal(
-    <>
-      {/* Backdrop */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={onCancel} />
-
-      {/* Popover — invisible until measured and placed */}
-      <div
-        ref={popRef}
-        style={{
-          position: 'fixed', zIndex: 1000, width: W,
-          left: pos?.left ?? 0, top: pos?.top ?? 0,
-          visibility: pos ? 'visible' : 'hidden',
-          maxHeight: `calc(100vh - ${MARGIN * 2}px)`, overflowY: 'auto',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="glass-strong anim-scale-in" style={{ overflow: 'hidden' }}>
+  return (
+    <Popover anchor={{ x: anchorX, y: anchorY, top: anchorTop }} width={300} label={`Edit binding ${currentBinding}`} onClose={onCancel}>
+        <div style={{ overflow: 'hidden' }}>
           {/* Header */}
           <div style={{
             padding: '10px 12px 8px',
@@ -524,20 +440,19 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {behaviors.map(b => {
                 const isActive = b.code === selBehavior
-                const isHovered = hoveredBehavior === b.code
                 return (
                   <button
                     key={b.code}
                     onClick={() => handleBehaviorChange(b.code)}
-                    onMouseEnter={() => setHoveredBehavior(b.code)}
-                    onMouseLeave={() => setHoveredBehavior(null)}
                     title={(b as any).title ?? b.label}
+                    aria-pressed={isActive}
+                    className="pill"
                     style={{
                       padding: '3px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 10,
                       fontWeight: isActive ? 700 : 500,
-                      background: isActive ? b.color : isHovered ? 'var(--glass-bg-hover)' : 'rgba(255,255,255,0.05)',
+                      background: isActive ? b.color : 'rgba(255,255,255,0.05)',
                       border: isActive ? `1px solid ${b.color.replace(/[\d.]+\)$/, '0.6)')}` : '1px solid var(--glass-border)',
-                      color: isActive ? '#fff' : isHovered ? 'var(--text)' : 'var(--text-muted)',
+                      color: isActive ? '#fff' : 'var(--text-muted)',
                       transition: 'background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
                     }}
                   >
@@ -575,8 +490,6 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
             </button>
           </div>
         </div>
-      </div>
-    </>,
-    document.body,
+    </Popover>
   )
 }

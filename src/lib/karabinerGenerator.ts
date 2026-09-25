@@ -185,12 +185,19 @@ export function ruleToKarabiner(rule: Rule): object {
         from: { key_code: rule.fromKey },
         to_if_held_down: [{ key_code: rule.modKey }],
         to_if_alone: [{ key_code: rule.tapKey }],
+        parameters: {
+          'basic.to_if_held_down_threshold_milliseconds': HOMEROW_HOLD_MS,
+          'basic.to_if_alone_timeout_milliseconds': HOMEROW_HOLD_MS + 30,
+        },
       }],
     };
   }
 
   return { description: 'unknown', manipulators: [] };
 }
+
+/** Hold threshold used by homerow mods (and shown in the UI). */
+export const HOMEROW_HOLD_MS = 150;
 
 export function generateComplexModification(rules: Rule[], title: string): object {
   return {

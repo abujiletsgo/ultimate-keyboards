@@ -1,0 +1,121 @@
+/* ── UI primitives (Phase 3) — tokens + classes shared by components/ui ─── */
+
+:root {
+  /* text ramp additions */
+  --text-10: 10px;  --text-12: 12px;  --text-14: 14px;
+  /* pill radius */
+  --r-pill: 9999px;
+  /* stacking scale — the only z-index values allowed in TSX */
+  --z-sticky: 10;
+  --z-sidebar: 20;
+  --z-popover: 1000;
+  --z-menu: 1100;
+  --z-toast: 9999;
+  /* readable muted text (≥ 4.5:1 on --bg); the old 0.32 alpha lives on as decorative */
+  --text-muted: rgba(226, 230, 255, 0.52);
+  --text-faint: rgba(226, 230, 255, 0.32);
+  --scrim: rgba(3, 4, 12, 0.35);
+  --toast-ms: 2500ms;
+}
+
+/* focus ring never reshapes the element */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: inherit; }
+
+/* selected-key pop (referenced by .keycap.selected) */
+@keyframes pop {
+  0%   { transform: scale(0.96); }
+  55%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* ── Popover ─────────────────────────────────────────────────────────────── */
+.popover-backdrop { position: fixed; inset: 0; background: transparent; }
+.popover-surface { border-radius: var(--r-lg); }
+.menu-item {
+  padding: 5px 10px; cursor: pointer; font-size: var(--text-11); font-family: var(--font-mono);
+  color: var(--text-secondary); display: flex; gap: 8px; align-items: center;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.menu-item:hover, .menu-item[data-active="true"] { background: var(--glass-bg-hover); color: var(--text); }
+.menu-item[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+
+/* ── Confirm banner ──────────────────────────────────────────────────────── */
+.confirm-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; font-size: var(--text-12); color: var(--text);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.confirm-banner[data-danger="true"] { border-color: rgba(251, 113, 133, 0.35); }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast-stack {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 8px; align-items: center; z-index: var(--z-toast);
+  pointer-events: none;
+}
+.toast-stack .toast {
+  position: static; transform: none; pointer-events: auto;
+  display: flex; align-items: center; gap: 10px; min-width: 220px; max-width: 520px;
+  animation: toast-in var(--dur-2) var(--ease-out) both;
+}
+.toast-success { border-color: rgba(74, 222, 128, 0.35); }
+.toast-error   { border-color: rgba(251, 113, 133, 0.45); color: var(--danger); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+/* ── Switch ──────────────────────────────────────────────────────────────── */
+.switch { display: flex; align-items: flex-start; gap: 12px; position: relative; }
+.switch[data-disabled="true"] { opacity: 0.5; }
+.switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+  border-radius: var(--r-pill); position: relative; flex-shrink: 0; margin-top: 1px;
+  transition: background var(--dur-2) var(--ease-spring);
+}
+.switch-input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch-knob {
+  position: absolute; top: 3px; border-radius: var(--r-pill); background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: left var(--dur-2) var(--ease-spring);
+}
+.switch-text { display: flex; flex-direction: column; gap: 2px; }
+.switch-label { font-size: var(--text-13); color: var(--text); }
+.switch-desc  { font-size: var(--text-12); color: var(--text-muted); line-height: 1.5; }
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-head { display: flex; align-items: baseline; justify-content: space-between; }
+.field-label { font-size: var(--text-10); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.field-hint  { font-size: var(--text-11); color: var(--text-muted); }
+
+/* ── Error panel ─────────────────────────────────────────────────────────── */
+.error-panel {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  font-size: var(--text-12); color: var(--danger);
+  background: rgba(251, 113, 133, 0.08); border-color: rgba(251, 113, 133, 0.30);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn-icon { padding: 0 8px; }
+
+/* ── Board legend ────────────────────────────────────────────────────────── */
+.board-legend { display: flex; gap: 12px; margin-bottom: 12px; font-size: var(--text-10); color: var(--text-muted); flex-wrap: wrap; padding-left: 2px; }
+.board-legend-item { display: flex; align-items: center; gap: 5px; }
+.board-legend-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+/* ── Keys are buttons ────────────────────────────────────────────────────── */
+button.keycap {
+  appearance: none; -webkit-appearance: none; font: inherit; line-height: 1.15;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  text-align: center; padding: 0 2px; color: var(--key-text, var(--text));
+}
+button.keycap:disabled { cursor: default; }
+button.keycap:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 4; }
+.keycap .key-main { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keycap .key-sub {
+  font-size: 7.5px; line-height: 1; opacity: 0.7; font-weight: 500; letter-spacing: 0.04em;
+  text-transform: uppercase; max-width: 100%; overflow: hidden; white-space: nowrap;
+}
+
+/* ── Pills (behavior / layer / modifier choices) ─────────────────────────── */
+.pill { transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), filter var(--dur-1) var(--ease-out); }
+.pill:hover { filter: brightness(1.2); }
+.pill[aria-pressed="true"] { color: var(--text); }

@@ -1,3 +1,4 @@
+import { ConfirmBanner } from '@/components/ui'
 import React, { useState, useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
@@ -169,7 +170,7 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 const MacComboEditor: React.FC = () => {
-  const { rules, addRule, removeRule } = useKarabinerStore()
+  const { rules, addRule, removeRule, updateRule } = useKarabinerStore()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<{ combo: ComboRule; idx: number } | null>(null)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
@@ -191,18 +192,12 @@ const MacComboEditor: React.FC = () => {
 
   function handleEdit(rule: ComboRule) {
     if (!editing) return
-    // Replace rule at original index: remove old, insert updated
-    // Since removeRule uses index, we need to work around the current rules array
-    removeRule(editing.idx)
-    // After removal the index shifts, so we re-add at end and accept the order change
-    addRule(rule)
+    updateRule(editing.idx, rule) // keeps its position — Karabiner evaluates rules in order
     setEditing(null)
   }
 
-  function handleDelete(idx: number) {
-    if (!window.confirm('Delete this combo?')) return
-    removeRule(idx)
-  }
+  const [confirmIdx, setConfirmIdx] = useState<number | null>(null)
+  function handleDelete(idx: number) { setConfirmIdx(idx) }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -216,6 +211,16 @@ const MacComboEditor: React.FC = () => {
           Add
         </button>
       </div>
+
+      {confirmIdx !== null && (
+        <ConfirmBanner
+          danger
+          message={<>Delete combo <strong>{combos.find(c => c.idx === confirmIdx)?.rule.description ?? ''}</strong>?</>}
+          confirmLabel="Delete"
+          onConfirm={() => { removeRule(confirmIdx); setConfirmIdx(null) }}
+          onCancel={() => setConfirmIdx(null)}
+        />
+      )}
 
       {/* Keyboard preview — hover a combo to see its keys lit up */}
       {combos.length > 0 && !showForm && !editing && (
