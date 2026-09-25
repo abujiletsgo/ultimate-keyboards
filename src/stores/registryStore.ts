@@ -7,6 +7,7 @@
  */
 import { create } from 'zustand'
 import { IS_TAURI } from '@/lib/io'
+import { LEGACY_CROSSES, LEGACY_CORNE_PROCYON, type PhysicalLayout } from '@/lib/layout'
 import { EMPTY_REGISTRY, newKeyboardId, type KeyboardDef, type RegistryData } from '@/lib/registry/types'
 
 const LS_KEY = 'uk.registry'
@@ -87,6 +88,13 @@ export const useRegistryStore = create<RegistryState>((set, get) => ({
       set({ loaded: true, error: `${e instanceof Error ? e.message : e}. Changes are not saved until the app can read it; restart the app to retry.` })
       return
     }
+    // Built-in layouts are copied into the registry when a keyboard is added;
+    // refresh them so geometry fixes (e.g. the Procyon's mirrored halves) reach saved keyboards.
+    const BUILT_IN: Record<string, PhysicalLayout> = { [LEGACY_CROSSES.origin!]: LEGACY_CROSSES, [LEGACY_CORNE_PROCYON.origin!]: LEGACY_CORNE_PROCYON }
+    data = { ...data, keyboards: data.keyboards.map(k => {
+      const fresh = k.layout?.source === 'legacy' && k.layout.origin ? BUILT_IN[k.layout.origin] : undefined
+      return fresh && fresh.keys.length === k.layout.keys.length ? { ...k, layout: fresh } : k
+    }) }
     // Drop stale selection.
     const selectedId = data.keyboards.some(k => k.id === data!.selectedId) ? data.selectedId : (data.keyboards[0]?.id ?? null)
     set({ loaded: true, keyboards: data.keyboards, selectedId })

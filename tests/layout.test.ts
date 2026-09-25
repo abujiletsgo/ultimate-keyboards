@@ -84,6 +84,14 @@ describe('legacy layouts', () => {
     expect(LEGACY_CROSSES.keys.length).toBe(42)
     expect(LEGACY_CROSSES.keys.filter(k => k.hand === 'L').length).toBe(21)
     expect(LEGACY_CORNE_PROCYON.keys.length).toBe(44)
-    expect(LEGACY_CORNE_PROCYON.keys.filter(k => k.encoder).length).toBe(2)
+    // outer thumb slots exist in the firmware layout but not on the board
+    expect(LEGACY_CORNE_PROCYON.keys.filter(k => k.hidden).length).toBe(2)
+    expect(LEGACY_CORNE_PROCYON.keys.filter(k => !k.hidden && k.hand === 'L').length).toBe(21)
+    // the right half is an exact mirror of the left
+    const shown = LEGACY_CORNE_PROCYON.keys.filter(k => !k.hidden)
+    const maxX = Math.max(...shown.map(k => k.x + 1))
+    for (const k of shown.filter(k => k.hand === 'L')) {
+      expect(shown.some(r => r.hand === 'R' && Math.abs(r.x - (maxX - k.x - 1)) < 1e-9 && r.y === k.y)).toBe(true)
+    }
   })
 })

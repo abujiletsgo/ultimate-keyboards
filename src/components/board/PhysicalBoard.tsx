@@ -76,7 +76,7 @@ export default function PhysicalBoard({ layout, keyAt, selected, editable = true
     const o = c(from)
     let best = -1, bestScore = Infinity
     layout.keys.forEach((k, i) => {
-      if (i === from || k.encoder) return
+      if (i === from || k.encoder || k.hidden) return
       const p = c(i)
       const dx = p.x - o.x, dy = p.y - o.y
       const ok = dir === 'ArrowLeft' ? dx < -0.3 : dir === 'ArrowRight' ? dx > 0.3 : dir === 'ArrowUp' ? dy < -0.3 : dy > 0.3
@@ -109,6 +109,7 @@ export default function PhysicalBoard({ layout, keyAt, selected, editable = true
           }} />
         )}
         {layout.keys.map((k, pos) => {
+          if (k.hidden) return null
           const w = k.w ?? 1, h = k.h ?? 1
           const v = keyAt(pos)
           const isSelected = selected?.has(pos) ?? false

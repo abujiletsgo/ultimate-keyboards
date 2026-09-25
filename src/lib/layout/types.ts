@@ -23,6 +23,8 @@ export interface PhysicalKey {
   hand?: 'L' | 'R'
   /** Rotary encoder slot rather than a key. */
   encoder?: boolean
+  /** A position the firmware has but the keyboard has no key for (e.g. an unused encoder slot): kept for the keymap data, never drawn. */
+  hidden?: boolean
 }
 
 export type LayoutSource =
@@ -47,6 +49,7 @@ export interface PhysicalLayout {
 export function layoutBounds(layout: PhysicalLayout): { minX: number; minY: number; maxX: number; maxY: number } {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   for (const k of layout.keys) {
+    if (k.hidden) continue
     const w = k.w ?? 1, h = k.h ?? 1
     minX = Math.min(minX, k.x)
     minY = Math.min(minY, k.y)

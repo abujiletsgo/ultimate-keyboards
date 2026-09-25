@@ -24,5 +24,5 @@ export const LEGACY_CORNE_PROCYON: PhysicalLayout = {
   name: 'Corne Procyon 44',
   source: 'legacy',
   origin: 'corneProcyonLayout.ts',
-  keys: CORNE_PROCYON_LAYOUT.map(k => ({ x: k.x, y: k.y, ...(k.w && k.w !== 1 ? { w: k.w } : {}), ...(k.h && k.h !== 1 ? { h: k.h } : {}), ...(k.isEncoder ? { encoder: true } : {}), hand: k.x < 6.4 ? 'L' as const : 'R' as const })),
+  keys: CORNE_PROCYON_LAYOUT.map(k => ({ x: k.x, y: k.y, ...(k.w && k.w !== 1 ? { w: k.w } : {}), ...(k.h && k.h !== 1 ? { h: k.h } : {}), ...(k.isEncoder ? { encoder: true } : {}), ...(k.hidden ? { hidden: true } : {}), hand: k.x < 6.4 ? 'L' as const : 'R' as const })),
 }

@@ -52,6 +52,7 @@ export function keymapToSvg(layout: PhysicalLayout, layers: ZMKLayer[], opts: Sv
     parts.push(`<rect x="16" y="${by}" width="${boardW}" height="${boardH}" rx="14" fill="${board}"/>`)
     const centers: { x: number; y: number }[] = []
     layout.keys.forEach((k, pos) => {
+      if (k.hidden) { centers.push({ x: -1, y: -1 }); return }
       const w = k.w ?? 1, h = k.h ?? 1
       const x = 16 + px(k.x - b.minX + PAD), y = by + px(k.y - b.minY + PAD)
       const kw = w * U + (w - 1) * G, kh = h * U + (h - 1) * G

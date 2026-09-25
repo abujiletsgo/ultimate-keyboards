@@ -2,7 +2,7 @@
 import type { PhysicalLayout } from '@/lib/layout'
 
 export default function MiniLayout({ layout, width = 180, color = 'rgba(226,230,255,0.35)' }: { layout: PhysicalLayout; width?: number; color?: string }) {
-  const keys = layout.keys
+  const keys = layout.keys.filter(k => !k.hidden)
   if (!keys.length) return null
   // bounds including rotation (approximate with the rotated corners)
   const pts: [number, number][] = []
