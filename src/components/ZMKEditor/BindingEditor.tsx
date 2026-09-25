@@ -27,6 +27,7 @@ interface Props {
 
 const ZMK_BEHAVIORS = [
   { code: '&kp',       label: 'Key',        title: 'Regular keypress',                        color: 'rgba(255,255,255,0.09)',  params: ['keycode'] },
+  { code: '&user',     label: 'Custom',     title: 'A behavior or macro defined in this keymap', color: 'rgba(52,211,153,0.2)',  params: ['user'] },
   { code: '&mo',       label: 'Hold Layer', title: 'Layer active while key is held (&mo)',    color: 'rgba(96,165,250,0.25)', params: ['layer'] },
   { code: '&lt',       label: 'Tap/Hold',   title: 'Tap=key, Hold=layer (&lt)',               color: 'rgba(96,165,250,0.18)', params: ['layer', 'keycode'] },
   { code: '&mt',       label: 'Mod-tap',    title: 'Tap=key, Hold=modifier (&mt)',            color: 'rgba(251,146,60,0.2)',   params: ['modifier', 'keycode'] },
@@ -59,7 +60,18 @@ const QMK_BEHAVIORS = [
 // ── Param options ─────────────────────────────────────────────────────────────
 
 import { useZMKStore } from '@/stores/zmkStore'
+import { parseBehaviors, type ZmkBehavior } from '@/lib/dt/behaviors'
+import { isDevicetreeReady } from '@/lib/zmkParser'
 import { useQMKStore } from '@/stores/qmkStore'
+
+/** User-defined behaviors/macros in the loaded keymap, for the "Custom" binding type. */
+function useUserBehaviors(): ZmkBehavior[] {
+  const src = useZMKStore(s => s.keymap?.rawSource)
+  return useMemo(() => {
+    if (!src || !isDevicetreeReady()) return []
+    try { return parseBehaviors(src).behaviors } catch { return [] }
+  }, [src])
+}
 
 /** Live layer list from the loaded keymap — labels show "N · name" */
 function useLayerOptions(firmware: Firmware): { value: string; label: string }[] {
@@ -127,6 +139,10 @@ function parseZMK(binding: string): ParsedZMK {
   if (behavior === '&bt' && params.length >= 2) {
     return { behavior, params: [params.join(' ')] }
   }
+  // Anything not built in is a user behavior/macro: keep its label as params[0].
+  if (!ZMK_BEHAVIORS.some(b => b.code === behavior)) {
+    return { behavior: '&user', params: [behavior.replace(/^&/, ''), ...params] }
+  }
   return { behavior, params }
 }
 
@@ -134,6 +150,7 @@ const ZMK_ZERO_PARAM = new Set(['&trans', '&none', '&caps_word', '&soft_off', '&
 
 function serializeZMK(b: string, params: string[]): string {
   if (ZMK_ZERO_PARAM.has(b)) return b
+  if (b === '&user') return ['&' + (params[0] ?? ''), ...params.slice(1).filter(p => p.trim() !== '')].join(' ').trim()
   return [b, ...params].join(' ')
 }
 
@@ -299,12 +316,42 @@ function ZMKParamEditor({
   behavior, params, onChange,
 }: { behavior: string; params: string[]; onChange: (params: string[]) => void }) {
   const bDef = ZMK_BEHAVIORS.find(b => b.code === behavior)
+  const users = useUserBehaviors()
   if (!bDef || bDef.params.length === 0) return null
 
   const setParam = (i: number, v: string) => {
     const next = [...params]
     next[i] = v
     onChange(next)
+  }
+
+  if (behavior === '&user') {
+    const chosen = users.find(u => u.label === params[0])
+    const cells = chosen?.bindingCells ?? 0
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Behavior</span>
+          {users.length === 0 ? (
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>No user behaviors in this keymap yet — add one on the Behaviors tab, or type the label:</span>
+          ) : (
+            <select value={params[0] ?? ''} onChange={e => onChange([e.target.value, ...Array(users.find(u => u.label === e.target.value)?.bindingCells ?? 0).fill('')])} style={{ height: 28, flex: 1 }}>
+              <option value="">Choose…</option>
+              {users.map(u => <option key={u.label} value={u.label}>&{u.label} · {u.kind}{u.bindingCells ? ` (${u.bindingCells} param${u.bindingCells === 1 ? '' : 's'})` : ''}</option>)}
+            </select>
+          )}
+        </div>
+        {users.length === 0 && (
+          <input value={params[0] ?? ''} onChange={e => setParam(0, e.target.value.replace(/^&/, ''))} placeholder="label" style={{ height: 28, fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+        )}
+        {Array.from({ length: cells }).map((_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 52, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Param {i + 1}</span>
+            <ParamPicker options={ZMK_KEYCODES} value={params[i + 1] ?? ''} onChange={v => setParam(i + 1, v)} />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
