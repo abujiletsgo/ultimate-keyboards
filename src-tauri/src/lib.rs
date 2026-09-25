@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 
+mod device;
 mod build;
 mod newconfig;
 mod mouse_engine;
@@ -347,6 +348,15 @@ pub fn run() {
             set_builtin_keyboard_disabled,
             set_dirty,
             install_karabiner_rules,
+            device::list_usb_keyboards,
+            device::serial_open,
+            device::serial_write,
+            device::serial_close,
+            device::hid_open,
+            device::hid_transact,
+            device::hid_close,
+            device::vial_definition,
+            device::fetch_device_metadata,
             build::git_repo_status,
             build::git_diff_file,
             build::gh_info,
