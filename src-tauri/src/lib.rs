@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
 
+mod build;
 mod mouse_engine;
 
 use tauri::{
@@ -308,6 +309,13 @@ pub fn run() {
             set_builtin_keyboard_disabled,
             set_dirty,
             install_karabiner_rules,
+            build::git_repo_status,
+            build::git_diff_file,
+            build::gh_info,
+            build::gh_run_list,
+            build::gh_run_download,
+            build::list_firmware,
+            build::flash_uf2,
             set_mouse_config,
             get_mouse_config
         ])

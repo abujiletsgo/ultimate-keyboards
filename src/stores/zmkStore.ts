@@ -30,6 +30,8 @@ interface ZMKState {
   redo: () => void;
   /** Everything that references a layer index — computed without mutating. */
   layerReferences: (index: number) => LayerReference[];
+  /** Apply a source-level edit (behaviors, macros…): re-parses, records history, marks dirty. Returns an error message or null. */
+  editSource: (mutate: (src: string) => string) => string | null;
 
   // Actions
   setKeymap: (km: ZMKKeymap | null, path: string) => void;
@@ -91,6 +93,23 @@ export const useZMKStore = create<ZMKState>((set, get) => ({
         selectedLayer: Math.min(state.selectedLayer, next.layers.length - 1),
       };
     }),
+
+  editSource: (mutate) => {
+    const { keymap, selectedLayer } = get();
+    if (!keymap) return 'No keymap loaded';
+    try {
+      // Bake pending layer/combo edits first so the mutation sees current text.
+      let src = updateLayerBindingsInSource(keymap.rawSource, keymap.layers);
+      src = updateCombosInSource(src, keymap.combos);
+      const out = mutate(src);
+      if (out === src) return null;
+      const km = parseKeymapText(out);
+      set((state) => ({ ...pushHistory(state), keymap: km, isDirty: true, selectedLayer: Math.min(selectedLayer, km.layers.length - 1) }));
+      return null;
+    } catch (e) {
+      return String(e instanceof Error ? e.message : e);
+    }
+  },
 
   layerReferences: (index) => {
     const { keymap } = get();

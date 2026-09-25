@@ -14,11 +14,15 @@ import type { KeyboardDef } from '@/lib/registry/types'
 import SplitKeyboard from '@/components/ZMKEditor/SplitKeyboard'
 import ComboEditor from '@/components/ZMKEditor/ComboEditor'
 import { ConfirmBanner, useToast } from '@/components/ui'
-import { Undo2, Redo2 } from 'lucide-react'
+import { Undo2, Redo2, ImageDown } from 'lucide-react'
+import { save as saveDialog } from '@tauri-apps/plugin-dialog'
+import { downloadDir, join } from '@tauri-apps/api/path'
+import { keymapToSvg } from '@/lib/export/svg'
+import BehaviorsEditor from './BehaviorsEditor'
 
 interface Props {
   keyboard: KeyboardDef
-  view: 'keymap' | 'combos'
+  view: 'keymap' | 'combos' | 'behaviors'
 }
 
 /** Save the store's current keymap to its file (used by the toolbar and the app-level guard). */
@@ -118,6 +122,23 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     }
   }
 
+  const exportSvg = async () => {
+    if (!keymap) return
+    try {
+      const svg = keymapToSvg(keyboard.layout, keymap.layers, { combos: keymap.combos, title: keyboard.name })
+      // The save panel opens at the directory of defaultPath; a bare file name
+      // would open it at the process cwd (`/` for a launched app).
+      const dir = await downloadDir().catch(() => '')
+      const name = `${keyboard.name.replace(/\s+/g, '-').toLowerCase()}-keymap.svg`
+      const target = await saveDialog({ defaultPath: dir ? await join(dir, name) : name, filters: [{ name: 'SVG', extensions: ['svg'] }] })
+      if (!target) return
+      await saveText(target, svg)
+      flash(`Exported ${target.split('/').pop()}`)
+    } catch (err) {
+      flash(`Export failed: ${err}`, false)
+    }
+  }
+
   const onRestore = async () => {
     try {
       const text = await restoreBackup(keyboard.keymapPath)
@@ -176,6 +197,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
           </button>
         )}
         <span style={{ flex: 1 }} />
+        <button className="btn btn-ghost btn-sm" onClick={exportSvg} title="Export every layer as an SVG picture"><ImageDown size={13} /> SVG</button>
         <button className="btn btn-ghost btn-sm btn-icon" aria-label="Undo" title="Undo (⌘Z)" disabled={past.length === 0 || !editable} onClick={undo}><Undo2 size={13} /></button>
         <button className="btn btn-ghost btn-sm btn-icon" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={future.length === 0 || !editable} onClick={redo}><Redo2 size={13} /></button>
         {isDirty && (
@@ -309,6 +331,10 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
             />
           </div>
         </>
+      ) : view === 'behaviors' ? (
+        <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
+          <BehaviorsEditor />
+        </div>
       ) : (
         <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
           <ComboEditor layout={keyboard.layout} />

@@ -11,3 +11,7 @@ export async function appDataDir(): Promise<string> {
 export async function join(...parts: string[]): Promise<string> {
   return parts.filter(Boolean).join('/').replace(/\/+/g, '/')
 }
+
+export async function downloadDir(): Promise<string> {
+  return ''
+}
