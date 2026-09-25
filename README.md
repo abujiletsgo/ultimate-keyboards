@@ -125,6 +125,8 @@ docs/                      # audits, research, phase plan
   byte-identical; comments must never be stripped from untouched nodes.
 - The tauri-web-shims vite alias is gated on `TAURI_ENV_PLATFORM` — removing the
   gate gives the packaged desktop app throwing fs stubs.
-- `bun test` must stay green; fixtures under `tests/fixtures` are real keymaps.
+- `bun test` must stay green on CI; fixtures under `tests/fixtures` are real keymaps.
+  Tests read only in-repo fixtures, never files under `~` (CI was red for five phases
+  because of that).
 - Nothing personal is compiled in: no absolute paths in `src/` (the legacy seed
   resolves `~` at runtime and only fires when the files exist).
