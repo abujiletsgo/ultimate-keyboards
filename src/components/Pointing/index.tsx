@@ -3,11 +3,17 @@
  * Reads the shield's right-side overlay, exposes the device's real
  * devicetree options as controls, and writes back minimal diffs.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { readText, saveText, ValidationError } from '@/lib/io'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
-import { Switch } from '@/components/ui'
-import type { PointingDescriptor as PointingDevice } from '@/lib/registry/types'
+import { ConfirmBanner, Switch, useToast } from '@/components/ui'
+import type { KeyboardDef, PointingDescriptor as PointingDevice } from '@/lib/registry/types'
+import { useRegistryStore } from '@/stores/registryStore'
+import { planRemove } from '@/lib/pointing/apply'
+import { confForOverlay } from '@/lib/pointing/targets'
+
+const AddDeviceWizard = lazy(() => import('./AddDeviceWizard'))
+const QmkPointing = lazy(() => import('./QmkPointing'))
 import {
   findNode, getBoolProp, setBoolProp, getIntProp, setIntProp,
   getStringProp, setStringProp, getScaler, setScaler,
@@ -179,10 +185,51 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   )
 }
 
-// ── Main section ──────────────────────────────────────────────────────────────
+// ── Section: empty state / wizard / tuner ────────────────────────────────────
 
-export default function Pointing({ devices }: { devices: PointingDevice[] }) {
+export default function Pointing({ keyboard }: { keyboard: KeyboardDef }) {
+  const devices = keyboard.pointing
+  const [adding, setAdding] = useState(false)
+  const canAdd = keyboard.firmware === 'zmk' && !!keyboard.repoPath
+
+  if (keyboard.firmware === 'qmk') {
+    return (
+      <Suspense fallback={<div className="skeleton" style={{ height: 120 }} />}>
+        <QmkPointing key={keyboard.id} keyboard={keyboard} />
+      </Suspense>
+    )
+  }
+  if (adding) {
+    return (
+      <Suspense fallback={<div className="skeleton" style={{ height: 160 }} />}>
+        <AddDeviceWizard keyboard={keyboard} onDone={() => setAdding(false)} />
+      </Suspense>
+    )
+  }
+  if (devices.length === 0) {
+    return (
+      <div className="glass anim-fade-up" style={{ padding: 24, maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="section-title">No pointing device</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          {canAdd
+            ? 'Add a trackball or trackpad from a tested template. The wizard appends the sensor and input listener to a shield overlay, enables the Kconfig options, and pulls the driver module into west.yml — after showing you the exact diff.'
+            : 'This keyboard was added from a single keymap file. Re-add it from its config repo folder to manage pointing devices.'}
+        </div>
+        {canAdd && <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setAdding(true)}>Add device…</button>}
+      </div>
+    )
+  }
+  return <Tuner key={devices.map(d => d.id).join(',')} keyboard={keyboard} devices={devices} onAdd={canAdd ? () => setAdding(true) : undefined} />
+}
+
+// ── Tuner (one or more devices) ──────────────────────────────────────────────
+
+function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: PointingDevice[]; onAdd?: () => void }) {
+  const toast = useToast()
+  const updateKeyboard = useRegistryStore(s => s.update)
   const [devId, setDevId] = useState<string>(devices[0].id)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const dev = useMemo(() => devices.find(d => d.id === devId) ?? devices[0], [devices, devId])
 
   const [source, setSource] = useState<string | null>(null)
@@ -260,6 +307,32 @@ export default function Pointing({ devices }: { devices: PointingDevice[] }) {
   const set = <K extends keyof PointingValues>(k: K, v: PointingValues[K]) =>
     setValues(prev => (prev ? { ...prev, [k]: v } : prev))
 
+  /** Remove the device: strip its marked blocks (template-added) and unregister it. */
+  const removeDevice = async () => {
+    setRemoving(true)
+    try {
+      let touched = 0
+      if (dev.templateId) {
+        const confPath = dev.confPath ?? confForOverlay(dev.overlayPath)
+        const [overlay, conf, west] = await Promise.all([
+          readText(dev.overlayPath),
+          readText(confPath).catch(() => ''),
+          dev.westPath ? readText(dev.westPath).catch(() => null) : Promise.resolve(null),
+        ])
+        const plan = planRemove(dev.id, { overlayPath: dev.overlayPath, overlay, confPath, conf, westPath: dev.westPath ?? null, west })
+        for (const c of [plan.overlay, plan.conf, plan.west]) {
+          if (c && c.after !== c.before) { await saveText(c.path, c.after); touched++ }
+        }
+      }
+      updateKeyboard(keyboard.id, { pointing: devices.filter(d => d.id !== dev.id) })
+      toast.success(dev.templateId
+        ? `${dev.name} removed — ${touched} file${touched === 1 ? '' : 's'} restored`
+        : `${dev.name} unregistered — the overlay was written by hand, so it was left unchanged`)
+    } catch (e) {
+      toast.error(`Could not remove: ${e}`)
+    } finally { setRemoving(false); setConfirmRemove(false) }
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -278,9 +351,22 @@ export default function Pointing({ devices }: { devices: PointingDevice[] }) {
         {status && <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>}
         {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
         <button className="btn btn-primary btn-sm" onClick={save} disabled={!dirty}>Save</button>
+        {onAdd && <button className="btn btn-secondary btn-sm" onClick={onAdd}>Add device…</button>}
+        <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRemove(true)} disabled={removing || confirmRemove} title="Remove this device from the firmware config and the app">Remove…</button>
       </div>
 
       <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {confirmRemove && (
+          <ConfirmBanner
+            danger
+            confirmLabel={removing ? 'Removing…' : `Remove ${dev.name}`}
+            onConfirm={removeDevice}
+            onCancel={() => setConfirmRemove(false)}
+            message={dev.templateId
+              ? <>Remove <strong>{dev.name}</strong>? The marked blocks in <span className="mono">{dev.overlayPath.split('/').pop()}</span>, its .conf and west.yml are deleted (backups are kept as .bak).</>
+              : <>Remove <strong>{dev.name}</strong> from this keyboard? It was not added by the wizard, so the overlay is left untouched — only the app forgets it.</>}
+          />
+        )}
         {/* Unsaved-changes guard when switching devices */}
         {pendingSwitch && (
           <div className="glass anim-fade-up" style={{

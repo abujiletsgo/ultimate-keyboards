@@ -119,3 +119,32 @@ button.keycap:focus-visible { outline: 2px solid var(--accent); outline-offset: 
 .pill { transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out), filter var(--dur-1) var(--ease-out); }
 .pill:hover { filter: brightness(1.2); }
 .pill[aria-pressed="true"] { color: var(--text); }
+
+/* ── Wizard (Add pointing device) ────────────────────────────────────────── */
+.wizard-steps { display: flex; gap: 14px; list-style: none; margin: 0; padding: 0; font-size: var(--text-11); color: var(--text-muted); }
+.wizard-steps li { display: flex; align-items: center; gap: 6px; }
+.wizard-steps li[aria-current="step"] { color: var(--text); font-weight: 600; }
+.wizard-steps li[data-done="true"] { color: var(--success); }
+.wizard-step-n {
+  width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; border: 1px solid currentColor;
+}
+.wizard-steps li[aria-current="step"] .wizard-step-n { background: var(--accent); border-color: var(--accent); color: #0b1220; }
+.card-btn {
+  appearance: none; font: inherit; text-align: left; cursor: pointer; color: var(--text);
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px;
+  background: var(--surface-2, rgba(255,255,255,0.04)); border: 1px solid var(--border); border-radius: 10px;
+  transition: border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+}
+.card-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+.card-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── Diff preview ────────────────────────────────────────────────────────── */
+pre.diff {
+  margin: 0; padding: 8px 12px 10px; max-height: 320px; overflow: auto;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--text-secondary); white-space: pre;
+}
+pre.diff div { min-height: 1.5em; }
+.diff-add { color: var(--success); background: rgba(74, 222, 128, 0.08); }
+.diff-del { color: var(--danger); background: rgba(251, 113, 133, 0.08); }
+.diff-hunk { color: var(--text-muted); font-style: italic; }
