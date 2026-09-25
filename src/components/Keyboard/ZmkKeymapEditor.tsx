@@ -16,6 +16,7 @@ import ComboEditor from '@/components/ZMKEditor/ComboEditor'
 import { ConfirmBanner, useToast } from '@/components/ui'
 import { Undo2, Redo2, ImageDown } from 'lucide-react'
 import { save as saveDialog } from '@tauri-apps/plugin-dialog'
+import { downloadDir, join } from '@tauri-apps/api/path'
 import { keymapToSvg } from '@/lib/export/svg'
 import BehaviorsEditor from './BehaviorsEditor'
 
@@ -125,7 +126,11 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     if (!keymap) return
     try {
       const svg = keymapToSvg(keyboard.layout, keymap.layers, { combos: keymap.combos, title: keyboard.name })
-      const target = await saveDialog({ defaultPath: `${keyboard.name.replace(/\s+/g, '-').toLowerCase()}-keymap.svg`, filters: [{ name: 'SVG', extensions: ['svg'] }] })
+      // The save panel opens at the directory of defaultPath; a bare file name
+      // would open it at the process cwd (`/` for a launched app).
+      const dir = await downloadDir().catch(() => '')
+      const name = `${keyboard.name.replace(/\s+/g, '-').toLowerCase()}-keymap.svg`
+      const target = await saveDialog({ defaultPath: dir ? await join(dir, name) : name, filters: [{ name: 'SVG', extensions: ['svg'] }] })
       if (!target) return
       await saveText(target, svg)
       flash(`Exported ${target.split('/').pop()}`)
