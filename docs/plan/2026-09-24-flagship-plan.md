@@ -197,3 +197,15 @@ Understanding-bottlenecked (1.1 layout model, 3.1 parser, 4.2 templates, 2.4 dir
 | NOT verified | undo/redo in the packaged app (unit-tested); screen-reader announcement of the toasts and dialogs; the Switch on the Pointing tab in the packaged app; 800×600 legibility (audit P2) |
 | side effect to note | "Load example profile" was clicked during QA, so the MacBook Keys section now holds the 33-rule example set (which equals the pre-Phase-1 default rules) |
 
+### Phase 4 verification (2026-09-24, packaged build)
+
+| check | result |
+|---|---|
+| tsc / bun test | clean / 72 pass (behaviors parse + byte-exact edits, SVG export) |
+| Behaviors tab | Corne lists its 6 mod-morphs with summaries; expanding `&and_bspc` shows bindings + mod pills; toggling LSFT updates the summary to `<(MOD_RCTL\|MOD_LSFT)>`, marks Unsaved, leaves disk untouched; Cmd+Z reverts it |
+| Build tab | repo branch + 2 uncommitted changes (both outside config/), 5 GitHub Actions runs with status via the user's `gh` login, Download on the latest run refreshed the 3 uf2 files in `cross_keyboard/firmware/` (timestamps 20:54) |
+| Flash | NOT exercised (needs a half in bootloader); the Rust step is the same wait-for-volume + copy flow used manually on 2026-09-23/24 |
+| SVG export | FAILED first: the save-dialog grant covers only the chosen file, so the atomic writer's sibling `.tmp` was refused ("forbidden path … svg.svg.tmp"). Fixed: new files are written directly; existing files fall back to an in-place write when sibling writes are refused. Re-verified after rebuild (see below) |
+| Custom binding type | listed from the keymap's own behaviors with `#binding-cells` params (unit-tested parse; UI not exercised) |
+| add hold-tap / macro from the UI | NOT exercised in the GUI (add/remove round-trips are unit-tested) |
+
