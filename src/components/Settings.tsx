@@ -58,7 +58,7 @@ export default function Settings({ startAdd, startEdit, onAdded }: Props) {
             {keyboards.length === 0 && !adding && (
               <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No keyboards yet. Add one to start editing its keymap.</div>
             )}
-            {keyboards.map(kb => (
+            {!adding && keyboards.map(kb => (
               <KeyboardRow
                 key={kb.id}
                 kb={kb}

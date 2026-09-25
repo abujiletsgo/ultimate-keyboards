@@ -40,11 +40,23 @@ export function buildYaml({ keyboard, controller, studio }: NewConfigOptions): s
     if (keyboard.type === 'board') lines.push(`  - board: ${half}`)
     else lines.push(`  - board: ${controller?.board ?? 'nice_nano//zmk'}`, `    shield: ${half}`)
     if (studio && keyboard.studio && central) {
-      lines.push('    snippet: studio-rpc-usb-uart', '    cmake-args: -DCONFIG_ZMK_STUDIO=y')
+      // without a &studio_unlock key in the keymap Studio would stay locked, so the lock is turned off
+      const args = needsUnlockOff(keyboard) ? '-DCONFIG_ZMK_STUDIO=y -DCONFIG_ZMK_STUDIO_LOCKING=n' : '-DCONFIG_ZMK_STUDIO=y'
+      lines.push('    snippet: studio-rpc-usb-uart', `    cmake-args: ${args}`)
     }
   })
   if (keyboard.type === 'shield') lines.push(`  - board: ${controller?.board ?? 'nice_nano//zmk'}`, '    shield: settings_reset')
   return lines.join('\n') + '\n'
+}
+
+/** True when the default keymap has no Studio unlock key. */
+export function needsUnlockOff(kb: ZmkCatalogueKeyboard): boolean {
+  return !kb.keymap.includes('&studio_unlock')
+}
+
+/** config/<id>.conf, which ZMK's own setup creates next to the keymap. */
+export function confText(kb: ZmkCatalogueKeyboard): string {
+  return `# Kconfig options for ${kb.name}. See https://zmk.dev/docs/config for what can go here.\n`
 }
 
 /** Pin the template's `revision: v0.3` default to main. */

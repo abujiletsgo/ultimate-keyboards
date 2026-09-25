@@ -16,7 +16,7 @@ import {
   type CatalogueFilter, type CatalogueItem, type Tag,
 } from '@/lib/catalogue'
 import { qmkDefaultKeymap, qmkKeyboardDetails, type QmkKeyboardDetails, type QmkConfiguratorKeymap } from '@/lib/catalogue/qmk'
-import { buildYaml, controllersFor, keymapFileName, pinWestToMain } from '@/lib/catalogue/newZmkConfig'
+import { buildYaml, confText, controllersFor, keymapFileName, needsUnlockOff, pinWestToMain } from '@/lib/catalogue/newZmkConfig'
 import { parseKeymapText } from '@/lib/zmkParser'
 import { bindingLabel, bindingSubLabel } from '@/lib/keyLabel'
 import { abbreviateQMK } from '@/components/ZMKEditor/QMKKeyboard'
@@ -212,6 +212,7 @@ function CreateZmkConfig({ item, onAdd }: { item: CatalogueItem; onAdd: Props['o
       // a fresh clone: plain writes, so no .bak files end up in the first commit
       await writeTextFile(await join(created.path, 'build.yaml'), buildYaml({ keyboard: kb, controller: ctl, studio }))
       await writeTextFile(keymapPath, kb.keymap)
+      await writeTextFile(keymapPath.replace(/\.keymap$/, '.conf'), confText(kb))
       const westPath = await join(cfg, 'west.yml')
       await writeTextFile(westPath, pinWestToMain(await readText(westPath)))
       setStep('Uploading to GitHub (this starts the first firmware build)…')
@@ -249,7 +250,12 @@ function CreateZmkConfig({ item, onAdd }: { item: CatalogueItem; onAdd: Props['o
       </div>
       <Switch checked={priv} onChange={setPriv} label="Private repository" description="Public is the ZMK norm and lets others help you; private works too." />
       {kb.studio && (
-        <Switch checked={studio} onChange={setStudio} label="Enable live editing (ZMK Studio)" description="Adds Studio to the left half so this app can read and change the keymap over USB without rebuilding." />
+        <Switch
+          checked={studio} onChange={setStudio} label="Enable live editing (ZMK Studio)"
+          description={needsUnlockOff(kb)
+            ? 'Adds Studio to the left half so this app can read and change the keymap over USB without rebuilding. This keymap has no Studio unlock key, so the Studio lock is turned off: any app on a computer you plug into can change the keymap.'
+            : 'Adds Studio to the left half so this app can read and change the keymap over USB without rebuilding. Press the keymap’s Studio unlock key before editing.'}
+        />
       )}
       {error && <ErrorPanel onRetry={create}>{error}</ErrorPanel>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

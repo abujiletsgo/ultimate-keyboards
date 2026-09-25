@@ -68,11 +68,14 @@ pub fn create_zmk_config(name: String, private: bool) -> Result<CreatedConfig, S
     let user = run(&gh, &["api", "user", "-q", ".login"], None)
         .map_err(|e| format!("Not signed in to GitHub. Run `gh auth login` in Terminal, then try again. ({e})"))?;
     let full = format!("{user}/{name}");
-    run(
-        &gh,
-        &["repo", "create", &full, "--template", TEMPLATE, if private { "--private" } else { "--public" }],
-        None,
-    )?;
+    // resumable: if an earlier attempt created the repo but failed later, reuse it
+    if run(&gh, &["repo", "view", &full, "--json", "name"], None).is_err() {
+        run(
+            &gh,
+            &["repo", "create", &full, "--template", TEMPLATE, if private { "--private" } else { "--public" }],
+            None,
+        )?;
+    }
     // GitHub fills a template repo asynchronously; retry the clone briefly.
     let start = Instant::now();
     let dest_s = dest.to_string_lossy().to_string();

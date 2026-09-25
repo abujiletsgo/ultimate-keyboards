@@ -44,3 +44,21 @@ After "Find my keyboard" on ZMK: **Create my config** makes a repo from `zmkfirm
 - **Input Monitoring prompt** when enumerating HID keyboards on macOS; must be proven absent or explained.
 - **Licensing:** implement protocols ourselves (Vial GUI is GPL-2); never bundle QMK/VIA data files.
 - **Live edit vs files:** Studio/Vial/VIA write to the keyboard, not to a repo; the UI must say which one is being edited.
+
+## Gate (Tom, 2026-09-25)
+Scope: **everything, incl. Vial/VIA** (untested parts labelled). New ZMK configs: **user's GitHub + local copy**.
+
+## Critique resolution (one OpenAI planning pass, resolved once by the lead)
+
+| # | finding | decision |
+|---|---|---|
+| 1 | repo keymap and device keymap are separate sources of truth; Studio/VIA saved state masks later file changes | **Accept.** Separate workspaces, no auto-sync; snapshot the whole device keymap before the first write; read back every write. |
+| 2 | do not ship untested writes | **Partly.** Tom chose to include Vial/VIA; their writes and RGB are behind an explicit Experimental switch until validated on hardware. Studio writes stay on (Studio has its own save/discard) with read-back. |
+| 3 | 0xFF60 is a usage page; match usage 0x61 and handshake; VIA ≠ Vial | **Accept.** |
+| 4 | macOS permissions / sandbox | **Accept default:** direct distribution, not App Store; Documents TCC prompt documented; Input Monitoring only if a signed build proves it is needed. |
+| 5 | a shield alone is not buildable; create `.conf` too | **Accept.** Controller choice + `config/<id>.conf` written. |
+| 6 | Studio needs an unlock key | **Accept.** 27 of 31 Studio-ready default keymaps have none → build adds `CONFIG_ZMK_STUDIO_LOCKING=n` and the UI says what that means. |
+| 7 | USB identity is heuristic | **Accept.** Candidates until a handshake; "Pointer reports detected", never trackball/trackpad from USB. |
+| 8 | runtime fetch is not a licence | **Noted.** Nothing QMK/VIA is bundled; provenance shown in the UI; Configurator defaults (derived from GPL keymaps, repo unlicensed) flagged for Tom's licence review before a public release. |
+| 9 | online catalogue can dead-end | **Partly.** ZMK part is offline; QMK errors explain the network cause. Last-known-good cache deferred. |
+| 10 | repo creation must be resumable | **Accept.** An existing remote from a failed attempt is reused; nothing is auto-deleted. |
