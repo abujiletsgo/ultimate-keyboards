@@ -34,9 +34,17 @@ jobs:
           awk -v v="$v" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > notes.md
           test -s notes.md || { echo "CHANGELOG.md has no section for $v"; exit 1; }
           { echo 'body<<UK_NOTES_EOF'; cat notes.md; echo 'UK_NOTES_EOF'; } >> "$GITHUB_OUTPUT"
-      - name: Updater public key is set
+      - name: Updater key present?
+        id: key
         run: |
-          python3 -c "import json,sys; k=json.load(open('src-tauri/tauri.conf.json'))['plugins']['updater']['pubkey']; sys.exit(0 if k else 'plugins.updater.pubkey is empty: run scripts/setup-updater-key.sh')"
+          if python3 -c "import json,sys; sys.exit(0 if json.load(open('src-tauri/tauri.conf.json'))['plugins']['updater']['pubkey'] else 1)"; then
+            echo "args=--target aarch64-apple-darwin --config {\"bundle\":{\"createUpdaterArtifacts\":true}}" >> "$GITHUB_OUTPUT"
+            echo "updater=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No updater key yet (run scripts/setup-updater-key.sh): publishing the app without auto-update files."
+            echo "args=--target aarch64-apple-darwin" >> "$GITHUB_OUTPUT"
+            echo "updater=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +56,5 @@ jobs:
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
-          # update archives + signatures only in CI, so local `bun run build` needs no key
-          args: --target aarch64-apple-darwin --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          includeUpdaterJson: ${{ steps.key.outputs.updater }}
+          args: ${{ steps.key.outputs.args }}
