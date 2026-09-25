@@ -1,3 +1,4 @@
+import { join } from 'path'
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'fs'
 import { TEMPLATES, validateField, renderOverlay } from '../src/lib/pointing/templates'
@@ -7,7 +8,7 @@ import { parseDevicetree, syntaxErrorLines } from '../src/lib/dt/runtime'
 
 const baseOverlay = '#include "corne.dtsi"\n\n&kscan0 {\n    col-gpios = <&gpio0 22 GPIO_ACTIVE_HIGH>;\n};\n'
 const baseConf = 'CONFIG_ZMK_SLEEP=y\n'
-const baseWest = readFileSync('/Users/tomkwon/Documents/cross_keyboard-crosses/config/west.yml', 'utf8')
+const baseWest = readFileSync(join(import.meta.dir, 'fixtures', 'repo', 'west.yml'), 'utf8')
 
 const files = (west: string | null = baseWest): RepoFiles => ({
   overlayPath: '/x/corne_right.overlay', overlay: baseOverlay,

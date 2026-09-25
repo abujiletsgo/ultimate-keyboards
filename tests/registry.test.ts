@@ -9,7 +9,7 @@ const fx = (name: string) => readFileSync(join(import.meta.dir, 'fixtures', name
 
 describe('pointing detection in overlays', () => {
   test('corne_tp right overlay → Azoteq trackpad with its listener', () => {
-    const src = readFileSync('/Users/tomkwon/Documents/cross_keyboard/config/boards/shields/corne_tp/corne_tp_right.overlay', 'utf8')
+    const src = readFileSync(join(import.meta.dir, 'fixtures', 'repo', 'corne_tp_right.overlay'), 'utf8')
     const devs = detectPointingInOverlay(src, '/x/corne_tp_right.overlay')
     expect(devs.length).toBe(1)
     expect(devs[0]).toMatchObject({ id: 'trackpad', chip: 'Azoteq IQS5XX', compatible: 'azoteq,iqs5xx' })
@@ -19,7 +19,7 @@ describe('pointing detection in overlays', () => {
   })
 
   test('crosses right overlay → PMW3610 trackball', () => {
-    const src = readFileSync('/Users/tomkwon/Documents/cross_keyboard-crosses/config/boards/shields/crosses/crosses_right.overlay', 'utf8')
+    const src = readFileSync(join(import.meta.dir, 'fixtures', 'repo', 'crosses_right.overlay'), 'utf8')
     const devs = detectPointingInOverlay(src, '/x/crosses_right.overlay')
     expect(devs.length).toBe(1)
     expect(devs[0].chip).toBe('Pixart PMW3610')

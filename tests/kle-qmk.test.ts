@@ -1,3 +1,4 @@
+import { join } from 'path'
 import { describe, expect, test } from 'bun:test'
 import { readFileSync, existsSync } from 'fs'
 import { parseKle, toKle } from '../src/lib/layout/kle'
@@ -36,7 +37,7 @@ describe('KLE import', () => {
 })
 
 describe('QMK VIA layout JSON: unknown fields survive a save', () => {
-  const path = '/Users/tomkwon/Documents/splitkey2/corne_procyon/corne_procyon.layout.json'
+  const path = join(import.meta.dir, 'fixtures', 'repo', 'corne_procyon.layout.json')
   const has = existsSync(path)
   test.skipIf(!has)('merging edited layers back keeps every other field byte-for-byte', () => {
     const text = readFileSync(path, 'utf8')

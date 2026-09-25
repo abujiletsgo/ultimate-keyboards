@@ -66,7 +66,7 @@ describe('info.json import', () => {
 
 describe('matrix-transform grid fallback', () => {
   test('corne_tp shield: 42 positions in map order, split gap inserted', () => {
-    const src = readFileSync('/Users/tomkwon/Documents/cross_keyboard/config/boards/shields/corne_tp/corne_tp.dtsi', 'utf8')
+    const src = readFileSync(join(import.meta.dir, 'fixtures', 'repo', 'corne_tp.dtsi'), 'utf8')
     const ts = parseMatrixTransforms(src)
     expect(ts.length).toBe(1)
     expect(ts[0].map.length).toBe(42)
