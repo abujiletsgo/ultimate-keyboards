@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Pencil, Trash2, FolderOpen, FileText } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import { useRegistryStore } from "@/stores/registryStore";
 import { IS_TAURI } from "@/lib/io";
 import { CATALOGUE, catalogueLabel } from "@/lib/layout/catalogue";
 import { parseInfoJsonLayouts, parseKle, type PhysicalLayout } from "@/lib/layout";
 import { readText } from "@/lib/io";
 import type { KeyboardDef } from "@/lib/registry/types";
-import AddKeyboard from "./Settings/AddKeyboard";
+import AddKeyboardHub, { type HubTab } from "./Settings/AddKeyboardHub";
 import Updates from "./Settings/Updates";
 import Supported from "./Settings/Supported";
 import PhysicalBoard from "@/components/board/PhysicalBoard";
@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 interface Props {
   /** Open the add-keyboard flow immediately (from the sidebar / onboarding). */
-  startAdd?: 'folder' | 'file'
+  startAdd?: HubTab
   /** Open this keyboard's editor (from the keyboard page's Edit button). */
   startEdit?: string
   onAdded?: (id: string) => void
@@ -34,7 +34,7 @@ interface Props {
 export default function Settings({ startAdd, startEdit, onAdded }: Props) {
   const { keyboards, add, update, remove } = useRegistryStore();
   const [tab, setTab] = useState<Tab>('keyboards');
-  const [adding, setAdding] = useState<'folder' | 'file' | null>(startAdd ?? null);
+  const [adding, setAdding] = useState<HubTab | null>(startAdd ?? null);
   const [editingId, setEditingId] = useState<string | null>(startEdit ?? null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ export default function Settings({ startAdd, startEdit, onAdded }: Props) {
             {keyboards.length === 0 && !adding && (
               <div style={{ fontSize: 13, color: "var(--text-muted)" }}>No keyboards yet. Add one to start editing its keymap.</div>
             )}
-            {keyboards.map(kb => (
+            {!adding && keyboards.map(kb => (
               <KeyboardRow
                 key={kb.id}
                 kb={kb}
@@ -72,26 +72,18 @@ export default function Settings({ startAdd, startEdit, onAdded }: Props) {
               />
             ))}
             {adding ? (
-              <AddKeyboard
+              <AddKeyboardHub
                 key={adding}
-                mode={adding}
+                initial={adding}
                 existingNames={keyboards.map(k => k.name)}
                 onAdd={(def) => { const kb = add(def); setAdding(null); onAdded?.(kb.id) }}
-                onCancel={() => setAdding(null)}
+                onClose={() => setAdding(null)}
               />
             ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 4 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => setAdding('folder')}>
-                  <FolderOpen size={14} /> Add keyboard…
-                </button>
-                <button className="btn-link" onClick={() => setAdding('file')}>
-                  <FileText size={12} /> or pick a single .keymap file
-                </button>
-              </div>
+              <button className="btn btn-primary btn-sm" style={{ alignSelf: "flex-start", marginTop: 4 }} onClick={() => setAdding('find')}>
+                <Plus size={14} /> Add keyboard…
+              </button>
             )}
-            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Pick your keyboard’s config folder. Files are edited where they are; nothing is copied.
-            </div>
           </>
         )}
 

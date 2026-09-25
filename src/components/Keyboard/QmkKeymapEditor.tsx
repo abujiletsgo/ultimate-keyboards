@@ -24,7 +24,7 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
 
   useEffect(() => {
     if (keymap && filePath === keyboard.keymapPath) return
-    load(keyboard.keymapPath)
+    load(keyboard.keymapPath, keyboard.layout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboard.keymapPath])
 
@@ -62,18 +62,18 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
           <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>Unsaved</span>
         )}
         <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!isDirty}>Save</button>
-        <button className="btn btn-secondary btn-sm" onClick={() => { if (!isDirty) load(keyboard.keymapPath); else setConfirmReload(true) }}>Reload</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => { if (!isDirty) load(keyboard.keymapPath, keyboard.layout); else setConfirmReload(true) }}>Reload</button>
       </div>
       {confirmReload && (
         <ConfirmBanner message="Discard unsaved edits and reload from disk?" confirmLabel="Discard & reload"
-          onConfirm={() => { setConfirmReload(false); load(keyboard.keymapPath) }} onCancel={() => setConfirmReload(false)} />
+          onConfirm={() => { setConfirmReload(false); load(keyboard.keymapPath, keyboard.layout) }} onCancel={() => setConfirmReload(false)} />
       )}
 
       {loadError ? (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', gap: 12 }}>
           <div className="panel-inset" role="alert" style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(251,113,133,0.08)', padding: '8px 12px', maxWidth: 520, wordBreak: 'break-all' }}>{loadError}</div>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Could not load <code className="mono">{keyboard.keymapPath}</code></div>
-          <button className="btn btn-primary" onClick={() => load(keyboard.keymapPath)}>Retry</button>
+          <button className="btn btn-primary" onClick={() => load(keyboard.keymapPath, keyboard.layout)}>Retry</button>
         </div>
       ) : !keymap ? (
         <div className="skeleton" style={{ height: 160 }} />

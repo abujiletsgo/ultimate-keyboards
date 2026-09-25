@@ -28,6 +28,9 @@ core-foundation = "0.10"
 tauri-plugin-store = "2"
 tauri-plugin-updater = "2.12.0"
 tauri-plugin-process = "2.3.1"
+hidapi = { version = "2.6.7", default-features = false, features = ["macos-shared-device"] }
+serialport = { version = "4.10.1", default-features = false }
+lzma-rs = "0.3.0"
 
 [profile.release]
 panic = "abort"

@@ -1,12 +1,16 @@
+import type { PhysicalLayout } from './layout/types'
+
 export interface QMKLayer {
   index: number
   name: string
-  keys: string[] // 44 entries in LAYOUT order (pos 0-43)
+  keys: string[] // one entry per physical-layout position
 }
 
 export interface QMKKeymap {
   layers: QMKLayer[]
-  rawLayers: string[][] // original 48-entry arrays from VIA JSON
+  rawLayers: string[][] // layers as stored in the file (matrix order for VIA exports)
+  /** layout position → index in rawLayers[i] */
+  map: number[]
 }
 
 // Mapping from CORNE_PROCYON_LAYOUT pos (0-43) to VIA raw index (0-47)
@@ -21,33 +25,53 @@ const LAYOUT_TO_VIA = [
   42, 43, 44, 45,
 ]
 
+// names the owner's Corne Procyon used before the registry; only applied to that legacy shape
 const LAYER_NAMES = ['QWERTY', 'Numbers', 'Numpad+Media', 'Gesture', 'Settings']
+const LAYER_NAMES_LEGACY = true
 
 interface VIAJson {
   name?: string
   layers: string[][]
 }
 
-export function parseQMKViaJson(jsonText: string): QMKKeymap {
-  const parsed: VIAJson = JSON.parse(jsonText)
-  const rawLayers = parsed.layers ?? []
+/**
+ * Which raw index holds each layout position.
+ * - QMK Configurator keymap.json (`layout` field) and any file whose layers
+ *   already have one entry per layout key: identity.
+ * - VIA export (matrix order, rows × cols): row * cols + col from the layout's
+ *   matrix positions, with cols = entries / rows.
+ * - The 44-key Corne Procyon legacy layout (no matrix data): its fixed table.
+ */
+export function layoutToRawMap(rawLen: number, layout?: PhysicalLayout, configurator = false): number[] {
+  const n = layout?.keys.length ?? rawLen
+  if (configurator || rawLen === n) return Array.from({ length: n }, (_, i) => i)
+  const keys = layout?.keys ?? []
+  if (keys.length && keys.every(k => k.row !== undefined && k.col !== undefined)) {
+    const rows = Math.max(...keys.map(k => k.row!)) + 1
+    const cols = rawLen % rows === 0 ? rawLen / rows : Math.max(...keys.map(k => k.col!)) + 1
+    return keys.map(k => k.row! * cols + k.col!)
+  }
+  if (rawLen === 48 && n === 44) return LAYOUT_TO_VIA
+  // unknown shape: show the first n entries in file order rather than guessing
+  return Array.from({ length: Math.min(n, rawLen) }, (_, i) => i)
+}
 
+export function parseQMKViaJson(jsonText: string, layout?: PhysicalLayout): QMKKeymap {
+  const parsed: VIAJson & { layout?: string } = JSON.parse(jsonText)
+  const rawLayers = parsed.layers ?? []
+  const map = layoutToRawMap(rawLayers[0]?.length ?? 0, layout, typeof parsed.layout === 'string')
   const layers: QMKLayer[] = rawLayers.map((raw, i) => ({
     index: i,
-    name: LAYER_NAMES[i] ?? `Layer ${i}`,
-    keys: LAYOUT_TO_VIA.map(viaIdx => raw[viaIdx] ?? 'KC_NO'),
+    name: LAYER_NAMES_LEGACY && map === LAYOUT_TO_VIA ? (LAYER_NAMES[i] ?? `Layer ${i}`) : `Layer ${i}`,
+    keys: map.map(idx => raw[idx] ?? 'KC_NO'),
   }))
-
-  return { layers, rawLayers }
+  return { layers, rawLayers, map }
 }
 
 export function toVIARaw(keymap: QMKKeymap): string[][] {
-  // Convert 44-entry LAYOUT layers back to 48-entry VIA raw format
   return keymap.layers.map((layer, layerIdx) => {
-    const raw = [...(keymap.rawLayers[layerIdx] ?? Array(48).fill('KC_NO'))]
-    LAYOUT_TO_VIA.forEach((viaIdx, layoutPos) => {
-      raw[viaIdx] = layer.keys[layoutPos] ?? 'KC_NO'
-    })
+    const raw = [...(keymap.rawLayers[layerIdx] ?? Array(Math.max(...keymap.map, 0) + 1).fill('KC_NO'))]
+    keymap.map.forEach((rawIdx, pos) => { raw[rawIdx] = layer.keys[pos] ?? 'KC_NO' })
     return raw
   })
 }

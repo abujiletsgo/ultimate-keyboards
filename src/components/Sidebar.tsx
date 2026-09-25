@@ -83,7 +83,7 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
           </div>
         )}
         {keyboards.map(kb => item({ kind: 'keyboard', id: kb.id }, kb.name, Keyboard, undefined, kb.firmware.toUpperCase()))}
-        {item({ kind: 'settings', add: 'folder' }, 'Add keyboard…', Plus, { color: 'var(--text-muted)' })}
+        {item({ kind: 'settings', add: 'find' }, 'Add keyboard…', Plus, { color: 'var(--text-muted)' })}
 
         <GroupLabel>This Mac</GroupLabel>
         {HOST_NAV.map(h => item(h.section, h.label, h.icon))}

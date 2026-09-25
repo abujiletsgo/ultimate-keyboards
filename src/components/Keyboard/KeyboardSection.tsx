@@ -52,9 +52,9 @@ export default function KeyboardSection({ keyboard, onEditInSettings }: Props) {
       `qmk:${keyboard.name}`,
       () => useQMKStore.getState().isDirty && useQMKStore.getState().filePath === path,
       () => useQMKStore.getState().save(),
-      () => { useQMKStore.getState().load(path) },
+      () => { useQMKStore.getState().load(path, keyboard.layout) },
     )
-  }, [keyboard.keymapPath, keyboard.name, keyboard.firmware])
+  }, [keyboard.keymapPath, keyboard.name, keyboard.firmware, keyboard.layout])
   useEffect(() => { if ((tab === 'pointing' && !hasPointing) || (tab === 'behaviors' && !isZmk)) setTab('keymap') }, [tab, hasPointing, isZmk])
 
   return (
