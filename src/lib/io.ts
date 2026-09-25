@@ -74,14 +74,30 @@ export async function saveText(path: string, contents: string, opts: SaveOptions
     return
   }
 
-  // 1. Keep one backup of what is on disk now (skipped if the file is new).
-  if (await exists(path)) {
-    await copyFile(path, backupPath(path))
+  // A brand-new file (e.g. an export picked in a save dialog) has nothing to
+  // protect, and a dialog grant covers only that exact path — no siblings.
+  if (!(await exists(path).catch(() => false))) {
+    await writeTextFile(path, contents)
+    return
   }
+
+  // 1. Keep one backup of what is on disk now.
   // 2. Write the sibling temp file in full.
-  const tmp = tempPath(path)
-  await writeTextFile(tmp, contents)
   // 3. Atomically replace the target.
+  // If the scope only covers the target itself (a file picked in a dialog),
+  // the sibling writes are refused; fall back to an in-place write rather
+  // than failing the save.
+  const tmp = tempPath(path)
+  try {
+    await copyFile(path, backupPath(path))
+    await writeTextFile(tmp, contents)
+  } catch (err) {
+    if (/forbidden path|not allowed/i.test(String(err))) {
+      await writeTextFile(path, contents)
+      return
+    }
+    throw err
+  }
   try {
     await rename(tmp, path)
   } catch (err) {
