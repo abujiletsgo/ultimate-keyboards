@@ -1,3 +1,4 @@
+import type { PhysicalLayout } from '../lib/layout/types'
 import { create } from 'zustand'
 import { readText, saveText } from '../lib/io'
 import { parseQMKViaJson, toVIARaw, type QMKKeymap } from '../lib/qmkParser'
@@ -8,7 +9,7 @@ interface QMKState {
   isDirty: boolean
   loadError: string | null
 
-  load: (path: string) => Promise<void>
+  load: (path: string, layout?: PhysicalLayout) => Promise<void>
   updateLayerKey: (layerIndex: number, keyPos: number, newKeycode: string) => void
   save: () => Promise<void>
   setDirty: (v: boolean) => void
@@ -20,11 +21,11 @@ export const useQMKStore = create<QMKState>((set, get) => ({
   isDirty: false,
   loadError: null,
 
-  load: async (path) => {
+  load: async (path, layout) => {
     set({ filePath: path, keymap: null, loadError: null })
     try {
       const text = await readText(path)
-      const km = parseQMKViaJson(text)
+      const km = parseQMKViaJson(text, layout)
       set({ keymap: km, isDirty: false, loadError: null })
     } catch (err) {
       set({ loadError: String(err) })

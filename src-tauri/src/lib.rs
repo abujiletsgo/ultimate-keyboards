@@ -3,6 +3,7 @@ use std::process::Command;
 use std::sync::Mutex;
 
 mod build;
+mod newconfig;
 mod mouse_engine;
 
 use tauri::{
@@ -357,7 +358,9 @@ pub fn run() {
             get_mouse_config,
             accessibility_trusted,
             open_accessibility_settings,
-            open_github_url
+            open_github_url,
+            newconfig::create_zmk_config,
+            newconfig::push_initial_config
         ])
         .setup(|app| {
             // ── Status-bar (menu-bar) item ──────────────────────────────────

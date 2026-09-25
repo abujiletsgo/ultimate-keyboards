@@ -199,7 +199,7 @@ export default function App() {
                 section.kind === 'karabiner' ? <KarabinerEditor /> :
                 section.kind === 'mouse' ? <Mouse /> :
                 section.kind === 'settings' ? <Settings key={section.n ?? 0} startAdd={section.add} startEdit={section.edit} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
-                <Onboarding onAddFromFolder={() => go({ kind: 'settings', add: 'folder' })} onAddFromFile={() => go({ kind: 'settings', add: 'file' })} />}
+                <Onboarding onStart={(tab) => go({ kind: 'settings', add: tab })} />}
             </div>
           </SectionErrorBoundary>
         </Suspense>

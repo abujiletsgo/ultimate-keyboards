@@ -5,7 +5,7 @@ export type Section =
   | { kind: 'karabiner' }
   | { kind: 'mouse' }
   /** `add` opens the add flow; `n` is a nonce so repeating the same request re-triggers it */
-  | { kind: 'settings'; add?: 'folder' | 'file'; edit?: string; n?: number }
+  | { kind: 'settings'; add?: 'find' | 'usb' | 'folder' | 'file'; edit?: string; n?: number }
   | { kind: 'onboarding' }
 
 export function sectionKey(s: Section): string {
