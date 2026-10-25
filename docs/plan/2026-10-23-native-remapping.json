@@ -15,7 +15,7 @@
     "No Developer ID distribution certificate is installed locally. Build all possible artifacts and preserve this as an external distribution requirement.",
     "Preserve the existing uncommitted recursive folder-permission fix in src/components/Settings.tsx."
   ],
-  "status": "cleanup_checks_commit_and_push_in_progress",
+  "status": "cleanup_complete_trial_install_pending",
   "history": {
     "path": "archive/2026-10-25/native-remapping-history.json",
     "checkpointCommit": "385fe64",
@@ -76,7 +76,17 @@
   "cleanup": {
     "activeRemoved": "Unused 540-line MacKeyEditor archived; sole helper removed and its regression migrated to the live binding codec. Shared QMK palette consolidated.",
     "archiveManifest": "archive/2026-10-25/MANIFEST.md",
-    "github": "Only main and v0.2.0; no stale branches, artifacts or caches. Preserve release/tag/assets/runs. Metadata update and source push pending.",
-    "nextAction": "Complete final validation and cache open-file audit, commit cleanup, push main, verify remote. Then finish authorized native installation and physical tests."
+    "github": "No redundant remote branches/releases/assets/artifacts/caches. Historical v0.2.0 retained. Repository description updated to native MacBook support and development-preview status.",
+    "nextAction": "Verify origin/main and GitHub CI for the final pushed commits. Complete authorized trial installation and physical tests after administrator authentication; no capture enabled.",
+    "commits": {
+      "foundation": "385fe64",
+      "archive": "2f3ed35",
+      "cleanup": "3b313ba"
+    },
+    "workspace": {
+      "before": "9.6 GB",
+      "after": "603 MB",
+      "preserved": "Current trial, verified rollback, signed release app bundle, node_modules and unique QA evidence."
+    }
   }
 }
