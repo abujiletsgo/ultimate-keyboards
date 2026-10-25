@@ -40,22 +40,23 @@
 
 | Feature | Supported | Notes |
 |---|---|---|
-| GitHub Actions firmware builds | Yes | Run list and artifact download through your own `gh` login. |
+| GitHub Actions firmware builds | Yes | Requires a separately installed GitHub CLI (`gh`) and your own GitHub login; this is not a self-contained local build tool. |
 | Flash a UF2 to a half in bootloader | Yes | Waits for the drive and copies the file. |
-| git commit / push from the app | No | Commit in your usual git tool; the Build tab shows uncommitted changes. |
+| Commit / push existing config edits from the app | No | Commit in your usual git tool; the Build tab shows uncommitted changes. |
 
 ## This Mac
 
 | Feature | Supported | Notes |
 |---|---|---|
-| Karabiner-Elements rules | Yes | Remaps, combos, layers, homerow mods for the built-in keyboard. Needs Karabiner-Elements installed. |
+| Native MacBook remapping | Partly | Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no Karabiner-Elements app required. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending. |
+| Karabiner-Elements compatibility export | Yes | Optional JSON export for an existing Karabiner-Elements setup. Saved rules are preserved; the native flow does not require that app. |
 | Scroll engine for wheel mice | Yes | Reverse direction and speed. Needs Accessibility permission. |
-| Turn off the built-in keyboard | Yes | Restored automatically if the app crashes. |
+| Turn off the built-in keyboard | Yes | Restored when the app quits normally, or on its next launch after a crash. |
 
 ## Platform
 
 | Feature | Supported | Notes |
 |---|---|---|
-| macOS 12+ (Apple silicon) | Yes | Builds are not signed yet: macOS asks again for Documents and Accessibility access after each update. |
-| Automatic updates | Partly | Settings › Updates checks GitHub Releases and verifies each download with the release signing key. Works once signed releases are published. |
+| macOS 13+ (Apple silicon native product) | Yes | Development previews are not commercial notarized releases. Public distribution requires a Developer ID-signed and notarized complete installer. |
+| Complete-installer updates | Partly | Native releases open the release page for the complete installer, updating app and keyboard service together. Requires a published release; app-only in-app updates are disabled for native versions. |
 | Windows / Linux / web | No | Not in version 1. |

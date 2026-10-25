@@ -13,3 +13,4 @@ logs/
 *.bak
 *.tmp
 .claude/worktrees/
+__pycache__/

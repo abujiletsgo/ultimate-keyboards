@@ -36,33 +36,44 @@ interface Props {
 }
 
 const MARGIN = 8
+// Portaled child pickers are siblings in the DOM; only the top surface owns keys.
+const dialogStack: HTMLElement[] = []
 
 export default function Popover({ anchor, width = 300, onClose, label, children, layer = 'popover', noBackdrop, className, onOutsideMouseDown }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   const openerRef = useRef<Element | null>(null)
+  const focusedRef = useRef(false)
 
   // Remember the opener and restore focus on close.
-  useEffect(() => {
+  useLayoutEffect(() => {
     openerRef.current = document.activeElement
+    const surface = ref.current
+    if (surface) dialogStack.push(surface)
     return () => {
+      focusedRef.current = false
+      if (surface) { const index = dialogStack.indexOf(surface); if (index >= 0) dialogStack.splice(index, 1) }
       const el = openerRef.current as HTMLElement | null
       if (el && typeof el.focus === 'function' && document.contains(el)) el.focus()
     }
   }, [])
 
-  // Initial focus: first focusable control inside.
-  useEffect(() => {
+  // A hidden, not-yet-measured surface cannot receive focus. Focus once after
+  // placement is committed; later size/position changes must not steal it.
+  useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return
-    const first = el.querySelector<HTMLElement>('input, select, textarea, button, [tabindex]:not([tabindex="-1"])')
+    if (!el || !pos || focusedRef.current) return
+    focusedRef.current = true
+    const first = Array.from(el.querySelectorAll<HTMLElement>('input, select, textarea, button, [tabindex]:not([tabindex="-1"])'))
+      .find(control => !control.hasAttribute('disabled'))
     ;(first ?? el).focus({ preventScroll: true })
-  }, [])
+  }, [pos])
 
   // Esc closes; Tab cycles inside.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onClose(); return }
+      if (dialogStack.at(-1) !== ref.current) return
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); onClose(); return }
       if (e.key !== 'Tab' || !ref.current) return
       const focusables = Array.from(ref.current.querySelectorAll<HTMLElement>('input, select, textarea, button, [tabindex]:not([tabindex="-1"])'))
         .filter(f => !f.hasAttribute('disabled'))
@@ -120,11 +131,12 @@ export default function Popover({ anchor, width = 300, onClose, label, children,
         aria-modal={!noBackdrop}
         aria-label={label}
         tabIndex={-1}
-        className={`popover-surface ${className ?? 'glass-strong anim-scale-in'}`}
+        className={`popover-surface ${className ?? `glass-strong${pos ? ' anim-scale-in' : ''}`}`}
+        inert={!pos}
         style={{
           position: 'fixed', width,
           left: pos?.left ?? 0, top: pos?.top ?? 0,
-          visibility: pos ? 'visible' : 'hidden',
+          opacity: pos ? 1 : 0, pointerEvents: pos ? undefined : 'none',
           zIndex: layer === 'menu' ? 'var(--z-menu)' : 'var(--z-popover)',
           maxHeight: `calc(100vh - ${MARGIN * 2}px)`, overflowY: 'auto', outline: 'none',
         } as React.CSSProperties}

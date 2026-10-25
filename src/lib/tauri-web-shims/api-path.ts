@@ -8,6 +8,10 @@ export async function appDataDir(): Promise<string> {
   return '~/'
 }
 
+export async function documentDir(): Promise<string> {
+  return '~/Documents/'
+}
+
 export async function join(...parts: string[]): Promise<string> {
   return parts.filter(Boolean).join('/').replace(/\/+/g, '/')
 }

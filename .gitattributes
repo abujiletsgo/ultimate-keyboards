@@ -1,0 +1,2 @@
+# Preserve the pinned upstream bytes used by the vendor integrity manifest.
+native/vendor/** -text -whitespace

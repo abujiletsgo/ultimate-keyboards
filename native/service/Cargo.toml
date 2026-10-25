@@ -1,0 +1,15 @@
+[package]
+name = "ultimate-keyboards-remapper"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+license = "MIT"
+
+[dependencies]
+ultimate-keyboards-engine = { path = "../engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
+
+[build-dependencies]
+cc = "1"

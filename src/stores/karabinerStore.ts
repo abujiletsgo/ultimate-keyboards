@@ -1,10 +1,25 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { Rule, generateComplexModification } from '../lib/karabinerGenerator';
 
-interface KarabinerState {
+import { cloneMacProfile, sameMacProfile, macLayerNames, layerNameError, renameMacLayer, deleteMacLayer, MAC_HISTORY_LIMIT, type MacProfileSnapshot } from '../lib/macLayerEditing';
+
+export interface KarabinerState {
   rules: Rule[];
   profileTitle: string;
+  layerNames: string[];
+  savedSnapshot: MacProfileSnapshot;
+  isDirty: boolean;
+  past: MacProfileSnapshot[];
+  future: MacProfileSnapshot[];
+  saveProfile: () => void;
+  revertProfile: () => void;
+  undo: () => void;
+  redo: () => void;
+  addLayer: (name: string) => string | null;
+  renameLayer: (from: string | null, to: string) => string | null;
+  deleteLayer: (name: string | null) => string | null;
+  replaceRules: (rules: Rule[]) => void;
   addRule: (r: Rule) => void;
   removeRule: (idx: number) => void;
   updateRule: (idx: number, r: Rule) => void;
@@ -65,44 +80,80 @@ export const EXAMPLE_RULES: Rule[] = [
   { type: 'combo', description: 'k+l → Enter', fromKeys: ['k', 'l'], toKey: 'return_or_enter' },
 ];
 
-export const useKarabinerStore = create<KarabinerState>()(
-  persist(
-    (set, get) => ({
-      rules: [],
-      profileTitle: 'Ultimate Keyboards',
+const EMPTY_PROFILE: MacProfileSnapshot = { rules: [], profileTitle: 'Ultimate Keyboards', layerNames: [] };
 
-      addRule: (r) =>
-        set((state) => ({ rules: [...state.rules, r] })),
-
-      removeRule: (idx) =>
-        set((state) => ({ rules: state.rules.filter((_, i) => i !== idx) })),
-
-      updateRule: (idx, r) =>
-        set((state) => ({ rules: state.rules.map((rule, i) => i === idx ? r : rule) })),
-
-      setTitle: (t) => set({ profileTitle: t }),
-
-      loadExample: () => set({ rules: EXAMPLE_RULES }),
-
-      moveRule: (idx, delta) =>
-        set((state) => {
-          const j = idx + delta;
-          if (j < 0 || j >= state.rules.length) return state;
-          const rules = [...state.rules];
-          [rules[idx], rules[j]] = [rules[j], rules[idx]];
-          return { rules };
-        }),
-
-      exportJSON: () => {
-        const { rules, profileTitle } = get();
-        const mod = generateComplexModification(rules, profileTitle);
-        return JSON.stringify(mod, null, 2);
+/** A separate store factory keeps persistence/migration tests isolated from user data. */
+export function createKarabinerStore(storage?: StateStorage) {
+  return create<KarabinerState>()(persist((set, get) => {
+    const snapshot = () => cloneMacProfile(get());
+    const edit = (next: MacProfileSnapshot) => {
+      const current = snapshot();
+      if (sameMacProfile(current, next)) return;
+      set({ ...cloneMacProfile(next), isDirty: !sameMacProfile(next, get().savedSnapshot),
+        past: [...get().past.slice(-(MAC_HISTORY_LIMIT - 1)), current], future: [] });
+    };
+    const layerEdit = (action: () => MacProfileSnapshot): string | null => {
+      try { edit(action()); return null; } catch (error) { return error instanceof Error ? error.message : String(error); }
+    };
+    return {
+      ...cloneMacProfile(EMPTY_PROFILE), savedSnapshot: cloneMacProfile(EMPTY_PROFILE), isDirty: false, past: [], future: [],
+      replaceRules: rules => edit({ ...snapshot(), rules: structuredClone(rules) }),
+      addRule: r => edit({ ...snapshot(), rules: [...get().rules, structuredClone(r)] }),
+      removeRule: idx => edit({ ...snapshot(), rules: get().rules.filter((_, i) => i !== idx) }),
+      updateRule: (idx, r) => edit({ ...snapshot(), rules: get().rules.map((rule, i) => i === idx ? structuredClone(r) : rule) }),
+      setTitle: profileTitle => edit({ ...snapshot(), profileTitle }),
+      loadExample: () => edit({ ...snapshot(), rules: structuredClone(EXAMPLE_RULES), layerNames: macLayerNames(EXAMPLE_RULES) }),
+      moveRule: (idx, delta) => {
+        const j = idx + delta;
+        if (idx < 0 || idx >= get().rules.length || j < 0 || j >= get().rules.length) return;
+        const rules = [...get().rules];
+        [rules[idx], rules[j]] = [rules[j], rules[idx]];
+        edit({ ...snapshot(), rules });
       },
-    }),
-    {
-      name: 'uk.karabiner',
-      // Rules are user work product — losing them on reload is data loss.
-      partialize: (s) => ({ rules: s.rules, profileTitle: s.profileTitle }),
+      addLayer: name => layerEdit(() => {
+        const current = snapshot();
+        const names = macLayerNames(current.rules, current.layerNames);
+        const error = layerNameError(name, names);
+        if (error) throw new Error(error);
+        return { ...current, layerNames: [...names, name] };
+      }),
+      renameLayer: (from, to) => layerEdit(() => renameMacLayer(snapshot(), from, to)),
+      deleteLayer: name => layerEdit(() => deleteMacLayer(snapshot(), name)),
+      saveProfile: () => {
+        const prior = { savedSnapshot: get().savedSnapshot, isDirty: get().isDirty, past: get().past, future: get().future };
+        try { set({ savedSnapshot: snapshot(), isDirty: false, past: [], future: [] }); }
+        catch (error) {
+          // A failed local-storage write must not claim that the draft was saved.
+          try { set(prior); } catch { /* in-memory rollback still happened before middleware writes */ }
+          throw error;
+        }
+      },
+      revertProfile: () => set({ ...cloneMacProfile(get().savedSnapshot), isDirty: false, past: [], future: [] }),
+      undo: () => {
+        const previous = get().past.at(-1); if (!previous) return;
+        set({ ...cloneMacProfile(previous), isDirty: !sameMacProfile(previous, get().savedSnapshot),
+          past: get().past.slice(0, -1), future: [snapshot(), ...get().future] });
+      },
+      redo: () => {
+        const next = get().future[0]; if (!next) return;
+        set({ ...cloneMacProfile(next), isDirty: !sameMacProfile(next, get().savedSnapshot),
+          past: [...get().past.slice(-(MAC_HISTORY_LIMIT - 1)), snapshot()], future: get().future.slice(1) });
+      },
+      exportJSON: () => JSON.stringify(generateComplexModification(get().rules, get().profileTitle), null, 2),
+    };
+  }, {
+    name: 'uk.karabiner',
+    storage: storage ? createJSONStorage(() => storage) : createJSONStorage(() => localStorage),
+    // Retain the working draft for crash recovery; history is session-only.
+    partialize: s => ({ rules: s.rules, profileTitle: s.profileTitle, layerNames: s.layerNames, savedSnapshot: s.savedSnapshot }),
+    merge: (persisted, current) => {
+      const data = persisted as Partial<MacProfileSnapshot> & { savedSnapshot?: MacProfileSnapshot } | undefined;
+      if (!data) return current;
+      const draft = cloneMacProfile({ rules: data.rules ?? current.rules, profileTitle: data.profileTitle ?? current.profileTitle, layerNames: data.layerNames ?? [] });
+      // Existing profiles are initially saved, including unknown rule fields.
+      const savedSnapshot = cloneMacProfile(data.savedSnapshot ?? draft);
+      return { ...current, ...draft, savedSnapshot, past: [], future: [], isDirty: !sameMacProfile(draft, savedSnapshot) };
     },
-  ),
-);
+  }));
+}
+export const useKarabinerStore = createKarabinerStore();

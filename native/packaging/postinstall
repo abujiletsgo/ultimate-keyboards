@@ -1,0 +1,114 @@
+#!/bin/bash
+set -eu
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+
+# Return 0 with job details, 1 only for launchd's known absent-service response,
+# and 2 for an inspection error. An error must never masquerade as shutdown.
+uk_job_description() {
+  local output result
+  if output=$(launchctl print "$1" 2>&1); then
+    printf '%s\n' "$output"
+    return 0
+  else
+    result=$?
+    if [ "$result" -eq 113 ] && [[ "$output" == *'Could not find service "'* ]]; then
+      return 1
+    fi
+    printf 'Cannot inspect %s (launchctl exit %s): %s\n' "$1" "$result" "$output" >&2
+    return 2
+  fi
+}
+
+uk_pause() { sleep 0.1; }
+
+uk_socket_ready() {
+  local endpoint=$1
+  # No protocol request or status heartbeat: connect and immediately close.
+  # macOS nc -z -U returns 1 even after a successful connection; use empty
+  # stdin instead. -w bounds the probe. Never send apply/enable commands.
+  [ ! -L "$endpoint" ] && [ -S "$endpoint" ] &&
+    [ "$(stat -f '%u' "$endpoint")" = 0 ] &&
+    /usr/bin/nc -U -w 1 "$endpoint" </dev/null >/dev/null 2>&1
+}
+
+uk_restart_helper() {
+  local target=$1 plist=$2 endpoint=$3 timeout=$4
+  local details result deadline
+  if details=$(uk_job_description "$target"); then
+    if launchctl bootout "$target"; then :; else
+      result=$?
+      printf 'Helper shutdown request failed (launchctl exit %s); not bootstrapping.\n' "$result" >&2
+      return 21
+    fi
+  else
+    result=$?
+    [ "$result" -eq 1 ] || return 20
+  fi
+
+  # bootout returns before launchd finishes removing the job. Observe removal
+  # rather than using a blind delay or retrying bootstrap against a dying job.
+  deadline=$((SECONDS + timeout))
+  while :; do
+    if details=$(uk_job_description "$target"); then
+      if [ "$SECONDS" -ge "$deadline" ]; then
+        printf 'Timed out after %ss waiting for %s removal; not bootstrapping.\n' "$timeout" "$target" >&2
+        return 22
+      fi
+      uk_pause
+    else
+      result=$?
+      [ "$result" -eq 1 ] && break
+      return 20
+    fi
+  done
+
+  # Exactly one attempt. Preserve launchctl's diagnostic and leave failed
+  # startup visible to Installer; never override background-service approval.
+  if launchctl bootstrap system "$plist"; then :; else
+    result=$?
+    printf 'Helper bootstrap failed (launchctl exit %s); no retry attempted.\n' "$result" >&2
+    return 23
+  fi
+
+  deadline=$((SECONDS + timeout))
+  while :; do
+    if details=$(uk_job_description "$target"); then
+      if printf '%s\n' "$details" | /usr/bin/grep -Eq '^[[:space:]]*state = running$' &&
+         printf '%s\n' "$details" | /usr/bin/grep -Eq '^[[:space:]]*pid = [1-9][0-9]*$' &&
+         uk_socket_ready "$endpoint"; then
+        return 0
+      fi
+    else
+      result=$?
+      [ "$result" -eq 1 ] || return 20
+    fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      printf 'Helper startup timed out after %ss: running job, PID, and root-owned listening socket were not all ready.\n' "$timeout" >&2
+      [ -z "$details" ] || printf '%s\n' "$details" >&2
+      return 24
+    fi
+    uk_pause
+  done
+}
+
+uk_postinstall() {
+  [ "${3:-/}" = / ] || return 1
+  local base='/Library/Application Support/com.ultimatekeyboards.app/Native'
+  install -d -o root -g wheel -m 0700 "$base/state"
+  chown root:wheel '/Library/LaunchDaemons/com.ultimatekeyboards.remapper.plist' '/Library/LaunchDaemons/com.ultimatekeyboards.virtual-hid-launcher.plist'
+  chmod 0644 '/Library/LaunchDaemons/com.ultimatekeyboards.remapper.plist' '/Library/LaunchDaemons/com.ultimatekeyboards.virtual-hid-launcher.plist'
+  # Only our helper may be restarted during an update. Never stop pqrs.
+  uk_restart_helper system/com.ultimatekeyboards.remapper \
+    '/Library/LaunchDaemons/com.ultimatekeyboards.remapper.plist' \
+    /var/run/com.ultimatekeyboards.remapper.sock 20 || return $?
+  if ! launchctl print system/com.ultimatekeyboards.virtual-hid-launcher >/dev/null 2>&1; then
+    launchctl bootstrap system '/Library/LaunchDaemons/com.ultimatekeyboards.virtual-hid-launcher.plist'
+  fi
+  echo 'Helper installed idle and its service endpoint is ready. Open Ultimate Keyboards to approve the driver and Input Monitoring, then explicitly enable a keyboard.'
+}
+
+# Sourceable only for isolated lifecycle tests; the package executes this file.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  uk_postinstall "$@"
+fi

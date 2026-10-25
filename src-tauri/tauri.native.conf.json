@@ -1,0 +1,9 @@
+{
+  "bundle": {
+    "resources": {
+      "../native/installer/UltimateKeyboards-Native-Setup.pkg": "native/UltimateKeyboards-Native-Setup.pkg",
+      "../native/vendor/UPSTREAM-LICENSE.md": "native/licenses/UPSTREAM-LICENSE.md",
+      "../native/vendor/manifest.json": "native/licenses/vendor-manifest.json"
+    }
+  }
+}

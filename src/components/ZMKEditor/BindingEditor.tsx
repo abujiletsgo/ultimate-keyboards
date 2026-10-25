@@ -4,8 +4,9 @@
  * Shows behavior-type pills + contextual param fields anchored to a clicked key.
  * Works for both ZMK and QMK firmware.
  */
-import { useState, useRef, useMemo } from 'react'
-import { Popover } from '@/components/ui'
+import { useState, useMemo } from 'react'
+import BindingEditorShell from '@/components/board/BindingEditorShell'
+import ParamPicker from '@/components/board/BindingParamPicker'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -188,106 +189,6 @@ function serializeQMK(type: string, params: string[]): string {
 }
 
 // ── Fuzzy search dropdown ─────────────────────────────────────────────────────
-
-function ParamPicker({
-  options, value, onChange,
-}: { options: string[]; value: string; onChange: (v: string) => void }) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, top: 0 })
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  const filtered = useMemo(() => {
-    if (!query) return options.slice(0, 40)
-    const q = query.toLowerCase()
-    return options.filter(o => o.toLowerCase().includes(q)).slice(0, 40)
-  }, [query, options])
-
-  function handleOpen() {
-    if (!open && btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect()
-      setAnchor({ x: r.left, y: r.bottom + 4, top: r.top - 4 })
-    }
-    setOpen(v => !v)
-  }
-
-  const display = value || '—'
-
-  return (
-    <div style={{ display: 'inline-block', minWidth: 90 }}>
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        className="btn btn-secondary btn-sm"
-        style={{
-          fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', maxWidth: 160,
-          overflow: 'hidden', textOverflow: 'ellipsis',
-        }}
-        title={value}
-      >
-        {display} ▾
-      </button>
-      {open && (
-        <Popover
-          anchor={anchor}
-          width={220}
-          layer="menu"
-          noBackdrop
-          label="Choose a value"
-          onClose={() => setOpen(false)}
-          onOutsideMouseDown={(t) => { if (!btnRef.current?.contains(t)) setOpen(false) }}
-        >
-        <div style={{ maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search or type any keycode…"
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                // Prefer exact/filtered match, else accept the raw text —
-                // covers modifier wraps like LG(LS(N4)) and uncommon codes
-                const pick = filtered.length > 0 && !query ? filtered[0]
-                  : filtered.find(o => o.toLowerCase() === query.toLowerCase()) ?? (query.trim() || filtered[0])
-                if (pick) { onChange(pick); setOpen(false); setQuery('') }
-              }
-            }}
-            style={{ margin: 6, fontSize: 11 }}
-          />
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {/* Raw entry: whatever was typed is always usable */}
-            {query.trim() && !filtered.some(o => o.toLowerCase() === query.trim().toLowerCase()) && (
-              <div
-                onClick={() => { onChange(query.trim()); setOpen(false); setQuery('') }}
-                style={{
-                  padding: '5px 10px', cursor: 'pointer', fontSize: 11,
-                  fontFamily: 'var(--font-mono)', color: 'var(--accent)',
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                Use “{query.trim()}”
-              </div>
-            )}
-            {filtered.map(opt => (
-              <div
-                key={opt}
-                onClick={() => { onChange(opt); setOpen(false); setQuery('') }}
-                className="menu-item"
-                role="option"
-                aria-selected={opt === value}
-              >
-                {opt}
-              </div>
-            ))}
-          </div>
-          <div style={{ padding: '5px 10px', fontSize: 9.5, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
-            Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable
-          </div>
-        </div>
-        </Popover>
-      )}
-    </div>
-  )
-}
 
 // ── Layer number pills ────────────────────────────────────────────────────────
 
@@ -472,71 +373,12 @@ export default function BindingEditor({ firmware, currentBinding, anchorX, ancho
   const selDef = behaviors.find(b => b.code === selBehavior) ?? behaviors[0]
 
   return (
-    <Popover anchor={{ x: anchorX, y: anchorY, top: anchorTop }} width={300} label={`Edit binding ${currentBinding}`} onClose={onCancel}>
-        <div style={{ overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{
-            padding: '10px 12px 8px',
-            borderBottom: '1px solid var(--border)',
-            background: 'rgba(255,255,255,0.02)',
-          }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              Binding Type
-            </div>
-            {/* Behavior pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {behaviors.map(b => {
-                const isActive = b.code === selBehavior
-                return (
-                  <button
-                    key={b.code}
-                    onClick={() => handleBehaviorChange(b.code)}
-                    title={(b as any).title ?? b.label}
-                    aria-pressed={isActive}
-                    className="pill"
-                    style={{
-                      padding: '3px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 10,
-                      fontWeight: isActive ? 700 : 500,
-                      background: isActive ? b.color : 'rgba(255,255,255,0.05)',
-                      border: isActive ? `1px solid ${b.color.replace(/[\d.]+\)$/, '0.6)')}` : '1px solid var(--glass-border)',
-                      color: isActive ? '#fff' : 'var(--text-muted)',
-                      transition: 'background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
-                    }}
-                  >
-                    {b.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Param area */}
-          <div style={{ padding: '12px 12px 10px' }}>
-            {selDef.params.length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No parameters needed
-              </div>
-            ) : firmware === 'zmk' ? (
-              <ZMKParamEditor behavior={selBehavior} params={params} onChange={setParams} />
-            ) : (
-              <QMKParamEditor type={selBehavior} params={params} onChange={setParams} />
-            )}
-          </div>
-
-          {/* Preview + Apply */}
-          <div style={{
-            padding: '8px 12px', borderTop: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,255,255,0.02)',
-          }}>
-            <code className="mono" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {firmware === 'zmk' ? serializeZMK(selBehavior, params) : serializeQMK(selBehavior, params)}
-            </code>
-            <button onClick={handleApply} className="btn btn-primary btn-sm">
-              Apply
-            </button>
-          </div>
-        </div>
-    </Popover>
+    <BindingEditorShell anchor={{ x: anchorX, y: anchorY, top: anchorTop }} label={`Edit binding ${currentBinding}`}
+      behaviors={behaviors} selected={selBehavior} onSelect={handleBehaviorChange} onCancel={onCancel} onApply={handleApply}
+      preview={firmware === 'zmk' ? serializeZMK(selBehavior, params) : serializeQMK(selBehavior, params)}>
+      {selDef.params.length === 0 ? <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>No parameters needed</div>
+        : firmware === 'zmk' ? <ZMKParamEditor behavior={selBehavior} params={params} onChange={setParams} />
+        : <QMKParamEditor type={selBehavior} params={params} onChange={setParams} />}
+    </BindingEditorShell>
   )
 }

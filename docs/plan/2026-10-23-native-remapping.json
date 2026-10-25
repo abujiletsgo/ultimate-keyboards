@@ -1,0 +1,808 @@
+{
+  "objective": "One installer for Ultimate Keyboards with native home-row mods, combos, layers, and a bundled virtual-HID driver; no separate Karabiner-Elements installation.",
+  "status": "standalone_local_trial_awaiting_interactive_installation",
+  "acceptance": [
+    "All five existing rule types execute in a deterministic native engine with tested tap/hold, combo timing, ordering, modifier ownership, and reset behavior.",
+    "Native helper uses IOHID device capture and the standalone signed virtual-HID driver, with no event-tap fallback or dependency on the Karabiner-Elements app.",
+    "Privileged mutations require the active console user and the signed Ultimate Keyboards app. Size limits, timeouts, driver readiness, device exclusion, and fail-open cleanup are enforced.",
+    "The application can report readiness, open the bundled installer, explicitly apply/enable rules, stop remapping, and maintain a bounded heartbeat lease.",
+    "A reproducible installer bundles our application/service and the pinned unmodified standalone driver, preserves licenses, checks signatures and compatibility, and protects existing shared installations.",
+    "Typecheck, frontend tests, native unit tests, service build, application build, packaging checks, and permitted runtime checks pass. Live capture, visual QA, signing, notarization, and external blockers are reported independently."
+  ],
+  "decisions": [
+    "Reuse unmodified signed pqrs standalone DriverKit package v8.6.0, protocol7, driver1.8.0; never require full Karabiner-Elements.",
+    "Default capture scope is the built-in keyboard only. Require output readiness and explicit opt-in before seizure; exclude virtual output and preserve external split keyboards.",
+    "No installation or driver upgrades during implementation without inspecting compatibility and coexistence; no security protections disabled.",
+    "No Developer ID distribution certificate is installed locally. Build all possible artifacts and preserve this as an external distribution requirement.",
+    "Preserve the existing uncommitted recursive folder-permission fix in src/components/Settings.tsx."
+  ],
+  "loadout": {
+    "skills": [
+      "orchestrate",
+      "postmortem",
+      "library/frontend/ux/accessible-interaction-and-assistive-tech-qa"
+    ],
+    "mid_session_skill_added": {
+      "leaf": "library/frontend/ux/accessible-interaction-and-assistive-tech-qa",
+      "reason": "Native service integration adds install/readiness/enable/stop states that require keyboard and rendered verification.",
+      "estimated_tokens": 1100
+    }
+  },
+  "ownership_enforcement": "Parent-serialized claims over disjoint paths; native agent tools do not enforce filesystem ownership.",
+  "tasks": [
+    {
+      "id": "research",
+      "owner": "/root/native_research",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "rationale": "Primary-source driver, entitlement and hardware API research changes architecture.",
+      "files": [
+        "docs/research/2026-10-23-native-remapping.md"
+      ],
+      "status": "complete",
+      "checks": [
+        "Primary source pins, upstream binary signature/notarization, protocol8.5/8.6 compatibility, header compile"
+      ]
+    },
+    {
+      "id": "engine",
+      "owner": "/root/remap_engine",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "rationale": "Timing-sensitive state machine and modifier ownership require strong reasoning.",
+      "files": [
+        "native/engine/**"
+      ],
+      "status": "complete",
+      "checks": [
+        "44 deterministic tests, including 19 new timing cases.",
+        "Clippy warnings denied and rustfmt passed."
+      ]
+    },
+    {
+      "id": "service",
+      "owner": "/root/native_service",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "rationale": "Privileged input capture, fail-open recovery, and authenticated IPC have high failure cost.",
+      "files": [
+        "native/service/**",
+        "native/vendor/**"
+      ],
+      "status": "implementation_complete",
+      "checks": [
+        "9Rust tests",
+        "3static descriptor tests",
+        "Clippy warnings denied",
+        "Safe synthetic IPC smoke",
+        "Actual passive1eligible builtin/4matched,0captures",
+        "Exact reported contract and static descriptor gates",
+        "Sleep callback, correct close flags, original HID timestamps and session guards implemented; live acceptance pending"
+      ],
+      "next_action": "Exact non-key Apple report exception guarded by descriptor and advertised SupportedKeyboardUsagePairs; user-session permission-request role"
+    },
+    {
+      "id": "integration",
+      "owner": "/root",
+      "files": [
+        "src-tauri/**",
+        "scripts/** EXCEPT build-native-installer.py",
+        "tests/** EXCEPT nativeRemapping.test.ts",
+        ".github/**",
+        "README.md",
+        "CHANGELOG.md",
+        "docs/user/** EXCEPT supported.md",
+        "docs/plan/2026-10-23-native-remapping.json"
+      ],
+      "status": "implementation_complete_live_acceptance_pending",
+      "checks": [
+        "135 frontend/app tests",
+        "3 Tauri IPC tests",
+        "Typecheck",
+        "Final Apple Development-signed app and DMG build",
+        "Embedded setup byte-identical to final verified helper package"
+      ]
+    },
+    {
+      "id": "frontend",
+      "owner": "/root/native_research",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "files": [
+        "src/lib/nativeRemapping.ts",
+        "src/components/KarabinerEditor/index.tsx",
+        "src/components/KarabinerEditor/NativeRemappingPanel.tsx",
+        "src/App.tsx",
+        "tests/nativeRemapping.test.ts",
+        "src/lib/supported.ts",
+        "docs/user/supported.md"
+      ],
+      "status": "complete",
+      "checks": [
+        "Typecheck",
+        "19 affected tests",
+        "Startup Apply/driver-readiness integration regression fixed"
+      ]
+    },
+    {
+      "id": "packaging",
+      "owner": "/root/remap_engine",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "files": [
+        "scripts/build-native-installer.py",
+        "native/packaging/**",
+        "native/installer/.gitignore"
+      ],
+      "status": "symbols_bootstrap_fix_verified_install_pending",
+      "checks": [
+        "19 packaging tests pass, including actual canonical admission and malformed flat nesting rejection despite metadata acceptance.",
+        "Canonical productbuild expanded executable components preserved; arm64 architecture declared.",
+        "Exact vendor component members equal signed upstream provenance, sealed inside helper resources; vendor Manager/Daemon/dext code signatures verified.",
+        "Actual PackageKit parses all3exact component IDs/versions/count and initializes request without auth/install.",
+        "Root independently reran final product verifier with current signed application; root ownership/nonrelocation/must-close/driver compatibility pass."
+      ],
+      "artifact": "native/installer/UltimateKeyboards-0.3.0.pkg",
+      "sha256": "7e146109f2b243763f126446db08abfd2fa6104bd099ce34b61c54b3f6495e1a",
+      "next_action": "Actual privileged installation through corrected Terminal script; do not equate parser admission with installation."
+    },
+    {
+      "id": "signed_peer_acceptance",
+      "owner": "/root/native_service",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "files": [
+        "native/service/tests/signed_peer_smoke.py",
+        "native/service/README.md"
+      ],
+      "status": "complete",
+      "acceptance": "Actual native audit-token authorization accepts a genuine same-team signed app peer and rejects wrong ID/ad-hoc/wrong expected team using safe unique test sockets; no production capture.",
+      "checks": [
+        "Actual compiled uk_authorize accepted correct signed app/team on a real local socket",
+        "Wrong bundle, ad-hoc signature, wrong expected Team and wrong expected UID rejected",
+        "Existing native archive SHA unchanged; temporary fixtures removed; no root/HID/production endpoint activity"
+      ]
+    },
+    {
+      "id": "mac_keyboard_contrast",
+      "owner": "/root/native_research",
+      "files": [
+        "src/components/KarabinerEditor/MacbookKeyboard.tsx",
+        "src/components/KarabinerEditor/MacComboEditor.tsx",
+        "src/components/KarabinerEditor/MacbookKeyboard.css",
+        "narrow visual fixture/check"
+      ],
+      "status": "implemented_browser_verified_signed_build_ready_install_pending",
+      "acceptance": [
+        "Static keyboard diagram retains legible labels without disabled opacity washout.",
+        "Combo trigger keys have bright fill and outline with idle membership and hover/focus distinction.",
+        "Actual component screenshots inspected at1830x1374and800x600; meaningful state/contrast regression checks."
+      ],
+      "source": "User screenshot /var/folders/9r/1hr458w97k53mg22ypr8jw000000gn/T/orca-paste-1792821849225-b6b2f23a-191c-490f-b364-f8d7d9fb7b36.png",
+      "checks": [
+        "Typecheck passed.",
+        "Rendered actual repo components at1830x1374and800x600; parent inspected idle/focus/picker screenshots.",
+        "Minimum computed keytextcontrast6.71:1, triggerfillvsneutral4.81:1.",
+        "Regression verifies idle9triggerkeys/sharedO, disabledpreviewopacity1, focus/hover/pickerSpace, no rulemutation/overflow/browsererrors."
+      ]
+    },
+    {
+      "id": "permission_attribution_setup",
+      "owner": "/root/native_service",
+      "files": [
+        "native/service/**",
+        "src-tauri/src/native_remapping.rs"
+      ],
+      "status": "implemented_platform_verified_install_and_grant_pending",
+      "acceptance": [
+        "Use IOHID listen-event-specific permission API.",
+        "Launch permission helper via LaunchServices with real app bundle identity and finishLaunching.",
+        "Daemon status remains authoritative; diagnose/recover cached permission state without shared broker changes.",
+        "No root permission UI, no diagnostic prompts, no TCC DB mutation, no live input capture during development tests."
+      ],
+      "checks": [
+        "11serviceTests",
+        "6TauriTests",
+        "Clippy",
+        "Release selftest + syntheticownrestart IPCsmoke",
+        "ActualsignedpackagedhelperLaunchServicespassivecheck+correctTCCidentity,0.330s,no request/capture"
+      ]
+    },
+    {
+      "id": "remapper_brand_icon",
+      "owner": "/root/remap_engine",
+      "files": [
+        "scripts/build-native-installer.py",
+        "native/packaging/**"
+      ],
+      "status": "implemented_packaged_and_native_icon_verified_install_pending",
+      "acceptance": [
+        "Reuse existing Ultimate Keyboards ICNS in the remapper bundle resources.",
+        "CFBundleIconFile resolves to that file, sealed by helper signature and verified in actual package.",
+        "Refresh repair, main app embedded resource, combined product, DMG and script pin without recompiling unchanged code."
+      ],
+      "source": "src-tauri/icons/icon.icns",
+      "checks": [
+        "Existing ICNS copied and referenced by CFBundleIconFile before signing.",
+        "Exact icon SHA65f836ab and sealed helper signature pass strong package verification.",
+        "Actual NSWorkspace icon lookup rendered the branded keyboard logo; parent inspected PNG.",
+        "Existing 19 packaging tests passed.",
+        "Main executable code section unchanged; app resource re-signed; root independently verified combined product; DMG mounted and checked."
+      ]
+    },
+    {
+      "id": "layer_timing_engine",
+      "owner": "/root/remap_engine",
+      "files": [
+        "native/engine/**"
+      ],
+      "status": "verified_and_packaged",
+      "acceptance": [
+        "Dedicated no-tap layers activate on key-down and release on key-up.",
+        "Dual-role layers support balanced/default, hold_preferred and tap_preferred policies with chronological interruption handling.",
+        "Tests demonstrate layer output before the 150 ms deadline for unambiguous chords while preserving taps, rolls, ordering, combos, references and resets.",
+        "Home-row mod timing remains unchanged."
+      ],
+      "checks": [
+        "44 tests pass (19 new timing regressions), clippy and rustfmt pass.",
+        "Dedicated next-key output at input time 1; Fast chord at other-down 10; Balanced at other-up 20; Timed waits until 150 in deterministic event vectors. These are logical event times, not hardware latency.",
+        "Rolls, nested queues, equal-time ordering, prior-held keys/repeats, combo precedence, layer refcounts, reset and invalid mode rejection covered."
+      ]
+    },
+    {
+      "id": "layer_timing_editor",
+      "owner": "/root/native_research",
+      "files": [
+        "src/lib/karabinerGenerator.ts",
+        "src/components/KarabinerEditor/MacKeyEditor.tsx",
+        "src/components/KarabinerEditor/NativeRemappingPanel.tsx",
+        "tests/nativeRemapping.test.ts",
+        "tests/visual/**"
+      ],
+      "status": "rendered_verified_and_packaged",
+      "acceptance": [
+        "Existing layer rules can be edited without losing order or saved fields.",
+        "No tap action is clearly immediate; dual-role timing offers Balanced, Fast chord, and Timed.",
+        "Omitted policy defaults to Balanced; native profile preserves explicit modes.",
+        "Legacy export timing limitations disclosed; actual editor rendered and inspected at 800x600 and desktop."
+      ],
+      "checks": [
+        "18 focused tests / 109 assertions and typecheck pass.",
+        "Parent inspected Balanced at 800x600, Fast chord at 1440x900 and immediate at 800x600.",
+        "Browser assertions cover radios with keyboard input, tap selection, fixed-name editing, rule-order/field preservation, focus and popup geometry."
+      ],
+      "screenshots": ".qa/native-layer-timing-2026-10-24"
+    },
+    {
+      "id": "hid_event_wake",
+      "owner": "/root/native_service",
+      "files": [
+        "native/service/**"
+      ],
+      "status": "verified_and_packaged",
+      "acceptance": [
+        "Remove unconditional trailing 3 ms sleep while remapping is active.",
+        "Active CFRunLoop waits wake on input and are bounded by 3 ms and the nearest engine deadline.",
+        "Inactive/synthetic scheduling remains bounded; no busy spin, safety lease/session/power checks and fail-open behavior preserved.",
+        "Synthetic run-loop source and timeout tests exercise scheduling without physical HID or injected input."
+      ],
+      "checks": [
+        "12 service tests, clippy, rustfmt, release self-test and synthetic IPC passed.",
+        "Private CF source test returned TimedOut while idle and HandledSource on a synthetic signal with callback handled.",
+        "Release built after engine freeze with expected trusted Team."
+      ],
+      "helperSha256": "4b94f3e577d30e1393afbaf2655919ff197b9d1a4eef9a102237c6db927160e1"
+    },
+    {
+      "id": "mac_keymap_visual_parity",
+      "owner": "/root/native_research",
+      "files": [
+        "src/components/KarabinerEditor/**",
+        "src/lib/macKeymapView.ts",
+        "tests/macKeymapView.test.ts",
+        "tests/visual/mac-keymap-parity.mjs"
+      ],
+      "status": "rendered_tested_built_packaged_install_pending",
+      "acceptance": [
+        "MacBook Keys tab adopts existing Keymap header, compact action row, real layer strip, shared PhysicalBoard and BoardLegend, and layer glass card styling.",
+        "Mac physical layout, readable labels, combo highlights and native layer timing options are retained.",
+        "Base and named layer previews show configured mappings and Base fallbacks; contextual edits preserve global rule order and additional fields.",
+        "Known shadowing by earlier unconditional mappings is disclosed instead of changing native rule priority.",
+        "Setup and missing-permission guidance remain reachable; Stop remains prominent while running. Only explicit Apply can enable remapping.",
+        "Actual rendering inspected at 800x600, 1200x800 and 1440x900 with keyboard interaction, long labels, empty/missing and native status states."
+      ],
+      "reference": ".qa/keymap-reference/REFERENCE.md",
+      "checks": [
+        "Typecheck and 24 focused tests/135 assertions passed.",
+        "Root full Bun suite: 147 tests, 791 assertions, zero failures.",
+        "Actual source rendering passed 800x600,1200x800,1440x900; parent inspected final Base, Navigation, contextual editor and error states.",
+        "Layer changes/edits do not apply; explicit Stop disables; Apply/Refresh failures remain visible and stale running clears.",
+        "Unknown fields, rule order, long labels, missing keys, selected-layer removal, conflict disclosure and keyboard/popup behavior checked.",
+        "Existing layer timing and combo contrast visual suites passed after current selector/focus synchronization.",
+        "At800px effective primary font9.208px and secondary7.564px; remap/modtap/combo labels fit."
+      ],
+      "gaps": [
+        "Browser native-status transport is mocked; no installed-native UI or physical capture claimed."
+      ]
+    },
+    {
+      "id": "shared_binding_editor_ux",
+      "owner": "/root/native_research",
+      "files": [
+        "src/components/ZMKEditor/BindingEditor.tsx",
+        "src/components/ZMKEditor/SplitKeyboard.tsx",
+        "src/components/board/BindingEditorShell.tsx",
+        "src/components/board/BindingParamPicker.tsx",
+        "src/components/KarabinerEditor/MacBindingEditor.tsx",
+        "src/components/KarabinerEditor/MacbookKeyboard.tsx",
+        "src/components/KarabinerEditor/MacbookKeyboard.css",
+        "src/lib/macKeymapView.ts",
+        "src/lib/keyVisual.ts",
+        "src/lib/nativeBinding.ts",
+        "focused tests/visual checks"
+      ],
+      "status": "implemented_tested_rendered_built_packaged_install_pending",
+      "acceptance": [
+        "Actual shared binding type pills, searchable picker, anchored local Apply workflow and semantic key visuals used by split and Mac editors.",
+        "Mac physical geometry retained; supported behaviors map to strict native rules, without fake firmware actions.",
+        "Variant changes remove obsolete known fields while preserving metadata/order; Pass-through atomically clears direct target overrides while preserving conditions/combos.",
+        "Existing timing and combo interactions remain tested; actual ZMK/QMK editor regression rendered."
+      ]
+    },
+    {
+      "id": "shared_keymap_management_ux",
+      "owner": "/root/remap_engine",
+      "files": [
+        "src/stores/karabinerStore.ts",
+        "src/lib/macLayerEditing.ts",
+        "src/components/Keyboard/KeymapActionBar.tsx",
+        "src/components/Keyboard/LayerControls.tsx",
+        "src/components/Keyboard/ZmkKeymapEditor.tsx",
+        "src/components/KarabinerEditor/index.tsx",
+        "src/components/KarabinerEditor/NativeRemappingPanel.tsx",
+        "focused tests"
+      ],
+      "status": "implemented_tested_rendered_built_packaged_install_pending",
+      "acceptance": [
+        "Real add/rename/delete layers with persisted empty-layer metadata and atomic rule-reference updates.",
+        "Save/Revert, bounded Undo/Redo and shared dirty navigation preserve legacy work and retained drafts.",
+        "Metadata excluded from native profiles; local actions never enable capture.",
+        "Actual shared toolbar/layer components preserve ZMK behavior and Mac runtime safety controls."
+      ]
+    },
+    {
+      "id": "mac_history_shortcuts",
+      "owner": "/root/native_service",
+      "files": [
+        "src/App.tsx"
+      ],
+      "status": "implemented_typechecked_and_browser_verified",
+      "checks": [
+        "Existing guarded CmdZ/ShiftCmdZ branch dispatches Mac store history; text-input undo, global CmdS and heartbeat/quit unchanged."
+      ]
+    }
+  ],
+  "verified": [
+    "248 current component regression tests: full frontend164, unchanged engine44/service12/TauriIPC6/packaging19/descriptor3. Latest full frontend suite rerun; unchanged suite evidence retained. Rendered/platform probes reported separately.",
+    "Actual native signed-peer smoke: expected app/team accepted; wrong bundle, ad-hoc signature, wrong expected team and expected UID rejected.",
+    "Engine/service build, Clippy checks and safe self-test passed. Real synthetic Unix listener smoke passed without hardware enable.",
+    "Passive hardware enumeration independently confirmed1eligible built-in of4matched keyboards; no capture attempted.",
+    "Old failed archive reproduced PackageKit packageWithURL rejection; corrected native repair and combined product parse with expected IDs/versions and initialize in-memory request. No privileged installation performed.",
+    "Corrected repair46cb5801 embedded byte-identically in refreshed Team9878YL387T signed app; executable code section unchanged after resource refresh/re-sign.",
+    "Root independently verified corrected combined product7181c392; app/helper selected, compatible driver8.5 reused (driver=false).",
+    "Rebuilt single-installer DMGda1bfd05 signature/checksum and read-only mounted inventory/package digest verified.",
+    "Explicit refresh controller: 15 tests/90 assertions. Full frontend suite: 138 pass, 746 assertions. Heartbeat remains status-only.",
+    "Updated service: 11 tests, Clippy, release self-test, and synthetic restart IPC smoke passed. Targeted Tauri tests: 6 pass.",
+    "Exact signed packaged helper passed a passive LaunchServices check in 0.330 seconds. TCC attributed it to com.ultimatekeyboards.remapper. Permission was denied; no request or capture occurred.",
+    "Final signed app release build passed. Embedded repair SHA51da7d61 matches; strict expected Team and bundle signature checks passed.",
+    "Root independently verified final combined product SHA64f28d14, including actual PackageKit admission and signed application preservation. Updated installation remains pending.",
+    "Signed DMG SHAabb3a527 passed integrity and read-only mounted inventory checks. Mounted package SHA64f28d14 matches the final product.",
+    "Branded repair SHAb108b6a9, combined SHA4e5c8a67 and DMG SHAb568a58e verified. Native effective app icon resolves correctly. Helper compiled code and layer timing remain unchanged.",
+    "Layer timing: dedicated immediate, balanced completed-chord resolution, fast other-key-down resolution and timed fallback pass deterministic chronological event tests; home-row timing preserved.",
+    "Active helper scheduling uses bounded CFRunLoop input wake and engine deadlines, without a trailing sleep; synthetic source wake and idle timeout pass without HID.",
+    "Actual compiled release helper accepted all three layer modes, omitted default and no-tap layer through synthetic IPC; invalid mode and hardware enable rejected. Seven cases, all stopped with zero capture.",
+    "Signed final main app contains repair SHA65ec865a. Combined SHA29594168 passed root independent strong verification. Signed DMG SHA63ceb957 passed image and mounted-content checks.",
+    "Mac Keymap parity: shared PhysicalBoard/legend, derived layer tabs, fallback/conflict labels and contextual edit tested at800x600,1200x800,1440x900. Parent inspected final images.",
+    "Native control layout: mocked transport confirms visible Apply/Refresh errors, Stop-only-disable, stale-running clear and no Apply from preview/edit operations. No real native mutation claimed.",
+    "Signed redesigned app SHA87ac1686, combined product SHAd27b5e59 and signed DMG SHAb7fca481 verified. Helper4b94 and repair65ec unchanged. New generation not installed by agent.",
+    "Corrected shared UX uses actual shared BindingEditorShell, BindingParamPicker, semantic key visuals, KeymapActionBar and LayerControls in split and Mac editors.",
+    "Local profile Save/Revert, retained drafts, legacy baseline, 50-step Undo/Redo, layer metadata/reference updates and dirty navigation tested without native mutations.",
+    "Shared Popover measurement visibility/focus lifecycle and nested Escape/Tab corrected and rendered across ZMK/QMK/Mac.",
+    "Final shared UX signed app SHA5fe9e8aa, product SHAa0ecd08e and signed DMG SHA30973bd4 verified. Helper4b94 and repair65ec retained unchanged."
+  ],
+  "pending": [
+    "Install corrected shared Split/Mac UX product SHAa0ecd08e through the updated Terminal script.",
+    "Approve Ultimate Keyboards Remapper in Input Monitoring, then choose Check status and verify the actual background service grant.",
+    "Verify physical capture, secure entry, Fn/media, sleep/wake, session changes, and app/helper/driver failure recovery.",
+    "Verify the updated installed native UI. Computer Use access is denied; actual repo component rendering was inspected independently.",
+    "Developer ID Application/Installer credentials and notarization before public distribution."
+  ],
+  "next_action": "Save edits, quit Ultimate Keyboards, and run bash scripts/install-native-preview.sh. Inspect shared Keymap binding editor/layer controls/Save-history workflow. Native setup, Check status and activation are in Remapping; local editor Apply and Save do not activate hardware. Prior OS approval, live capture and physical latency gates remain pending.",
+  "artifacts": {
+    "app": "src-tauri/target/release/bundle/macos/Ultimate Keyboards.app",
+    "dmg": "native/installer/UltimateKeyboards-0.3.0-Native-Installer.dmg",
+    "dmg_sha256": "64ae232c1c64a55aa5fe0c3576c1b70896773ddf60e1129bfc822ab6b7479981",
+    "native_setup": "native/installer/UltimateKeyboards-Native-Setup.pkg",
+    "native_setup_sha256": "2a683fa2c2b046ccfdabd871cb0f879894228669e2c5d2187004555b00f0e913",
+    "signing": "Apple Development, Team9878YL387T; outer setup unsigned; no public notarization",
+    "combined_installer": "native/installer/UltimateKeyboards-0.3.0.pkg",
+    "combined_installer_sha256": "7e146109f2b243763f126446db08abfd2fa6104bd099ce34b61c54b3f6495e1a",
+    "single_installer_dmg": "native/installer/UltimateKeyboards-0.3.0-Native-Installer.dmg",
+    "single_installer_dmg_sha256": "64ae232c1c64a55aa5fe0c3576c1b70896773ddf60e1129bfc822ab6b7479981",
+    "superseded_delivery": "App-only0.3DMG is superseded by the combined installer DMG; use new artifact.",
+    "superseded_app_only_dmg": {
+      "path": "src-tauri/target/release/bundle/dmg/Ultimate Keyboards_0.3.0_aarch64.dmg",
+      "sha256": "c2c6d54914424ee87e4de687e6b91bb397c48d6ed5d23f8ef87da912c0bed49c",
+      "reason": "Replaced by combined single-installer delivery; use new DMG."
+    },
+    "rejected_format_regression": {
+      "path": "native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.pkg",
+      "sha256": "a87fc201496473c7a8bde8a172c43d9c41ec06aeb8807ede34d0a947d85bb719",
+      "evidence": "native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.verification.json",
+      "installable": false
+    },
+    "helper_source_sha256": "4b94f3e577d30e1393afbaf2655919ff197b9d1a4eef9a102237c6db927160e1",
+    "main_executable_sha256": "5fe9e8aa8fd6954aac48460a684424f12d795a75a8f23ecc6c843f67a02ff0eb"
+  },
+  "completion_audit": {
+    "engine_and_service": "Layer timing and event-wake fixes implemented, tested and packaged. Actual physical capture, typing and hardware latency remain pending.",
+    "delivery": "Actual shared Split/Mac UX signed app, combined product and signed DMG verified. This corrective generation awaits interactive install.",
+    "installed_state": "At task start installed app SHA87ac matched the prior delivery, confirming feedback was a real UX mismatch. Agent did not install the new SHA5fe9 app or mutate production remapping.",
+    "approvals_and_live_acceptance": "The correctly attributed helper reports Input Monitoring denied. User must approve Ultimate Keyboards Remapper and choose Check status after updating. Production recovery, actual typing, failure handling, and installed UI verification remain pending.",
+    "distribution": "Development signatures only; public Developer ID signing/notarization remains unmet.",
+    "signed_peer_authentication": "Actual platform positive and negative peer checks achieved without root or HID activity."
+  },
+  "external_gate_audit": {
+    "condition": "Updated installation, own-helper OS approval, and live acceptance remain pending; implementation/build checks are complete.",
+    "consecutive_goal_turns_observed": 2,
+    "resumed_by_user": "you do it",
+    "last_revalidated_utc": "2026-10-24T05:02:05.806509+00:00",
+    "evidence": [
+      "cua.getApp(com.apple.installer) returned Computer Use was not approved to use Installer.",
+      "Installed app remains0.2.0; helper absent.",
+      "Combined installer digest verified."
+    ],
+    "next_action": "Save edits, quit Ultimate Keyboards, and run bash scripts/install-native-preview.sh. Inspect shared Keymap binding editor/layer controls/Save-history workflow. Native setup, Check status and activation are in Remapping; local editor Apply and Save do not activate hardware. Prior OS approval, live capture and physical latency gates remain pending.",
+    "current_turn": "User-confirmed installed latest prior build still diverged in UX. Replaced custom Mac editing workflow with shared components and actual management operations, verified source/browser behavior, built signed delivery. Interactive corrective installation and native/live acceptance remain external.",
+    "documentation": "https://learn.chatgpt.com/docs/computer-use",
+    "capability_limit": "Computer Use cannot authenticate as administrator or approve macOS security/privacy prompts; user must complete those OS steps."
+  },
+  "blocking_evidence": [
+    "Latest updated product is built and verified but not installed. Agent cannot enter an administrator password.",
+    "The actual fresh helper app reports no Input Monitoring access under its own TCC identity; user approval is required.",
+    "Installed app Computer Use access is denied; updated native UI verification remains pending.",
+    "Physical typing and failure acceptance remain pending; public distribution signing credentials are absent."
+  ],
+  "terminal_install_script": "scripts/install-native-preview.sh",
+  "terminal_install_checks": [
+    "Bash syntax passed; pinned SHAa0ecd08e matches the final shared-UX product.",
+    "Running-app guard retained to preserve unsaved edits.",
+    "Post-install receipts, strict bundle signatures, launchd job and helper self-test are required.",
+    "Permission request uses LaunchServices without waiting for the human response, then opens app and Settings and guides Check status.",
+    "No updated installation or permission request was executed by the agent."
+  ],
+  "installer_failure": {
+    "observed_at": "2026-10-24 01:26:50 local",
+    "source": "/var/log/install.log lines245063-245085 and user Terminal output",
+    "cause": "Custom outer product flattened opaque flat component .pkg files instead of canonical expanded component directories. PackageKit packageWithURL returned nil for app/helper fragment URLs.",
+    "previous_verification_gap": "pkginfo, showChoicesXML, signatures and payload inventory did not prove PackageKit admission or actual installation.",
+    "recovery": "Canonical productbuild component topology; original signed vendor archive retained as provenance; parse each exact component through actual PackageKit and initialize request without execution.",
+    "actual_installation": "Corrected product installed successfully by user; both0.3receipts and running signed helper independently verified.",
+    "privilege_probe": "sudo -n true still requires password in agent context.",
+    "recovery_result": "Old archive rejected; corrected native repair and all3combined component URLs parsed, request initialized; independently verified by root.19packagingtests pass. Actual installation remains pending."
+  },
+  "verification_gaps": {
+    "actual_installation": "Administrator credential cannot be supplied by agent; sudo-n requires password. After corrected parser proof, user runs updated Terminal script for actual install.",
+    "auto_prime": "Requested prime skill not present in configured skill roots or canonical AF skill search; existing loadout and exact source pointers reused."
+  },
+  "runtime_install_verification": {
+    "appVersion": "0.3.0",
+    "helperReceipt": "0.3.0",
+    "appReceipt": "0.3.0",
+    "strictSignatures": "pass for both installed bundles Team9878YL387T and exact IDs",
+    "helperPID": 37944,
+    "socketStatus": "ok; stopped;0captures;inputMonitoringGranted=false",
+    "cliCheck": "inputMonitoringGranted=true; unreliable for daemon permission because responsible Terminal/Orca identity differs",
+    "driver": "1.8.0 activated enabled; canonical brokerPID561running; compatible driver reused",
+    "captureAttempted": false,
+    "gui": "cua exact installed app path denied computer access; user screenshot available",
+    "permission_cause": "tccd responsible identities differ: direct helper CLI inherited Terminal/Orca attribution; daemon runs as own helper identity. Upstream-aligned LaunchServices permission agent setup in progress."
+  },
+  "visual_contrast_rationale": {
+    "userTask": "Locate combo trigger keys on Mac keyboard and compare to combo rows.",
+    "finding": "Static preview keys are disabled buttons; global button:disabled opacity0.38 compounds translucent key styling.",
+    "decision": "Scoped static diagram opacity override, legible neutral labels, solid colored trigger fills and visible outlines; reuse app visual system and geometry.",
+    "sources": [
+      "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+    ],
+    "targets": "4.5:1 key text;3:1 meaningful state cues against adjacent colors; do not rely on hue alone.",
+    "nativeAccess": "Exact installed app path CUA denied; repo-native component rendering to be inspected separately.",
+    "reviewed_artifacts": [
+      ".qa/macbook-combo-contrast-2026-10-24/idle-1830x1374.png",
+      ".qa/macbook-combo-contrast-2026-10-24/idle-800x600.png",
+      ".qa/macbook-combo-contrast-2026-10-24/focus-1830x1374.png",
+      ".qa/macbook-combo-contrast-2026-10-24/picker-800x600.png"
+    ]
+  },
+  "permission_frontend_integration": {
+    "status": "implemented_tested_backendpending",
+    "tests": "15controllerTests90assertions + typecheck",
+    "rendering": "Mocked nativepanel at1440x900and800x600 parent inspected busychecking and stoppedstates.",
+    "semantics": "Only explicit Check status invokes fresh-bundle permission refresh; native heartbeat stays status-only. Capture never autoenables."
+  },
+  "latest_frontend_checks": {
+    "command": "bun test",
+    "result": "164 pass, zero failures, 874 assertions across21files",
+    "log": ".qa/shared-keymap-bun-tests.log",
+    "typecheck": "Passed after shared editor/management source freeze.",
+    "rendering": "Actual ZMK/QMK/Mac shared shells/pickers and controls checked at800/1200/1440; native status actions use isolated mocks."
+  },
+  "latest_signed_app_build": {
+    "status": "passed; searchable symbols and repaired helper installer packaged; actual install pending",
+    "log": ".qa/native-symbols-app-build.log",
+    "embeddedRepairSha256": "2a683fa2c2b046ccfdabd871cb0f879894228669e2c5d2187004555b00f0e913",
+    "executableSha256": "0fc4a93405601089aee9900251543a9d98088f4760c1c2af69467e34a979209d",
+    "signature": "Strict expected Team9878YL387T and bundle requirement verified.",
+    "evidence": ".qa/native-symbols-2026-10-24/signed-app.json"
+  },
+  "permission_platform_failure": {
+    "step": "Exact signed wrapped helper via open-n-g-W --permission-status",
+    "result": "Resolved in test environment. Actualpassivelaunch0.330s, expectedstructuredreport/ownhelperTCCidentity. Grantfalse truthful. No capture/request/productionrestart.",
+    "diagnosis": "Test stdout/stderr on externalWork caused xpcproxy kTCCServiceSystemPolicyRemovableVolumes EPERM before helper launch; production Tauri uses OSprivate temp. Corrected test to same temp placement and verified actual own-helper attribution; no sourceworkaround.",
+    "delivery": "Platform setup pass; actual user grant/root refresh/live capture still pending."
+  },
+  "permission_platform_evidence": ".qa/permission-agent-platform-smoke/README.md",
+  "karabiner_uninstall_advice": {
+    "answer": "Keep installed until own-helper approval and live native tests pass.",
+    "verified_source": "/Library/Application Support/org.pqrs/Karabiner-Elements/uninstall.sh invokes standalone driver remove_files.sh; official uninstall docs deactivate the driver.",
+    "reference": "https://karabiner-elements.pqrs.org/docs/manual/operation/uninstall/",
+    "future_path": "Remove full Karabiner only after testing; restore standalone driver through our installer if its uninstaller removes shared components. No uninstall performed or authorized."
+  },
+  "layer_timing_assessment": {
+    "source": [
+      "native/engine/src/lib.rs:353",
+      "native/engine/src/lib.rs:539",
+      "native/engine/src/lib.rs:561"
+    ],
+    "corne_config": "cross_keyboard/config/corne_tp.keymap and cross_corne/config/cross_corne.keymap configure layer-tap as balanced with 200 ms tapping term and 150 ms quick-tap; dedicated momentary keys also exist.",
+    "reference": [
+      "https://zmk.dev/docs/keymaps/behaviors/layers",
+      "https://zmk.dev/docs/keymaps/behaviors/hold-tap#interrupt-flavors"
+    ],
+    "conclusion": "Intentional layer waits and active polling sleep have been addressed in the rebuilt app. Physical end-to-end latency and Corne equivalence remain unmeasured.",
+    "latency_measurement": "Physical end-to-end latency has not been measured.",
+    "before_fix": "MacBook layer activators, including those without a tap output, compile to a dual-role state and wait for the 150 ms hold threshold. There is no early hold resolution from another key.",
+    "current_behavior": "Dedicated no-tap layers activate on key-down. Dual-role layers support balanced (default), hold_preferred and tap_preferred. Early resolution and rolling taps are covered by deterministic tests."
+  },
+  "remapper_icon_verification": {
+    "effectiveIcon": ".qa/remapper-icon/effective-helper-icon.png",
+    "result": ".qa/remapper-icon/result.json",
+    "parentInspected": true,
+    "helperLaunched": false,
+    "installedSettingsIcon": "Pending updated installation; old icon caches may need Settings reopened."
+  },
+  "latency_decisions": {
+    "dominant_delay": "Current layer activation waits for a 150 ms threshold even without a tap action. Fix semantic ambiguity before reducing timeout values globally.",
+    "default": "Balanced interruption behavior matches the user\u2019s Corne and preserves rolling taps better than eager holds.",
+    "fast_option": "Explicit Fast chord resolves a dual-role layer on another key-down; this can treat rolling taps as layer chords.",
+    "dedicated_layer": "No tap action means an immediate momentary layer. Existing ordered combo precedence remains respected.",
+    "home_row_mods": "Keep conservative current timing; do not cause eager modifier activation during ordinary typing.",
+    "scheduling": "Actual code has a 1 ms run-loop wait followed by an unconditional 3 ms sleep. Replace the active sleep with event-driven bounded waiting.",
+    "measurement": "Deterministic engine timing and safe platform scheduling tests prove intentional waits removed. Physical end-to-end latency and Corne equivalence require live measurement.",
+    "observed_behavior": "Deterministic engine tests now pass the intended immediate and early-chord output sequences. Scheduling removes the active post-pass sleep and waits for events/deadlines. Actual physical typing and end-to-end latency remain pending."
+  },
+  "latency_platform_sources": [
+    "https://developer.apple.com/documentation/corefoundation/cfrunloopruninmode%28_%3A_%3A_%3A%29",
+    "https://zmk.dev/docs/keymaps/behaviors/hold-tap#interrupt-flavors",
+    "https://zmk.dev/docs/keymaps/behaviors/layers"
+  ],
+  "latency_compiled_ipc_evidence": ".qa/native-layer-ipc/result.json",
+  "keymap_visual_rationale": {
+    "userTask": "Compare and edit MacBook mappings layer by layer using the same Keymap interface as Crosses/Corne.",
+    "nextAction": "Select a layer, click a key to edit, then explicitly apply the profile.",
+    "reference": "Actual KeyboardSection/ZmkKeymapEditor/PhysicalBoard screenshots under .qa/keymap-reference, inspected by parent.",
+    "decision": "Reuse the actual shared board and legend with a Mac geometry adapter; reuse section/header/card/segmented controls. Keep Mac auto-save and explicit Apply honest; do not add nonfunctional firmware/Save/Undo/layer controls.",
+    "nativeControls": "Compact healthy toolbar; important install/permission guidance expands; current remapping Stop stays visible.",
+    "referenceLimitations": "Existing reference wraps awkwardly at 800 px and scales secondary labels too small. Improve these constraints instead of reproducing them.",
+    "sources": [
+      "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+    ],
+    "reuseResearch": "Existing primary accessibility guidance reused; no new visual style or bitmap asset needed.",
+    "final_decisions": [
+      "Shared PhysicalBoard and BoardLegend; native-only legend categories, Mac geometry and compact labels.",
+      "Base/derived native layers, dashed Base fallback, explicit order conflicts, contextual edits without reordering.",
+      "Compact auto-save/Apply/Stop toolbar, visible setup/permission/errors, secondary ordered-rule and compatibility details.",
+      "No store migration/history changes, fake Save/Undo/firmware controls or backend timing changes."
+    ],
+    "verification_recovery": "Intermediate Vite HMR created duplicate mocked module instances, and concurrent browser runs caused focus/timing flakes. Fixture interception and isolated sequential runs now meet the original assertions. These are browser-fixture results, not native permission/runtime evidence."
+  },
+  "ui_parity_failure": {
+    "user_feedback": "MacBook UI/UX still differs; wants the split keyboard UI/UX.",
+    "installed_app_verified": "Installed executable SHA87ac1686 equals previously delivered app. Feedback applies to latest build, not an old installation.",
+    "previous_method": "Shared PhysicalBoard and outer styling with a separate Mac form and limited toolbar/layer actions.",
+    "cause": "That matched layout but retained a different editing workflow and Mac-specific key styling.",
+    "recovery": "Use actual shared binding shell/picker and semantic key visuals, shared toolbar/layer controls, and real local draft/save/history/layer metadata operations adapted to native rules.",
+    "safety": "Local binding Apply, Save/Revert/history/layer actions never start remapping. System-wide Apply/Stop remain separate and explicit.",
+    "recovery_result": "Completed actual shared components and interaction workflows, not another visual wrapper. Keymap desktop card y169 matches ZMK reference; native runtime setup moved to Remapping with emergency Stop retained during running/uncertain status."
+  },
+  "shared_ux_iteration": {
+    "layout_feedback": "Native runtime controls still interrupted Save\u2192Layer\u2192Board flow. Move them to a dedicated Remapping tab, analogous to firmware runtime/build steps; keep Stop reachable on Keymap when running.",
+    "shared_focus_defect": "Initial Popover focus happened while position-dependent surface was hidden. Narrow shared lifecycle correction authorized; actual split/Mac keyboard tests required.",
+    "ownership_extension": "native_research owns Popover.tsx for focus lifecycle only; remap_engine owns Mac tab/runtime layout iteration; App.tsx shortcut edit remains native_service only.",
+    "scope": "UI and local profile state only; no helper/engine/OS permission changes."
+  },
+  "shared_ux_visual_tradeoff": "Exact shared key font formula is retained for both hardware layouts. At800px the dense78-key Mac board has small effective labels (~6.58/4.93px for mod-tap primary/sub); full-size tooltips/pickers/popups and keyboard access remain available. No Mac-only styling override reintroduced.",
+  "current_followup": {
+    "objective": "Directly select + for MacBook Layer 1 at physical V, and repair diagnosed installer helper lifecycle race.",
+    "symbols": {
+      "owner": "/root/native_research",
+      "status": "source_frozen_tests_and_rendered_checks_pass",
+      "files": [
+        "src/lib/nativeSymbols.ts",
+        "src/lib/nativeBinding.ts",
+        "src/lib/macKeymapView.ts",
+        "src/components/KarabinerEditor/MacBindingEditor.tsx",
+        "tests/nativeSymbols.test.ts",
+        "tests/nativeBinding.test.ts",
+        "tests/visual/**"
+      ],
+      "acceptance": [
+        "Search literal + or plus and choose the shifted equal output using the actual shared picker.",
+        "Physical v layer1 compiles to equal_sign with shift; metadata/order preserved.",
+        "Raw matching base selection removes symbol Shift; other explicit modifier edits preserved.",
+        "Rendered key and reopened editor show +. Local Apply does not enable native capture."
+      ],
+      "checks": [
+        "168 frontend tests955assertions pass; typecheck and diffcheck pass.",
+        "Browser symbols800/1200, modifiers800/1200, timing1440/800, Macparity800/1200/1440 pass; parent inspected reopened1200 and board800."
+      ],
+      "evidence": [
+        ".qa/native-symbols-2026-10-24/results.json",
+        "tests/visual/native-symbol-picker.mjs"
+      ]
+    },
+    "installer": {
+      "owner": "/root/remap_engine",
+      "status": "built_verified_privileged_install_pending",
+      "evidence": ".qa/native-bootstrap-failure/diagnosis.md",
+      "cause": "Actual launchd 37 Operation already in progress: bootstrap preceded old helper label removal by about8ms. PackageKit reports generic bootstrap5 and postinstall failed.",
+      "files": [
+        "native/packaging/postinstall",
+        "scripts/tests/test_native_packaging.py"
+      ],
+      "acceptance": [
+        "Bounded wait for actual own-label removal before a single bootstrap.",
+        "Bounded verification of own job and root-owned socket before install success.",
+        "Regression tests asynchronous bootout and failure paths.",
+        "Rebuild repair/main app/combined pkg/DMG and pin user script to verified new product."
+      ],
+      "checks": [
+        "Root independently reran28packagingtests incl9 lifecycle cases: pass.",
+        "Async bootout waits observed absent before exactly1bootstrap; shutdown/bootstrap/inspection/readiness failures reported.",
+        "Actual nc -z -U returned1 despite connection; corrected no-z probe independently tested on real temporary Unix socket: listening0/zero bytes; absent+stale1."
+      ],
+      "repairSha256": "2a683fa2c2b046ccfdabd871cb0f879894228669e2c5d2187004555b00f0e913",
+      "combinedSha256": "7e146109f2b243763f126446db08abfd2fa6104bd099ce34b61c54b3f6495e1a",
+      "executedPostinstallSha256": "573c993d1bb50809335795efa74906cbece60651e4447e228ba97be3295fe07c",
+      "verification": "Root independently verified final3component PackageKit parsing/request admission, signatures/Team, embeddedrepair, provenance and compatible-driver choices. No install/auth requested by verification.",
+      "dmgSha256": "64ae232c1c64a55aa5fe0c3576c1b70896773ddf60e1129bfc822ab6b7479981"
+    },
+    "installation_state": "Repaired preview actually installed2026-10-24 22:00:42: install.log confirms successful postinstall ready message and application/helper receipts. Installed app0fc4... embeddedrepair2a683... verified; ownjobrunning/permissiontrue/stopped/captured0. Physical output remains pending.",
+    "native_plus_ipc": {
+      "owner": "/root/native_service",
+      "status": "pass_disabled_synthetic_socket",
+      "evidence": ".qa/native-plus-ipc/result.json",
+      "limits": "Actual compiled deserialization+Engine::new validation accepted generated canonical profile; zero capture, no hardware output or production socket."
+    },
+    "prime": "Auto-prime requested but no prime skill installed or canonical prime source found; existing task receipt/source pointers reused. No invented cache or graph verification claim.",
+    "build": "Full release app signed and strict verified with repaired embeddedpkg. Final combined independently verified. DMG signed/checksum/read-only inventory and mountedpkg hash verified by packaging agent; detached. Script pinned; actual install pending.",
+    "appExecutableSha256": "0fc4a93405601089aee9900251543a9d98088f4760c1c2af69467e34a979209d",
+    "nextAction": "Native physical mapping and failure-recovery acceptance still pending. Commercial source changes are separate, not installed."
+  },
+  "commercial_product": {
+    "objective": "A customer installs and maintains Ultimate Keyboards as a standalone product without Karabiner-Elements or separately installed remapping tools.",
+    "requirements": "docs/release/standalone-macos.md",
+    "loadout": "Continuation reuses existing frozen loadout; no additional skills selected.",
+    "ownership": {
+      "/root": [
+        "scripts/build-commercial-release.py",
+        "scripts/tests/test_commercial_release.py",
+        "src-tauri/src/native_remapping.rs customer status/error only",
+        "src-tauri/tauri.conf.json OS minimum",
+        "docs/release/standalone-macos.md",
+        ".github/workflows/ci.yml",
+        "existing task record"
+      ],
+      "/root/native_research": [
+        "frontend onboarding/setup/update policy/combo controls",
+        "tests and rendered fixtures",
+        "supported source/generated docs"
+      ],
+      "/root/remap_engine": [
+        "scripts/build-native-installer.py",
+        "native/packaging/build_delivery.py",
+        "packaging tests except test_uninstall.py"
+      ],
+      "/root/native_service": [
+        "native/service/src/main.rs pure build-info mode",
+        "native/packaging/uninstall.sh",
+        "native/packaging/tests/test_uninstall.py"
+      ]
+    },
+    "checks": {
+      "packaging": "Root48 tests pass; isolated actualdevelopmentrepair/pkg/DMG smoke by packager; currentpreviewunchanged.",
+      "service": "13unit tests, clippy, self-test, syntheticIPC pass; purebuildinfo independently verified exactcompiledTeam9878YL387T.",
+      "tauri": "7 native IPC/status tests pass; edited Rust file format check pass. Whole-crate cargo fmt check reports existing unrelated formatting differences; no unrelated files rewritten.",
+      "commercial_wrapper": "4 deterministic plan/prerequisite/isolation tests pass; CI runs these; actual readonlypreflight blocked absent DeveloperIDApplication/Installer and notaryprofile. Production pipeline not executed.",
+      "frontend": "171 full app tests980assertions, typecheck and productionVitebundle pass. Browserjourney800/1200 passes; parent inspected welcome/setup and corrected actualAppSettingsUpdates captures. NativeplusCombo/regression1830/800 passes. No installedcommercialUI/capture verification.",
+      "render_recovery": "Isolated Updates fixture inherited default black text. Replaced with actualAppSettings capture and verified correct rgba(244,245,255,0.98) inheritance. FullbrowserSettings initially blocked by missingdocumentDir webshim; added scoped browserstub, realtargetrerenderpassed."
+    },
+    "prerequisites": {
+      "signing": "security find-identity -v shows only Apple Development. Developer ID Application and Developer ID Installer unavailable. Notary profile not supplied/verified.",
+      "customerAcceptance": "Clean Mac without Elements, Gatekeeper/downloaded install, physical output/latency/recovery/update/uninstall unverified.",
+      "remainingProductWork": [
+        "Complete customer GUI uninstall and shared-driver ownership policy.",
+        "Remove separately installed gh/git requirement from advertised firmware workflows, or deliberately revise launch scope.",
+        "Complete whole-product third-party dependency/asset license inventory."
+      ]
+    },
+    "preview_state": "Read-only production status found ownhelper running, InputMonitoring true, remapping disabled, captured0, driverReady false (not a live handshake result). Commercial-source changes not installed/published.",
+    "evidence": [
+      ".qa/commercial-release-preflight.json",
+      ".qa/commercial-packaging-root-tests.log",
+      ".qa/commercial-release/",
+      ".qa/commercial-tauri-tests.log",
+      ".qa/customer-journey-2026-10-24/"
+    ],
+    "preview_install_verified": {
+      "time": "2026-10-24 22:00:42 EDT",
+      "source": "/var/log/install.log, ownjob/socketstatus, installed app/repair hashes",
+      "appExecutableSha256": "0fc4a93405601089aee9900251543a9d98088f4760c1c2af69467e34a979209d",
+      "repairSha256": "2a683fa2c2b046ccfdabd871cb0f879894228669e2c5d2187004555b00f0e913",
+      "helperSignedExecutableSha256": "72574d80c26ae92bd7cb1e3cb77737b248d5ff25c4d0e268ab0c1b9381aaf611",
+      "note": "Signed helper bytes differ from source helper due to codesign; not a source-byte comparison. No new commercial build installed."
+    },
+    "source_status": "All owned source frozen and checks complete for this implementation wave. No commercialcandidate published or installed. Existing release publication gate remains active.",
+    "next_action": "Install Developer ID Application/Installer identities and configure notarization profile before a production candidate can be built. Independent remaining scope is documented: CLI-free firmware workflows, GUI full-product uninstall/shared-driver policy, whole-product notices; then clean-Mac downloaded-install and real hardware acceptance."
+  },
+  "local_trial": {
+    "objective": "Build and install current standalone development trial, then test native mappings with Elements stopped and shared driver preserved.",
+    "loadout": {
+      "phase": "Local trial requires native app observation; prior commercial source wave checkpointed.",
+      "skills": [
+        "postmortem",
+        "computer-use",
+        "library/frontend/ux/accessible-interaction-and-assistive-tech-qa"
+      ],
+      "computerUseSource": "/Users/tomkwon/.agents/skills/computer-use/SKILL.md; version-matched guide via orca skills get computer-use --json",
+      "unavailablePluginSkill": "Listed bundled computer-use skill path absent; canonical computer-use skill and functioning version-matched Orca guide used."
+    },
+    "state": "Corrected signeddevelopmenttrialpackageopen inInstaller. Awaitinghumaninstallercompletion/password; ownnativecaptureleftoff.",
+    "repairSha256": "f6d9e39e8e008514cb7f2057dd365894c879b63e17de1659d1e15f6a867ac437",
+    "preservation": "native/installer verified preview artifacts preserved for rollback; no Karabiner uninstall/shared-broker stop.",
+    "ownership": {
+      "/root": "trial overlay/main signed app build/install script + ledger and GUI actions",
+      "/root/remap_engine": "native/trial/2026-10-25 artifacts only",
+      "/root/native_service": "read-only runtime/officialElementsstop audit .qa/standalone-trial"
+    },
+    "installer_visual_failure": {
+      "evidence": ".qa/standalone-trial/installer-raw-html.png",
+      "cause": "Distribution welcome/conclusion lack mandatorymime-typeoruti; content isHTMLfragment. AppleDistributionXMLreference confirmed explicitHTMLtype requirement.",
+      "recovery": "FixedrequiredHTMLMIME/fullUTF8docs; updatedsetupcopy; newtestsreject originalarchive and verifyrebuiltresources. Rebuiltrepair+resignedresourceapp+product+DMG. CorrectedactualGUIrenderpendingAX/human.",
+      "installationStarted": false
+    },
+    "appExecutableSha256": "e956e0b4fd6cece3f986faac9cae233f3da73dbfb27d89ebdcfd91e8eadc27f9",
+    "package": "native/trial/2026-10-25/UltimateKeyboards-0.3.0-Trial.pkg",
+    "packageSha256": "2f941100f23eda0d48d8692ed3b87aead24a06c8f5c2b809fe61a4682e8f3bd8",
+    "dmg": "native/trial/2026-10-25/UltimateKeyboards-0.3.0-Trial.dmg",
+    "dmgSha256": "c2c9743b934736ecea81756329833048f987eb5e2f4f89dc408dda911ed1697e",
+    "checks": "171frontendtests980assertions and fullsignedreleaseappbuild pass. ExpectedID/Team strictsignature and embeddedrepair match. Root independently reverified correctedcombined package actualPackageKit admission/signatures/lifecycle/HTML. Development DMG exactinventory/read-only/digest verified bypackager.Root52packagingtests pass.",
+    "visualState": "ActualinitialInstaller screenshot caught rawHTML; cause/fix/regressionrecorded. CorrectedInstaller window isvisible butnative AX observation permission_denied twice; permissionshelperreportsAX/screenshotsgranted. No alternateproviderbypass; correctedactualrender explicitlypendinghumanconfirmation.",
+    "nextAction": "Waitactualinstallercompletion; verify installedappnewhash andhelpermetadata/rootstatus beforeElementsquit/nativeApply. Userquestionasksinstallerresult, notapproval. Sharedbroker/driver/Elementsunchanged sofar.",
+    "lastInstalledExecutableSha256": "0fc4a93405601089aee9900251543a9d98088f4760c1c2af69467e34a979209d",
+    "trialInstalled": false,
+    "physicalTests": "Pending interactive installation and deliberate native enable; no capture/Elementsquit/uninstall performed."
+  }
+}

@@ -75,8 +75,11 @@ export interface ComboRule {
 
 /**
  * Designates a key as a layer activator.
- * Hold → sets variable `layerName=1` (fires after hold threshold). Release → clears it.
- * Tap alone → optional tapKey.
+ * Native: no tapKey is an immediate momentary layer (press on, release off).
+ * With tapKey, holdBehavior defaults to balanced: another key's completed tap
+ * resolves hold; hold_preferred resolves on another press; tap_preferred waits
+ * for the hold threshold. These policies are native-only.
+ * Legacy Karabiner export retains its existing to_if_held_down behavior.
  */
 export interface LayerActivatorRule {
   type: 'layer_activator';
@@ -84,6 +87,7 @@ export interface LayerActivatorRule {
   fromKey: string;
   layerName: string;  // e.g. "layer1" — used as Karabiner variable name
   tapKey?: string;    // key sent on tap-only (e.g. 'spacebar' for spacebar)
+  holdBehavior?: 'balanced' | 'hold_preferred' | 'tap_preferred'; // native only; omitted = balanced
 }
 
 /**
@@ -150,8 +154,9 @@ export function ruleToKarabiner(rule: Rule): object {
   }
 
   if (rule.type === 'layer_activator') {
-    // Use to_if_held_down so fast typing (space + next char) doesn't accidentally
-    // trigger the layer. Only activates after the hold threshold (~120ms).
+    // Compatibility export deliberately retains legacy timing. Native-only
+    // holdBehavior and immediate tapless activation are not reproduced here.
+    // The threshold remains controlled by Karabiner's existing configuration.
     const manipulator: Record<string, unknown> = {
       type: 'basic',
       from: { key_code: rule.fromKey },

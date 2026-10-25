@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
 import { useQMKStore } from "@/stores/qmkStore";
+import { useKarabinerStore } from "@/stores/karabinerStore";
 import { useRegistryStore } from "@/stores/registryStore";
 import { syncDirty, isAnyDirty, dirtySources, saveAllDirty, discardAllDirty, onDirtyChange } from "@/lib/dirty";
 import { IS_TAURI } from "@/lib/io";
+import { nativeRemapping } from "@/lib/nativeRemapping";
 import { useToast } from "@/components/ui";
 import { loadSection, saveSection, sameSection, type Section } from "@/lib/nav";
 import { initDevicetree } from "@/lib/zmkParser";
@@ -58,6 +60,8 @@ class SectionErrorBoundary extends Component<{ section: string; children: ReactN
 }
 
 export default function App() {
+  // Renew the native capture lease across every section, including the tray window.
+  useEffect(() => nativeRemapping.startHeartbeat(), []);
   const registry = useRegistryStore();
   const [section, setSection] = useState<Section | null>(null);
   const [pending, setPending] = useState<Section | null>(null);
@@ -148,8 +152,13 @@ export default function App() {
       if (k === 'z') {
         const t = e.target as HTMLElement | null;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-        // only the ZMK keymap editor has undo; elsewhere leave the key alone
+        // Dispatch history to the active editor; leave other sections' shortcuts alone.
         const cur = sectionRef.current;
+        if (cur?.kind === 'karabiner') {
+          e.preventDefault();
+          if (e.shiftKey) useKarabinerStore.getState().redo(); else useKarabinerStore.getState().undo();
+          return;
+        }
         const kb = cur?.kind === 'keyboard' ? registryRef.current.keyboards.find(k => k.id === cur.id) : null;
         if (kb?.firmware !== 'zmk') return;
         e.preventDefault();
@@ -199,7 +208,7 @@ export default function App() {
                 section.kind === 'karabiner' ? <KarabinerEditor /> :
                 section.kind === 'mouse' ? <Mouse /> :
                 section.kind === 'settings' ? <Settings key={section.n ?? 0} startAdd={section.add} startEdit={section.edit} onAdded={(id) => go({ kind: 'keyboard', id })} /> :
-                <Onboarding onStart={(tab) => go({ kind: 'settings', add: tab })} />}
+                <Onboarding onStart={(tab) => go({ kind: 'settings', add: tab })} onMacBook={() => go({ kind: 'karabiner' })} />}
             </div>
           </SectionErrorBoundary>
         </Suspense>

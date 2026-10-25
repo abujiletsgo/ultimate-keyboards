@@ -6,6 +6,7 @@ mod device;
 mod build;
 mod newconfig;
 mod mouse_engine;
+mod native_remapping;
 
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
@@ -244,6 +245,7 @@ fn set_dirty(state: State<AppState>, dirty: bool) {
 fn request_quit(app: &tauri::AppHandle) {
     let dirty = *app.state::<AppState>().dirty.lock().unwrap();
     if !dirty {
+        native_remapping::stop_on_exit();
         app.exit(0);
         return;
     }
@@ -263,6 +265,7 @@ fn request_quit(app: &tauri::AppHandle) {
         .show(move |confirmed| {
             if confirmed {
                 *handle.state::<AppState>().dirty.lock().unwrap() = false;
+                native_remapping::stop_on_exit();
                 handle.exit(0);
             }
         });
@@ -348,6 +351,13 @@ pub fn run() {
             set_builtin_keyboard_disabled,
             set_dirty,
             install_karabiner_rules,
+            native_remapping::native_remapping_status,
+            native_remapping::native_remapping_refresh_permissions,
+            native_remapping::native_remapping_apply,
+            native_remapping::native_remapping_disable,
+            native_remapping::native_remapping_install,
+            native_remapping::native_remapping_open_settings,
+            native_remapping::native_remapping_activate_driver,
             device::list_usb_keyboards,
             device::serial_open,
             device::serial_write,
@@ -373,6 +383,7 @@ pub fn run() {
             newconfig::push_initial_config
         ])
         .setup(|app| {
+            native_remapping::start_heartbeat();
             // ── Status-bar (menu-bar) item ──────────────────────────────────
             let toggle_item =
                 CheckMenuItemBuilder::with_id("toggle_builtin", "Disable built-in keyboard")
@@ -485,6 +496,14 @@ pub fn run() {
                 }
             }
 
+            // The native setup package registers the app for login so the
+            // authenticated service lease remains alive without an editor window.
+            if std::env::args().any(|arg| arg == "--native-background") {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+
             #[cfg(debug_assertions)]
             {
                 let window = app.get_webview_window("main").unwrap();
@@ -512,6 +531,7 @@ pub fn run() {
                     return;
                 }
                 // Never leave the user with a dead keyboard.
+                native_remapping::stop_on_exit();
                 let _ = set_builtin_state(app, false);
             }
         });

@@ -62,24 +62,25 @@ export function supportMatrix(): SupportGroup[] {
     {
       title: 'Build & flash',
       rows: [
-        { feature: 'GitHub Actions firmware builds', level: 'yes', note: 'Run list and artifact download through your own `gh` login.' },
+        { feature: 'GitHub Actions firmware builds', level: 'yes', note: 'Requires a separately installed GitHub CLI (`gh`) and your own GitHub login; this is not a self-contained local build tool.' },
         { feature: 'Flash a UF2 to a half in bootloader', level: 'yes', note: 'Waits for the drive and copies the file.' },
-        { feature: 'git commit / push from the app', level: 'no', note: 'Commit in your usual git tool; the Build tab shows uncommitted changes.' },
+        { feature: 'Commit / push existing config edits from the app', level: 'no', note: 'Commit in your usual git tool; the Build tab shows uncommitted changes.' },
       ],
     },
     {
       title: 'This Mac',
       rows: [
-        { feature: 'Karabiner-Elements rules', level: 'yes', note: 'Remaps, combos, layers, homerow mods for the built-in keyboard. Needs Karabiner-Elements installed.' },
+        { feature: 'Native MacBook remapping', level: 'partial', note: 'Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no Karabiner-Elements app required. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending.' },
+        { feature: 'Karabiner-Elements compatibility export', level: 'yes', note: 'Optional JSON export for an existing Karabiner-Elements setup. Saved rules are preserved; the native flow does not require that app.' },
         { feature: 'Scroll engine for wheel mice', level: 'yes', note: 'Reverse direction and speed. Needs Accessibility permission.' },
-        { feature: 'Turn off the built-in keyboard', level: 'yes', note: 'Restored automatically if the app crashes.' },
+        { feature: 'Turn off the built-in keyboard', level: 'yes', note: 'Restored when the app quits normally, or on its next launch after a crash.' },
       ],
     },
     {
       title: 'Platform',
       rows: [
-        { feature: 'macOS 12+ (Apple silicon)', level: 'yes', note: 'Builds are not signed yet: macOS asks again for Documents and Accessibility access after each update.' },
-        { feature: 'Automatic updates', level: 'partial', note: 'Settings › Updates checks GitHub Releases and verifies each download with the release signing key. Works once signed releases are published.' },
+        { feature: 'macOS 13+ (Apple silicon native product)', level: 'yes', note: 'Development previews are not commercial notarized releases. Public distribution requires a Developer ID-signed and notarized complete installer.' },
+        { feature: 'Complete-installer updates', level: 'partial', note: 'Native releases open the release page for the complete installer, updating app and keyboard service together. Requires a published release; app-only in-app updates are disabled for native versions.' },
         { feature: 'Windows / Linux / web', level: 'no', note: 'Not in version 1.' },
       ],
     },

@@ -3,6 +3,32 @@
 All notable changes are listed here. Versions follow [Semantic Versioning](https://semver.org).
 The release workflow uses the section for a version as that release's notes.
 
+## [0.3.0] — Native remapping preview (unreleased)
+
+### Added
+
+- Searchable MacBook symbol choices, including **+ · plus**, that save the required US ANSI keycode and Shift modifier and display the symbol on the keymap.
+- Native keyboard service and deterministic engine for built-in-keyboard remaps, combos, layers, and home-row mods. Karabiner-Elements export remains optional.
+- Bundled setup for the standalone signed virtual-HID driver and our signed helper, with compatible-driver reuse, explicit activation and permission steps, apply/stop controls, and background lease recovery.
+- A combined application/helper/driver installer, with signed-app validation, an app-close requirement, and a separate in-app repair package.
+- Native profile export, bounded authenticated service IPC, driver/readiness diagnostics, and engine/service/packaging checks.
+- Native layer timing controls: immediate momentary layers, balanced tap/hold, fast chords, and timer-only compatibility behavior.
+- MacBook Keymap now shares the keyboard Keymap's board, layer strip, legend and card layout, with contextual layer edits, Base fallback indicators and compact native controls.
+- MacBook and split keyboards use the same binding editor, searchable picker, semantic key styles, toolbar and layer controls. MacBook profiles support real Save/Revert, retained drafts, layer management and bounded Undo/Redo; native activation is separate in Remapping.
+
+### Fixed
+
+- Native helper updates wait for launchd to remove the stopped job before starting it, then verify the new running job and listening endpoint. This fixes an installer race that left the app copied but the remapper unavailable.
+- Choosing an existing keyboard's config folder now grants recursive access to nested keymap and pointing files.
+- MacBook key previews keep readable labels and bright combo colours, with shared-key colours and clear hover/focus outlines.
+- Native setup preserves the standard installer component layout and checks actual PackageKit admission. Permission setup uses the helper's own app identity, with explicit service refresh after approval.
+- Active keyboard processing wakes on input instead of adding a fixed sleep after each pass; layer chords can resolve before the hold fallback while home-row timing stays unchanged.
+- Shared binding popups focus correctly after placement and handle nested picker Escape/Tab without closing or trapping the wrong dialog.
+
+### Verification boundary
+- Native remapping needs macOS 13+, admin installation, driver approval and Input Monitoring. Fn/media are pass-through only; Fn remapping is not supported.
+- Live capture, secure input, sleep/wake and driver-loss acceptance must be verified on an approved installation. Development artifacts are not notarized public releases.
+
 ## [0.2.0] — 2026-09-25
 
 First public-ready release.

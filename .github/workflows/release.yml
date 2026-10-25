@@ -1,6 +1,6 @@
-name: Release
-# Push a tag like v0.2.0 (matching tauri.conf.json "version") to build, sign the
-# updater artifacts, and publish a GitHub Release with latest.json.
+name: Legacy app-only release
+# Historical pre-0.3 tag publication. Updater artifacts are conditional on a configured key.
+# Native products use scripts/build-commercial-release.py; this job refuses 0.3+.
 on:
   push:
     tags: ['v*']
@@ -11,6 +11,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Native release prerequisite
+        run: |
+          echo 'Native remapping releases require the signed and notarized native build pipeline.'
+          echo 'Use scripts/build-commercial-release.py --preflight; see docs/release/standalone-macos.md.'
+          echo 'The legacy release job cannot publish a 0.3+ app without its bundled helper installer.'
+          python3 -c "import json,sys; v=json.load(open('package.json'))['version']; sys.exit(1 if tuple(map(int,v.split('.')[:2])) >= (0,3) else 0)"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest

@@ -14,7 +14,9 @@ import type { KeyboardDef } from '@/lib/registry/types'
 import SplitKeyboard from '@/components/ZMKEditor/SplitKeyboard'
 import ComboEditor from '@/components/ZMKEditor/ComboEditor'
 import { ConfirmBanner, useToast } from '@/components/ui'
-import { Undo2, Redo2, ImageDown } from 'lucide-react'
+import { ImageDown } from 'lucide-react'
+import KeymapActionBar from './KeymapActionBar'
+import LayerControls from './LayerControls'
 import { save as saveDialog } from '@tauri-apps/plugin-dialog'
 import { downloadDir, join } from '@tauri-apps/api/path'
 import { keymapToSvg } from '@/lib/export/svg'
@@ -57,11 +59,6 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   const { keymap, filePath, isDirty, setKeymap, updateLayerKey, selectedLayer, setSelectedLayer, addLayer, renameLayer, deleteLayer, layerReferences, undo, redo, past, future } = useZMKStore()
   const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
-  const [renameError, setRenameError] = useState<string | null>(null)
-  const [addingLayer, setAddingLayer] = useState(false)
-  const [newLayerName, setNewLayerName] = useState('')
-  const [renamingLayer, setRenamingLayer] = useState(false)
-  const [renameValue, setRenameValue] = useState('')
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasBackup, setHasBackup] = useState(false)
@@ -177,31 +174,14 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={keyboard.keymapPath}>
-          {keyboard.keymapPath.split('/').pop()}
-        </span>
-        {isDirty && (
-          <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>Unsaved</span>
-        )}
-        {!editable && (
-          <span className="tag" title="See the compatibility notes below">Read-only</span>
-        )}
-        <button className="btn btn-primary btn-sm" onClick={onSave} disabled={!isDirty || !editable}>Save</button>
-        {hasBackup && (
-          <button className="btn btn-secondary btn-sm" onClick={onRestore} title="Put back the version saved before the last write (.bak)">
-            Restore backup
-          </button>
-        )}
-        <span style={{ flex: 1 }} />
-        <button className="btn btn-ghost btn-sm" onClick={exportSvg} title="Export every layer as an SVG picture"><ImageDown size={13} /> SVG</button>
-        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Undo" title="Undo (⌘Z)" disabled={past.length === 0 || !editable} onClick={undo}><Undo2 size={13} /></button>
-        <button className="btn btn-ghost btn-sm btn-icon" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={future.length === 0 || !editable} onClick={redo}><Redo2 size={13} /></button>
-        {isDirty && (
-          <button className="btn btn-ghost btn-sm" title="Discard unsaved edits and reload from disk" onClick={() => { useZMKStore.getState().setDirty(false); load() }}>Revert</button>
-        )}
-      </div>
+      <KeymapActionBar
+        label={<span className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={keyboard.keymapPath}>{keyboard.keymapPath.split('/').pop()}</span>}
+        dirty={isDirty} editable={editable} canUndo={past.length > 0} canRedo={future.length > 0}
+        onSave={onSave} onUndo={undo} onRedo={redo}
+        onRevert={() => { useZMKStore.getState().setDirty(false); load() }} revertTitle="Discard unsaved edits and reload from disk"
+        afterSave={hasBackup && <button className="btn btn-secondary btn-sm" onClick={onRestore} title="Put back the version saved before the last write (.bak)">Restore backup</button>}
+        extraActions={<button className="btn btn-ghost btn-sm" onClick={exportSvg} title="Export every layer as an SVG picture"><ImageDown size={13} /> SVG</button>}
+      />
 
       {confirmDelete !== null && keymap.layers[confirmDelete] && (() => {
         const refs = layerReferences(confirmDelete)
@@ -253,69 +233,24 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
 
       {view === 'keymap' ? (
         <>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginRight: 4 }}>Layer:</span>
-            <div className="seg-ctrl" role="tablist" aria-label="Layers" style={{ flexWrap: 'wrap' }}>
-              {keymap.layers.map((layer, idx) => (
-                <button
-                  key={layer.name}
-                  role="tab"
-                  aria-selected={selectedLayer === idx}
-                  className={`seg-btn${selectedLayer === idx ? ' active' : ''}`}
-                  onClick={() => setSelectedLayer(idx)}
-                  title={`Layer ${idx} — ${layer.name}`}
-                >
-                  <span style={{ fontSize: 9.5, fontFamily: 'var(--font-mono)', fontWeight: 700, opacity: selectedLayer === idx ? 0.9 : 0.45, marginRight: 5 }}>{idx}</span>
-                  {layer.displayName ?? layer.name}
-                </button>
-              ))}
-            </div>
-            {editable && (addingLayer ? (
-              <form style={{ display: 'flex', gap: 6, alignItems: 'center' }} onSubmit={e => {
-                e.preventDefault()
-                const name = newLayerName.trim().replace(/[^\w+]/g, '_')
-                if (!name) return
-                if (keymap.layers.some(l => l.name === name || l.displayName === name)) { flash(`Layer "${name}" already exists`, false); return }
-                const idx = addLayer(name)
-                if (idx >= 0) flash(`Layer ${idx} "${name}" created — all keys transparent`, true)
-                setNewLayerName(''); setAddingLayer(false)
-              }}>
-                <input autoFocus value={newLayerName} onChange={e => setNewLayerName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Escape') { setAddingLayer(false); setNewLayerName('') } }}
-                  placeholder="layer_name" style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }} />
-                <button type="submit" className="btn btn-primary btn-sm">Create</button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setAddingLayer(false); setNewLayerName('') }}>Cancel</button>
-              </form>
-            ) : renamingLayer ? (
-              <form style={{ display: 'flex', gap: 6, alignItems: 'center' }} onSubmit={e => {
-                e.preventDefault()
-                const name = renameValue.trim().replace(/[^\w+]/g, '_')
-                if (!name) return
-                const err = renameLayer(selectedLayer, name)
-                if (err) { setRenameError(err); return }
-                setRenameError(null)
-                flash(`Renamed to "${name}"`)
-                setRenamingLayer(false); setRenameValue('')
-              }}>
-                <input autoFocus value={renameValue} onChange={e => { setRenameValue(e.target.value); setRenameError(null) }}
-                  aria-invalid={!!renameError} aria-describedby={renameError ? 'rename-error' : undefined}
-                  onKeyDown={e => { if (e.key === 'Escape') { setRenamingLayer(false); setRenameValue(''); setRenameError(null) } }}
-                  placeholder="new_name" style={{ width: 130, height: 26, fontSize: 12, fontFamily: 'var(--font-mono)' }} />
-                {renameError && <span id="rename-error" role="alert" style={{ fontSize: 11, color: 'var(--danger)' }}>{renameError}</span>}
-                <button type="submit" className="btn btn-primary btn-sm">Rename</button>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRenamingLayer(false); setRenameValue('') }}>Cancel</button>
-              </form>
-            ) : (
-              <>
-                <button className="btn btn-secondary btn-sm" onClick={() => setAddingLayer(true)} title="Add a new empty layer">+ Layer</button>
-                <button className="btn btn-ghost btn-sm" title={`Rename layer ${selectedLayer}`} onClick={() => {
-                  setRenameValue(keymap.layers[selectedLayer]?.displayName ?? keymap.layers[selectedLayer]?.name ?? '')
-                  setRenamingLayer(true)
-                }}>Rename</button>
-                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} title={`Delete layer ${selectedLayer} (blocked if referenced)`} onClick={() => setConfirmDelete(selectedLayer)}>Delete</button>
-              </>
-            ))}
-          </div>
+          <LayerControls
+            layers={keymap.layers.map((layer, index) => ({ key: layer.name, name: layer.displayName ?? layer.name, title: `Layer ${index} — ${layer.name}` }))}
+            selected={selectedLayer} onSelect={setSelectedLayer} editable={editable}
+            normalizeName={name => name.trim().replace(/[^\w+]/g, '_')}
+            onAdd={name => {
+              if (keymap.layers.some(layer => layer.name === name || layer.displayName === name)) return `Layer "${name}" already exists`
+              const index = addLayer(name)
+              if (index < 0) return 'Could not create layer'
+              flash(`Layer ${index} "${name}" created — all keys transparent`)
+              return null
+            }}
+            onRename={name => {
+              const error = renameLayer(selectedLayer, name)
+              if (!error) flash(`Renamed to "${name}"`)
+              return error
+            }}
+            onDelete={() => setConfirmDelete(selectedLayer)}
+          />
 
           <div className="glass anim-fade-up" style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>

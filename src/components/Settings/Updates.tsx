@@ -1,14 +1,13 @@
-/**
- * Settings › Updates. Checks GitHub Releases through tauri-plugin-updater;
- * the download is verified against the release signing key compiled into the
- * app before it is installed. The check runs when this page opens and on
- * the button; nothing is downloaded without the user's click.
+/** Native releases use the complete installer so app/service versions stay together.
+ * The legacy app-only updater is restricted to pre-native versions on both ends.
  */
 import { useEffect, useState } from 'react'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { IS_TAURI } from '@/lib/io'
 import { isAnyDirty as hasUnsavedChanges } from '@/lib/dirty'
+import { openGithub } from '@/lib/openUrl'
+import { COMPLETE_INSTALLER_RELEASES_URL, requiresCompleteInstaller, appOnlyUpdateAllowed } from '@/lib/updatePolicy'
 import { ErrorPanel } from '@/components/ui'
 
 type State =
@@ -31,8 +30,15 @@ function friendly(e: unknown): string {
 
 export default function Updates() {
   const [state, setState] = useState<State>({ kind: 'idle' })
+  const completeInstaller = requiresCompleteInstaller(__APP_VERSION__)
+  const [downloadError, setDownloadError] = useState('')
+  const openInstallerDownloads = async () => {
+    setDownloadError('')
+    try { await openGithub(COMPLETE_INSTALLER_RELEASES_URL) } catch (error) { setDownloadError(`Could not open installer downloads: ${error}`) }
+  }
 
   const run = async () => {
+    if (completeInstaller) return
     setState({ kind: 'checking' })
     try {
       const u = await check()
@@ -45,6 +51,10 @@ export default function Updates() {
   }
 
   const install = async (u: Update) => {
+    if (!appOnlyUpdateAllowed(__APP_VERSION__, u.version)) {
+      setState({ kind: 'error', message: 'This update requires the complete installer to update the app and keyboard service together.' })
+      return
+    }
     let done = 0, total: number | null = null
     setState({ kind: 'downloading', done, total })
     try {
@@ -57,9 +67,20 @@ export default function Updates() {
     } catch (e) { setState({ kind: 'error', message: friendly(e) }) }
   }
 
-  useEffect(() => { if (IS_TAURI) run() }, [])
+  useEffect(() => { if (IS_TAURI && !completeInstaller) run() }, [])
 
   if (!IS_TAURI) return <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Updates are available in the desktop app.</p>
+
+  if (completeInstaller) return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+      <span>Installed version <strong className="mono">{__APP_VERSION__}</strong></span>
+      <p>Use the complete Ultimate Keyboards installer to update the app and keyboard service together.</p>
+      <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>Open the release page and download its complete native installer. Save your changes and quit Ultimate Keyboards before running it. macOS will request any required administrator or driver approvals.</p>
+      <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={openInstallerDownloads}>Open complete installer downloads</button>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>This page does not check whether your version is the latest. If no release is published, an update is not available here yet.</p>
+      {downloadError && <div role="alert" style={{ color: 'var(--danger)' }}>{downloadError}</div>}
+    </div>
+  )
 
   const pct = state.kind === 'downloading' && state.total ? Math.round((state.done / state.total) * 100) : null
   return (
@@ -73,13 +94,15 @@ export default function Updates() {
       </div>
       <div role="status" aria-live="polite">
         {state.kind === 'current' && <span style={{ color: 'var(--success)' }}>You have the latest version.</span>}
-        {state.kind === 'none' && <span style={{ color: 'var(--text-muted)' }}>No release has been published yet. This is the newest build.</span>}
+        {state.kind === 'none' && <span style={{ color: 'var(--text-muted)' }}>No published update was found. This does not confirm that your build is the latest.</span>}
         {state.kind === 'available' && (
           <div className="panel-inset" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div><strong>Version {state.update.version}</strong> is available{state.update.date ? ` (${state.update.date.slice(0, 10)})` : ''}.</div>
             {state.update.body && <div style={{ whiteSpace: 'pre-wrap', color: 'var(--text-secondary)', fontSize: 12, maxHeight: 160, overflow: 'auto' }}>{state.update.body}</div>}
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>This build is not signed by Apple yet, so macOS asks again for Documents and Accessibility access after the update.</div>
-            <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => install(state.update)}>Download and install</button>
+            {appOnlyUpdateAllowed(__APP_VERSION__, state.update.version)
+              ? <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => install(state.update)}>Download and install</button>
+              : <><p>Use the complete installer to update the app and keyboard service together.</p><button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={openInstallerDownloads}>Open complete installer downloads</button>{downloadError && <div role="alert">{downloadError}</div>}</>}
+
           </div>
         )}
         {state.kind === 'downloading' && <span>Downloading{pct !== null ? ` ${pct}%` : '…'}</span>}

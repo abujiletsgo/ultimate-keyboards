@@ -1,0 +1,2043 @@
+{
+  "source": "https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice",
+  "tag": "v8.6.0",
+  "commit": "9036bc771259ff8d61341f4d1b7072b954fdb2fa",
+  "files": [
+    {
+      "path": "pqrs/karabiner/driverkit/client_protocol_version.hpp",
+      "sha256": "710b98ae5910cc5206f00ec5dd7a1fbbedf88ca02c24028a85e3d39c039734a8"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/driver_version.hpp",
+      "sha256": "b1923d13b3a57592152f038504ea8d258b89ed85b21dfa9beeb95ae0bb8a45f6"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/apple_vendor_keyboard_input.hpp",
+      "sha256": "40633c39851c75ac87c90a0676836b3ce21c31262d7eb1ca9797e5f307b916f1"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/apple_vendor_top_case_input.hpp",
+      "sha256": "257e8f64d1717473ed50edd1c786a40f2844c9187ecd15f77bd4a0b64776b66b"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/buttons.hpp",
+      "sha256": "06be244cec3ae8ee7738d67b2184daf79c69b280ef6c00ba48746b4dbb42327e"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/consumer_input.hpp",
+      "sha256": "f3b35c79bd66f7b90dc6af5433a296abf90388d2e11e84aaa46ff9acc1ad8fb2"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/generic_desktop_input.hpp",
+      "sha256": "f9bfa949371182e6b91af2af8d0840ed4b1b910ff95d52b1bbe52cf47a794c7d"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/keyboard_input.hpp",
+      "sha256": "10c8c7bd5e28bdce356e7814014f042b26f1a8f3802507c2865fb72327d91424"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/keys.hpp",
+      "sha256": "0b0d26fcaa2ded52b2beba023de595bfa048f603ab9775e7e8b482c4be998f4a"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/modifier.hpp",
+      "sha256": "bbd06082e8a65fd9b733f8b7eb5e8f4bf0936e661704d6ee04b1a216717cf216"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/modifiers.hpp",
+      "sha256": "4e4730d250028f286a0e5ea06d40d0c1e4d93b8b553784fbda0ea1d5fd1163be"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/hid_report/pointing_input.hpp",
+      "sha256": "9509cead32b19f123f44768d144ac55dc3d4ec9ff2d7f510298bf01c7d427cf3"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver/user_client_method.hpp",
+      "sha256": "6160ba0fb480cc06f04e5973c16c7163928f23062d04031eca29368de27e3530"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_driver.hpp",
+      "sha256": "0db20a520b8eb7349b6b24f06af94164eec5036233eb226b6c22e1489f09becf"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service/client.hpp",
+      "sha256": "25ce596b2208292e40a6b63b3c2d1093b5ffbaab76065ea6f1398d4ef53ecfa3"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service/constants.hpp",
+      "sha256": "f48c373d0795fde6bb78de56d201a92cf78bc25372e30586e4593a560f58fb16"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service/parameters.hpp",
+      "sha256": "75c0924545277c41ceaed735692c649d73079330bf2c394131b58ad6d9518b89"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service/request.hpp",
+      "sha256": "83a0e83865f6e892f6148aa75754dcb592e0ad29acc449c286dfe4a47a0d1daa"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service/response.hpp",
+      "sha256": "461b48016358affdbb4250e5f35d848ed6c964e4afa2a355d935a4e8214bf2ca"
+    },
+    {
+      "path": "pqrs/karabiner/driverkit/virtual_hid_device_service.hpp",
+      "sha256": "66fb5340645ab1e1a98dc7e3cdac3c18823d381b1b924a72a5a3dccfb96f64be"
+    },
+    {
+      "path": "asio/any_completion_executor.hpp",
+      "sha256": "30513b0e409f70030865fac0578e438da087a443328e904850b64ffa2b594253"
+    },
+    {
+      "path": "asio/any_completion_handler.hpp",
+      "sha256": "1e4c70f39ca9822e563f17d63e91ef8ebf5e647f0ba79cf633d4562fbdde3628"
+    },
+    {
+      "path": "asio/any_io_executor.hpp",
+      "sha256": "54abf0722f7583f0a941c963f8e8981d9600ee41ca4e99e1f5fa60c616ac3ad5"
+    },
+    {
+      "path": "asio/append.hpp",
+      "sha256": "e704f7270b86a3c808c09467e233441ab656d6601d067d8740457f59b1f60fe0"
+    },
+    {
+      "path": "asio/as_tuple.hpp",
+      "sha256": "f316ff807e14f34bd1a4d194d8f3f02ce92c7457c37f5253986050732e2066d1"
+    },
+    {
+      "path": "asio/associated_allocator.hpp",
+      "sha256": "1666351aa2b4b7bece95c304bfd402474b8de934ebece4091a6671ea56d5a8be"
+    },
+    {
+      "path": "asio/associated_cancellation_slot.hpp",
+      "sha256": "a51c71cee695c7982fc7258315eea5c54581c95177c15b8cc22602d2238ad6b8"
+    },
+    {
+      "path": "asio/associated_executor.hpp",
+      "sha256": "c46e4dcd56edf0981ffb06a0f55fb8dfb0d2bdcf017fa927d5b0501e3659eee2"
+    },
+    {
+      "path": "asio/associated_immediate_executor.hpp",
+      "sha256": "867a9850fde9f635e724ca2ddd61608998bd4f16bb240e4f2610ade439aa23bd"
+    },
+    {
+      "path": "asio/associator.hpp",
+      "sha256": "09a054764a1366050ccf8eda7098b55b1eec4096e9c20a4d8ec436c3a974dfdb"
+    },
+    {
+      "path": "asio/async_result.hpp",
+      "sha256": "1a67597e6ad01467dedb9621287e760097fc7f275437981657c72959727ac93c"
+    },
+    {
+      "path": "asio/awaitable.hpp",
+      "sha256": "ec58100062a898b8eeb6b739447106cb7105a2b2519be64ff2ad7d3612305401"
+    },
+    {
+      "path": "asio/basic_datagram_socket.hpp",
+      "sha256": "d48c0b181f4ed3a09fac78427b90a9a102ab1a72ce713336140d44eb7a9fafcb"
+    },
+    {
+      "path": "asio/basic_file.hpp",
+      "sha256": "93593b09b05ccf26dc9cc9f27eaab67212d0fc968ab6c66b398c865e7082d62e"
+    },
+    {
+      "path": "asio/basic_io_object.hpp",
+      "sha256": "4faeb108aa866a4233f3aa9ca3286be136a6803ced3717c13dbf7671e8eb507a"
+    },
+    {
+      "path": "asio/basic_random_access_file.hpp",
+      "sha256": "9a50f74fccdc925679be24886dae361970ace5d1ef2d9f69c70f34adb161d1e3"
+    },
+    {
+      "path": "asio/basic_raw_socket.hpp",
+      "sha256": "944032f9cfbbb94c1251860d9f36d761fe41d29a211709d8a27ffcd209b7206e"
+    },
+    {
+      "path": "asio/basic_readable_pipe.hpp",
+      "sha256": "7c2d0015ded99c8b33a713124998342f45f0ca55bdd419b0b783dea1e91dc8c6"
+    },
+    {
+      "path": "asio/basic_seq_packet_socket.hpp",
+      "sha256": "d022133f633d3cd40e9997766a20ea045b8465b8ca1b62a8c790b361b7639924"
+    },
+    {
+      "path": "asio/basic_serial_port.hpp",
+      "sha256": "60bf17b16d3e3d5b6a7e64af0e6ee0ff9632f8b0cc203fba167ab70e57dfa144"
+    },
+    {
+      "path": "asio/basic_signal_set.hpp",
+      "sha256": "e3710c5f901c40e1c952ae922e744066614712e3a424c61a0cbfc91f00ee2bdd"
+    },
+    {
+      "path": "asio/basic_socket.hpp",
+      "sha256": "cca57c0e482d48a7b8d355da09c7655266f8231dfbec4c2f2af1341129950671"
+    },
+    {
+      "path": "asio/basic_socket_acceptor.hpp",
+      "sha256": "53a8eef4fefc017c14f2709adf87503fb10522a0c52fa1f9dd9583990368aafb"
+    },
+    {
+      "path": "asio/basic_socket_iostream.hpp",
+      "sha256": "0732d293f70cab8444e91f2a5dd1dfeb21931a438c7b66d28cc2ab305e2685b7"
+    },
+    {
+      "path": "asio/basic_socket_streambuf.hpp",
+      "sha256": "5a11697734b3825ba633717ec5c8cb911dc1e17626bb89130788b6cc2dc12737"
+    },
+    {
+      "path": "asio/basic_stream_file.hpp",
+      "sha256": "32768a281aeb6d2eef73c8481efc8fb7f60e8bced174e213601a42ce414cf176"
+    },
+    {
+      "path": "asio/basic_stream_socket.hpp",
+      "sha256": "341f1fdcce77fca14c391697016a91851bbb87f2aa2cf8de03fd31e6f53fc775"
+    },
+    {
+      "path": "asio/basic_streambuf.hpp",
+      "sha256": "86af34fd89a71e968f97c029011d83647bbac66ca0d568508b15aea4159e4eab"
+    },
+    {
+      "path": "asio/basic_streambuf_fwd.hpp",
+      "sha256": "4edbe9c449d56ed0bef37fa6b255f38238053e94a280d1dfe71aff90b4bc4622"
+    },
+    {
+      "path": "asio/basic_waitable_timer.hpp",
+      "sha256": "66991c51b1c9e0f20cfc224f3e46770e8127d3d8d209205f3d5bb4a0cffc090a"
+    },
+    {
+      "path": "asio/basic_writable_pipe.hpp",
+      "sha256": "33b0e8bab33671a6f4ff5122048482695f9d6132bfa9146a801e9c0f84588868"
+    },
+    {
+      "path": "asio/bind_allocator.hpp",
+      "sha256": "f61b210b292d6e70daae0f19856a5ca0054509b20a7cf74ab1dbc1380d770d37"
+    },
+    {
+      "path": "asio/bind_cancellation_slot.hpp",
+      "sha256": "9279e6d9f3ab2527733ce3357bb4e61e81804df8e867fd5fea5e190d4083cf8b"
+    },
+    {
+      "path": "asio/bind_executor.hpp",
+      "sha256": "e1c1e413370bc5817feab42b5b6daa9934178c06a846ff6a26f0266b19dd7355"
+    },
+    {
+      "path": "asio/bind_immediate_executor.hpp",
+      "sha256": "8488321949e097a79e04b231692d7d9d2d191d1623c3ce9eb64bddbb50f39d23"
+    },
+    {
+      "path": "asio/buffer.hpp",
+      "sha256": "05f2cd0590ce4b5970cb8bd9937a54c8726b653069f06557e57537e1857c28c5"
+    },
+    {
+      "path": "asio/buffer_registration.hpp",
+      "sha256": "c7815ddf7afc295912d0c5fb3d8109bb82c9761c251a90fe347ab373dca26076"
+    },
+    {
+      "path": "asio/buffered_read_stream.hpp",
+      "sha256": "bc6cabb6ec2200cc5be2ec041e94573a82d4d6b7887fadfb5eb91179ccbd5a50"
+    },
+    {
+      "path": "asio/buffered_read_stream_fwd.hpp",
+      "sha256": "36956dffd52b8e7ed4dd25ae34380783c654cd4908cf0ce32ae36e9a327693c0"
+    },
+    {
+      "path": "asio/buffered_stream.hpp",
+      "sha256": "0a2d7fd897a93311bc8ea8394d0f4d9ed4f8d1a4ef7a2f88773fbc9e60754d45"
+    },
+    {
+      "path": "asio/buffered_stream_fwd.hpp",
+      "sha256": "5700274217d543a4c9152a148914fca16b4c9148754f38ed7b556ad0d6a3851d"
+    },
+    {
+      "path": "asio/buffered_write_stream.hpp",
+      "sha256": "a1a8abc09a0ecdc281b928adeb27a6df5ed65d76257951aa6550fff3f6039869"
+    },
+    {
+      "path": "asio/buffered_write_stream_fwd.hpp",
+      "sha256": "f460b4c6c31eb4894dba3fadf2ef33d8f6b6f4468d297bf6eae6fb93a00eb58b"
+    },
+    {
+      "path": "asio/buffers_iterator.hpp",
+      "sha256": "ba71f413ba4d05da36af2a6c154642200a419bc35ba3e02f2dc11819eaca9b78"
+    },
+    {
+      "path": "asio/cancel_after.hpp",
+      "sha256": "cd7c45f75de67813c5f89edcf46e1f8f8cd17b663a4050345a9013b69d5829bd"
+    },
+    {
+      "path": "asio/cancel_at.hpp",
+      "sha256": "14919e746a801205fe264055fdaebd903179c4a87e963884b91eec21b11f929f"
+    },
+    {
+      "path": "asio/cancellation_signal.hpp",
+      "sha256": "c31166013311a0b379856913f89e2351d1a3ad574d137109b765aa3ed0cd5cf6"
+    },
+    {
+      "path": "asio/cancellation_state.hpp",
+      "sha256": "54b42dc0f84ced9187afc532143e88205d850bf5dfc4db75eab22b4beceb11c3"
+    },
+    {
+      "path": "asio/cancellation_type.hpp",
+      "sha256": "cfe86781580543e99c7ba233278d83772cd618bdb0d5514c620446cea2ff4a1c"
+    },
+    {
+      "path": "asio/co_composed.hpp",
+      "sha256": "249465fdab5c425734ec7e5259a8d0d28bf77e8cffe4092f0e96be25ccd0a263"
+    },
+    {
+      "path": "asio/co_spawn.hpp",
+      "sha256": "0628c34bd3e619a40d6ec52203add499eb101bd433d1d08c41f4ee9fd0abe770"
+    },
+    {
+      "path": "asio/completion_condition.hpp",
+      "sha256": "8e44a709bf53706a70a30eadeb267736602f5a2c64613e8e96e739176a00a635"
+    },
+    {
+      "path": "asio/compose.hpp",
+      "sha256": "5269d8418ad5b1eca94e4ad416626cb6f8d2128279bd83a76bb38faeb5377884"
+    },
+    {
+      "path": "asio/composed.hpp",
+      "sha256": "42bbdda078696fd072f08242efff72a654fadd3f17720d534b501fc4a9775514"
+    },
+    {
+      "path": "asio/config.hpp",
+      "sha256": "ff76c66fe0b9140cad5ea61d4788c47415dcd580134f095f0d0e7357d735e62d"
+    },
+    {
+      "path": "asio/connect.hpp",
+      "sha256": "bef9d7fa5275ff2213d899de5b55f99f6dd9575b02afd4ce2d40032fa473d864"
+    },
+    {
+      "path": "asio/connect_pipe.hpp",
+      "sha256": "edd30df59ead944317761cf467828a08c99d97a76bde171eab32ac7649a40753"
+    },
+    {
+      "path": "asio/consign.hpp",
+      "sha256": "9658b17f33cf5bdbeb64cbefa64554051937fdc515ad4c773a25e7b18659ace6"
+    },
+    {
+      "path": "asio/coroutine.hpp",
+      "sha256": "009421bf932c52f612408e8d267ec16fdfc440d42061d5adb1435406de278e5b"
+    },
+    {
+      "path": "asio/default_completion_token.hpp",
+      "sha256": "8e10ac34955a09f8759051260adc1195515f835eaab27879dcb9d07cc724970b"
+    },
+    {
+      "path": "asio/defer.hpp",
+      "sha256": "0bc14f5ea89a4f250617854123b39a881b8a971fb6aec39b2c78bf3477960a73"
+    },
+    {
+      "path": "asio/deferred.hpp",
+      "sha256": "c7723525a72fd047ab9979b19ecb3cff3d9b292d9e157380720269f6f04eb62d"
+    },
+    {
+      "path": "asio/detached.hpp",
+      "sha256": "8a9d8eee2d67dca906584d81dc10965debf6b341c2b30c300cc312b972f7bfc5"
+    },
+    {
+      "path": "asio/detail/array.hpp",
+      "sha256": "2ecbd63e526106dd2af5a6e418988d383134b5fed4b316d66a10393ae6c03523"
+    },
+    {
+      "path": "asio/detail/array_fwd.hpp",
+      "sha256": "abaafc6ab45686942569add1a415521dfa44328280c92f21b22f857c240ed189"
+    },
+    {
+      "path": "asio/detail/assert.hpp",
+      "sha256": "89c4db7546068fb996f211b27a53a32f31db9ae1646ce096e471215ea67e947e"
+    },
+    {
+      "path": "asio/detail/atomic_count.hpp",
+      "sha256": "3a6b013c99519c4ffad4a201a5ab4215ff95f2e186fde0098ad4b4e47b1b2744"
+    },
+    {
+      "path": "asio/detail/atomic_slim_mutex.hpp",
+      "sha256": "6714fdf33aaddedb79dc2163ae247f31b5fc67703565fe9094db912848e04839"
+    },
+    {
+      "path": "asio/detail/base_from_cancellation_state.hpp",
+      "sha256": "2e1e16f14e722aa14cf7430c0bc4eb70bd50b8da925bbb1e27eee25b7dc4df5b"
+    },
+    {
+      "path": "asio/detail/base_from_completion_cond.hpp",
+      "sha256": "e98ed615245d6e5c6a7335a92d76a72815f5e11562b8b60ec09c651229b13e95"
+    },
+    {
+      "path": "asio/detail/bind_handler.hpp",
+      "sha256": "4d3b424a594bfe524f1d62c9d7abc54cdcc80ce428dff2fe8c6c0f68a89b1f99"
+    },
+    {
+      "path": "asio/detail/blocking_executor_op.hpp",
+      "sha256": "db8990b74aee6202778c5b806ac80eff9f7e8261f1c0f5393e8ef563124406f1"
+    },
+    {
+      "path": "asio/detail/buffer_resize_guard.hpp",
+      "sha256": "95ebc5b0127a615f7e94c49290b71b201cbd308c8b9c3d84172d13053b428037"
+    },
+    {
+      "path": "asio/detail/buffer_sequence_adapter.hpp",
+      "sha256": "66adb7accaed04e3c4c57bdef3b4212e8852ac6fe5499adc98909dffbb8417be"
+    },
+    {
+      "path": "asio/detail/buffered_stream_storage.hpp",
+      "sha256": "26c1f9ae9b19a464cf2864f5acc4e979d7b0aabaade884d88a6bdcc0926eb640"
+    },
+    {
+      "path": "asio/detail/call_stack.hpp",
+      "sha256": "d8d90b3eb7878b1aad30a75e190fac6e03ee8a1e4a4ca8a5650447aff14620ee"
+    },
+    {
+      "path": "asio/detail/chrono.hpp",
+      "sha256": "089b74b25315e616ed5b3fe70818e375c57b7d2f6d113a28a0faebdb816cbe6f"
+    },
+    {
+      "path": "asio/detail/chrono_time_traits.hpp",
+      "sha256": "8139fe324d403981b103aa56a11ec5e8ad35af1c07be92482108fa47cba791b5"
+    },
+    {
+      "path": "asio/detail/completion_handler.hpp",
+      "sha256": "082b429eeac7f94cc4e8e87a352073110211a1fad0dcbe6d6aea161153c47a79"
+    },
+    {
+      "path": "asio/detail/completion_message.hpp",
+      "sha256": "6917a64360613f7b63ec144716571f7aa54ac6d02818bca58e8bfcea15b8911e"
+    },
+    {
+      "path": "asio/detail/completion_payload.hpp",
+      "sha256": "060a39b792c8162c484e599be84727ecf2478f054035f5e37d67cb2a6160d054"
+    },
+    {
+      "path": "asio/detail/completion_payload_handler.hpp",
+      "sha256": "b1495398f2f84b783fd27ab3bae8db7120c411cec3b454788a256fa15b4a1b21"
+    },
+    {
+      "path": "asio/detail/composed_work.hpp",
+      "sha256": "6df5077d0b1be5748d204c74a9ca4f56f92bdceb538fa89723b1f48c6f0fd34b"
+    },
+    {
+      "path": "asio/detail/concurrency_hint.hpp",
+      "sha256": "c785f15954324b6b1fe05357aeb556d1b9158d4f57cccbd655a816b1c6c4c686"
+    },
+    {
+      "path": "asio/detail/conditionally_enabled_event.hpp",
+      "sha256": "e16fc28de76603528382e5c62458718140db2d80be9bbf473f5d0c505161f14c"
+    },
+    {
+      "path": "asio/detail/conditionally_enabled_mutex.hpp",
+      "sha256": "2740035296f06ef5d0eb09306ce831624cac77e593339d3c4362087b44429e21"
+    },
+    {
+      "path": "asio/detail/config.hpp",
+      "sha256": "1602ca05dc97acb2f800988ce25f89d0b0e4144c8a4945a84329ad24f30ef442"
+    },
+    {
+      "path": "asio/detail/consuming_buffers.hpp",
+      "sha256": "f838c56ce3f1d6eaef451fd43515f0a185815fd805309f7f4ed4cb0c01ffb60d"
+    },
+    {
+      "path": "asio/detail/cstddef.hpp",
+      "sha256": "2256c828b1cd1178e225829900e3488b9b9d0018a4ff308d72cef6341c27d5be"
+    },
+    {
+      "path": "asio/detail/cstdint.hpp",
+      "sha256": "992ed868638ce933d0d2556fbebdd543309e9cb5c4043ce000bf8387262fb123"
+    },
+    {
+      "path": "asio/detail/date_time_fwd.hpp",
+      "sha256": "fe2260bec4cb993f92a9bd5f0f576459db95742e44089188d1d2305e083ee03b"
+    },
+    {
+      "path": "asio/detail/deadline_timer_service.hpp",
+      "sha256": "f207a390c9c3a0b489c75f54d2b946a78b11f9aba94653877414c3329eb22aec"
+    },
+    {
+      "path": "asio/detail/dependent_type.hpp",
+      "sha256": "d17991be7d009712921dd3485976e00db408a7ce6925450af9659e3f0c0190f1"
+    },
+    {
+      "path": "asio/detail/descriptor_ops.hpp",
+      "sha256": "54eb9e6f001eaa0306daf1426201a99b2a6eec6167382fcc7ec03c6f3b5cd5af"
+    },
+    {
+      "path": "asio/detail/descriptor_read_op.hpp",
+      "sha256": "be889a6d9dc61110a16496cbe82a71d02b646bad921209aaca12f29fc13fd612"
+    },
+    {
+      "path": "asio/detail/descriptor_write_op.hpp",
+      "sha256": "62d35e3fbc3fc4fc8ca291e12bcbcf14ce12aee84426c92c50f2e9894f9acff7"
+    },
+    {
+      "path": "asio/detail/event.hpp",
+      "sha256": "ed24dc304351956fba0472c5269bf072a7054d946cbe076cb3c44a2592f6e028"
+    },
+    {
+      "path": "asio/detail/executor_function.hpp",
+      "sha256": "ddc02d7ff9745bb66c777e4f99878fe381d7832956daffd602bdad1dcac23528"
+    },
+    {
+      "path": "asio/detail/executor_op.hpp",
+      "sha256": "75f22bf8f34606271b217d33b1466ae1b6a0eff4855e5e3bf981cb76792aa7d4"
+    },
+    {
+      "path": "asio/detail/fenced_block.hpp",
+      "sha256": "bd696b4135d224835e082bca8dbb3c20e8dfab8e078818e928fa630b2502ca62"
+    },
+    {
+      "path": "asio/detail/functional.hpp",
+      "sha256": "33bb6eceac605d21ebe82c0ae4903b8590410c3fc6588f5a72a32c6ffdbe52c4"
+    },
+    {
+      "path": "asio/detail/future.hpp",
+      "sha256": "ced597bcdc5c3b6d0bcac17187018b61d96fe99ca87de63dea00518dc7052035"
+    },
+    {
+      "path": "asio/detail/global.hpp",
+      "sha256": "280d0f92355ccbe5bd833039e70ed751d8b55844b4c8eb1b14d2031a5a77561f"
+    },
+    {
+      "path": "asio/detail/handler_alloc_helpers.hpp",
+      "sha256": "024dd7acc151098c765f4861f517733d694afe05f91a0e312161727e764cfec9"
+    },
+    {
+      "path": "asio/detail/handler_cont_helpers.hpp",
+      "sha256": "39578b95f76381d5169abaed7d4782472c6cbd9c1951070a4a926829d01ffa3e"
+    },
+    {
+      "path": "asio/detail/handler_tracking.hpp",
+      "sha256": "df1b73bb3b58c3ce58191b64f32365b917f4d31df41943b148300648768507b8"
+    },
+    {
+      "path": "asio/detail/handler_type_requirements.hpp",
+      "sha256": "6470a94c49fe2528ad2e499fd482055d86bc1421025bf2b36fd174a99a71e99f"
+    },
+    {
+      "path": "asio/detail/handler_work.hpp",
+      "sha256": "3c51fbda9b97b0f8faa48c09b94aa557760ab547948db1baf24d10d23cc0224d"
+    },
+    {
+      "path": "asio/detail/impl/buffer_sequence_adapter.ipp",
+      "sha256": "3277e81d1e5ec5cc4a8e264234190c7619546fa14ef096fe9464630546678dee"
+    },
+    {
+      "path": "asio/detail/impl/descriptor_ops.ipp",
+      "sha256": "c604e63dfd0d4f5a18ddb8cfda87508297693bd52a09a1642e2e477611ca337b"
+    },
+    {
+      "path": "asio/detail/impl/handler_tracking.ipp",
+      "sha256": "871cc7bb3963506231a16e3394c376f8b1d9c2576e152c3c3a9b3b0079f855df"
+    },
+    {
+      "path": "asio/detail/impl/kqueue_reactor.hpp",
+      "sha256": "eccd5d62d8b8f4f2d8da4b81d0fd131ac7814094f6820b2c4ad58338ea2720e7"
+    },
+    {
+      "path": "asio/detail/impl/kqueue_reactor.ipp",
+      "sha256": "6787b4680d704a55f96eeb0d2c67080a7df8976ba9a7d8587a92313e2b282402"
+    },
+    {
+      "path": "asio/detail/impl/null_event.ipp",
+      "sha256": "11e2ae233565186fb70ca9fe74078559052120be76ff24b854d4a8bd712124df"
+    },
+    {
+      "path": "asio/detail/impl/pipe_select_interrupter.ipp",
+      "sha256": "b0b7840b09647df3b9c8c3c904a6b6d2458260a55ebd80b3241a6525d00dadc8"
+    },
+    {
+      "path": "asio/detail/impl/posix_event.ipp",
+      "sha256": "1adfd3cb5e27695eebacfc6bd98c8ced196f2c427c48071adf67d4465c141c0a"
+    },
+    {
+      "path": "asio/detail/impl/posix_mutex.ipp",
+      "sha256": "7f4a6573fb863290de2ec59783942cdd7eff07562119c5d3ebbb2e050d416b04"
+    },
+    {
+      "path": "asio/detail/impl/posix_serial_port_service.ipp",
+      "sha256": "c148f0e50db1adbfd97e463c7c098a51bb27ad05e8ec8defe03559f761960045"
+    },
+    {
+      "path": "asio/detail/impl/posix_thread.ipp",
+      "sha256": "c08e550335c657baa04cb5d8d6486bd8cd00754738de58e3e19c15e93ff95dea"
+    },
+    {
+      "path": "asio/detail/impl/reactive_descriptor_service.ipp",
+      "sha256": "3c40260dc3e33bf34ac017949dc75012468907c11843d680ef01d86d168a2ba7"
+    },
+    {
+      "path": "asio/detail/impl/reactive_socket_service_base.ipp",
+      "sha256": "66e470083b93544cbef237e8ed9027a1dceae562b7a0b28767f32c4ffaa09b76"
+    },
+    {
+      "path": "asio/detail/impl/resolver_service_base.ipp",
+      "sha256": "adb46df60520f6e2cf1f46af527d3146e76ae1825dd3fcbd7768a2734d6967e9"
+    },
+    {
+      "path": "asio/detail/impl/resolver_thread_pool.ipp",
+      "sha256": "b2f896adf35eb0ae85df98a9d47b486ae606aedb5c414e6c25ff53e5a4c1e844"
+    },
+    {
+      "path": "asio/detail/impl/scheduler.ipp",
+      "sha256": "c459d46f1dc61c99a7e75f067406bb3f06cbe0139b6fd6b3c53756ce407e4a98"
+    },
+    {
+      "path": "asio/detail/impl/service_registry.hpp",
+      "sha256": "ade853330d421213ad44b0eef331fd6ccd18c3f086ed86ff6b4293f73286bb1c"
+    },
+    {
+      "path": "asio/detail/impl/service_registry.ipp",
+      "sha256": "67e0949e7c4f3747a99eb1f1227280ffdccb29a9c84384429dc511a6c517e18c"
+    },
+    {
+      "path": "asio/detail/impl/signal_set_service.ipp",
+      "sha256": "9033e7a98b405d6962c3dd7db63b1660af02f01d2c71c23920a646f04f1eec5b"
+    },
+    {
+      "path": "asio/detail/impl/socket_ops.ipp",
+      "sha256": "50ad71f4af2924c2bf0e951e63a8dacb795307d9bb38e0154c69069eae6a578e"
+    },
+    {
+      "path": "asio/detail/impl/strand_executor_service.hpp",
+      "sha256": "1cdff024a046213ca304fd09eb0745014a2d06c18149c4cc732d37fb57c2b247"
+    },
+    {
+      "path": "asio/detail/impl/strand_executor_service.ipp",
+      "sha256": "f059288d8a235ceb46b52c96bade1fab17e72988e8960d67702b53708b549db1"
+    },
+    {
+      "path": "asio/detail/impl/strand_service.hpp",
+      "sha256": "3ceb6623d557379d6f24272aef936881451ed9a546dfe6ed3951fc36b85ee5b6"
+    },
+    {
+      "path": "asio/detail/impl/strand_service.ipp",
+      "sha256": "d9a76199302fb4d90388bf7388cea5b07e6fc941f680697819c2b904cade7f49"
+    },
+    {
+      "path": "asio/detail/impl/thread_context.ipp",
+      "sha256": "bd69dd9d90414aba47e3ef4135d4fd6348d606543f895330a5f31d4d368fb173"
+    },
+    {
+      "path": "asio/detail/impl/throw_error.ipp",
+      "sha256": "fd3d8436fd88782112e69d1abe8ffd939198ff0635fbfc07802d5eb0bb2e9b3f"
+    },
+    {
+      "path": "asio/detail/impl/timer_queue_set.ipp",
+      "sha256": "f42fcca9524b3d8b44c774fa506198b96951f50a7292048821af664f9a92405c"
+    },
+    {
+      "path": "asio/detail/initiate_defer.hpp",
+      "sha256": "806171d6db88962e645d5b8741d311978fa93e743d0cd1adfe1e8b3675543bcf"
+    },
+    {
+      "path": "asio/detail/initiate_dispatch.hpp",
+      "sha256": "6b63e1aa133cdd0968645dc2e1866222339b679badb878b2948ff61eded4ff7d"
+    },
+    {
+      "path": "asio/detail/initiate_post.hpp",
+      "sha256": "a8cef1d7067cd96ddd505d52086bec81bf59e13676bb53cb6e821bcd43107d12"
+    },
+    {
+      "path": "asio/detail/initiation_base.hpp",
+      "sha256": "139c44ad9ff7ca395fd356fc0f273d0de6d877a1865bf0c416552587f738fe52"
+    },
+    {
+      "path": "asio/detail/io_control.hpp",
+      "sha256": "27825479c624bfe2065d5f942d9f7e70b3863d5c6207f801a7ce93a743f84ac8"
+    },
+    {
+      "path": "asio/detail/io_object_impl.hpp",
+      "sha256": "148f97e09585414d785cac5859c7569df1286a408bc5f530c4e1823d89275966"
+    },
+    {
+      "path": "asio/detail/is_buffer_sequence.hpp",
+      "sha256": "6dd2b2357e38cc2a1331605ec96bb0236ef304cb0901a1bd55d16e9de76922ff"
+    },
+    {
+      "path": "asio/detail/is_executor.hpp",
+      "sha256": "5f5f2cd761b9847abadebf7148946ec450e400d84447bc3c5c6d99b6010d7f95"
+    },
+    {
+      "path": "asio/detail/keyword_tss_ptr.hpp",
+      "sha256": "5d32a2e06d7b4a278f2a7fafe3d7be1c0e7da35fdef508ab8c9277a878d6fe6b"
+    },
+    {
+      "path": "asio/detail/kqueue_reactor.hpp",
+      "sha256": "ed5d7be2e8215dcfc387c1e5bcc503ceb18b0e988b56077e38682b2e4fbcf626"
+    },
+    {
+      "path": "asio/detail/limits.hpp",
+      "sha256": "cfcf063cf1281c46248ef85adf9873491f44ec2fad1234cc3a6e1636f7bcdfcf"
+    },
+    {
+      "path": "asio/detail/local_free_on_block_exit.hpp",
+      "sha256": "62bf426a35793e43f70f48de366f29c29258c947c5fbc903468da0f52e2a87ad"
+    },
+    {
+      "path": "asio/detail/memory.hpp",
+      "sha256": "898511b74446a3b16a23c7a4c4e6868edeab159a4b67b5ae6c6c8caab8d949d4"
+    },
+    {
+      "path": "asio/detail/mutex.hpp",
+      "sha256": "d7c16259483416347a230349950967754f4458c56478c279ec569e724f2ebaa1"
+    },
+    {
+      "path": "asio/detail/non_const_lvalue.hpp",
+      "sha256": "3035aa56a7e58e6b717efa22b2e92fc9050d5d75908fe295122bdfa2382c1430"
+    },
+    {
+      "path": "asio/detail/noncopyable.hpp",
+      "sha256": "5d002f6a4e3071b6a6f163583dfbb9998cba16cec7143c918795494fd88ec7ab"
+    },
+    {
+      "path": "asio/detail/null_event.hpp",
+      "sha256": "5f3d161e006a1a9e2131fa3233646e9c94ab7ca101d5fe37c5dfdf0362b0c2d2"
+    },
+    {
+      "path": "asio/detail/object_pool.hpp",
+      "sha256": "da2638b12d3935aa49a46b62c74dd404cbbf0b85915285f3ca3fa0f0c1e0cc91"
+    },
+    {
+      "path": "asio/detail/op_queue.hpp",
+      "sha256": "3bdc3c85d301bdbbc83ee2138cf91b986cca95ade006199f2e2236f7b26c44ab"
+    },
+    {
+      "path": "asio/detail/operation.hpp",
+      "sha256": "65c36ec9cf6a175708e158787af91812b02ccef16bf10851e8b78adc595072b2"
+    },
+    {
+      "path": "asio/detail/pipe_select_interrupter.hpp",
+      "sha256": "f369374e6d54cddf3cfca1703f2da28e9fc4a1aa506d1066826635e1b9679a29"
+    },
+    {
+      "path": "asio/detail/pop_options.hpp",
+      "sha256": "a50a458c02c46317a7a051c8ef2fdedabcf7bf6fa8d42e47affe72ef4b3b5127"
+    },
+    {
+      "path": "asio/detail/posix_event.hpp",
+      "sha256": "687ffd748d7d6a9a7ba99517939c90d7ffb2053091f622d4e97110ce7d51ad07"
+    },
+    {
+      "path": "asio/detail/posix_global.hpp",
+      "sha256": "df19dc2a3b4b85247229b0f7db1469b289c56b32551bc1321a3f24930142cf29"
+    },
+    {
+      "path": "asio/detail/posix_mutex.hpp",
+      "sha256": "c1a892adf6339d45d9ab53b4e0dcfdffa964d6d2730a44d0fd887a1249603e61"
+    },
+    {
+      "path": "asio/detail/posix_serial_port_service.hpp",
+      "sha256": "0067b00be725c4a08ba0a1b594489efea1ecdce5c7be7d1ef5a9c1eed19c8435"
+    },
+    {
+      "path": "asio/detail/posix_signal_blocker.hpp",
+      "sha256": "da5c6c7df1af695f22991dc9e6ebe595afe05d9cc4997613057ff4902408b4fa"
+    },
+    {
+      "path": "asio/detail/posix_static_mutex.hpp",
+      "sha256": "4af020f749ddc0ed7ba752deca841eb3417ada6a90c158a3414a934d2ba9c02d"
+    },
+    {
+      "path": "asio/detail/posix_thread.hpp",
+      "sha256": "f6d08dd96bd654aa739c64d124101f344a3f1a622643f017b27952f82b7363ac"
+    },
+    {
+      "path": "asio/detail/push_options.hpp",
+      "sha256": "a003c785bea9a22ce8246831f26c79d31f7debae6df14a5c13f599a91e361734"
+    },
+    {
+      "path": "asio/detail/reactive_descriptor_service.hpp",
+      "sha256": "02c97c46f3be59485e4df41e808358d9db4b25edd10710902bf8b675a7a3c50d"
+    },
+    {
+      "path": "asio/detail/reactive_null_buffers_op.hpp",
+      "sha256": "92b9815605a50af69d58a90064a1fad44e2940d50b515ad6ea170f589e8be31c"
+    },
+    {
+      "path": "asio/detail/reactive_socket_accept_op.hpp",
+      "sha256": "7a99f02d1fa5ecb4367280f7eaf7f7446ec94d2f8f82f1b4adde698268a2a58b"
+    },
+    {
+      "path": "asio/detail/reactive_socket_connect_op.hpp",
+      "sha256": "c1787fa4c9f390fa4c77fa8252dfafbbdfab9de4bc9835158557e163b961ccdf"
+    },
+    {
+      "path": "asio/detail/reactive_socket_recv_op.hpp",
+      "sha256": "d455cea3fa99aad701d261027f0ecc0417985412682caff39306ee751182371e"
+    },
+    {
+      "path": "asio/detail/reactive_socket_recvfrom_op.hpp",
+      "sha256": "7ac3dd4c9bc891feb07a779bba67f3717cecdb0eabd820beafd3a29b19bc1415"
+    },
+    {
+      "path": "asio/detail/reactive_socket_recvmsg_op.hpp",
+      "sha256": "85e325aaea1a015a6f1619f394c8d9c100184f4c125b98a024a6241fc17533c0"
+    },
+    {
+      "path": "asio/detail/reactive_socket_send_op.hpp",
+      "sha256": "863ab529924c3f65499413393e4c97c49fb999cf9bcc7d706db7e939d5204392"
+    },
+    {
+      "path": "asio/detail/reactive_socket_sendto_op.hpp",
+      "sha256": "20b4b7e77bec168c814bed371795bf42527b1adabfb34d2d35057b7d278afd5d"
+    },
+    {
+      "path": "asio/detail/reactive_socket_service.hpp",
+      "sha256": "4ce17bf91360b19ea1f0e7a43021b147575f0165ac097f7199e16fc3143db921"
+    },
+    {
+      "path": "asio/detail/reactive_socket_service_base.hpp",
+      "sha256": "e214950889a740f9e5a4ed232a5102247c5543ef6f4434af8c1cf40ac7749447"
+    },
+    {
+      "path": "asio/detail/reactive_wait_op.hpp",
+      "sha256": "cc985a5f5c3a75d52b5a36fe830c26bc582a780dcc74253a222e3ad0f52568b8"
+    },
+    {
+      "path": "asio/detail/reactor.hpp",
+      "sha256": "dc7caa48054179fa2151c0412e6844da713e77787654e16b663252f73d102e7c"
+    },
+    {
+      "path": "asio/detail/reactor_op.hpp",
+      "sha256": "09b2ce931af35faf36aed21e4d0dd6ba4a6ff73cbfc06cdfc5b8744b7a96bdaf"
+    },
+    {
+      "path": "asio/detail/recycling_allocator.hpp",
+      "sha256": "147a0518dc44e148cbcd685d7b225df2a415c04c8454003c0359decc2b1e263e"
+    },
+    {
+      "path": "asio/detail/regex_fwd.hpp",
+      "sha256": "18305be9a8051ae213963d0d5c8f60cb50550b34a94c70607ca2825cfc2d9010"
+    },
+    {
+      "path": "asio/detail/resolve_endpoint_op.hpp",
+      "sha256": "c76bc096cd9bd2f011a5c051e765a8fd38df08c10cca861f70b868c390ec85d9"
+    },
+    {
+      "path": "asio/detail/resolve_op.hpp",
+      "sha256": "c60f5a705649d0449113b665c3f82ed62c0ee36467a19f1ffaab9237f8ddd185"
+    },
+    {
+      "path": "asio/detail/resolve_query_op.hpp",
+      "sha256": "592d656f7bc8ae9a8f56a3f38672c41ad97b952a0d87310fc6b4c8513c0ea54b"
+    },
+    {
+      "path": "asio/detail/resolver_service.hpp",
+      "sha256": "719ccb2924968c1937a7b2b5f72f59f3bcd9f4389a857d85c856830ef07b6ec4"
+    },
+    {
+      "path": "asio/detail/resolver_service_base.hpp",
+      "sha256": "a72bb898a31bf65ebc65936a73ef760fd8f439602ba3efc74911e6e71c56a85d"
+    },
+    {
+      "path": "asio/detail/resolver_thread_pool.hpp",
+      "sha256": "85bb9369c607828d2f6f26b0961abb9491ce4bab6cbdbb5d14ac3a64ce5d8bb2"
+    },
+    {
+      "path": "asio/detail/scheduler.hpp",
+      "sha256": "0a63b0c68794d44ba702d6cd5a1198a0f514aac9c6b36e433fd152702a669275"
+    },
+    {
+      "path": "asio/detail/scheduler_operation.hpp",
+      "sha256": "fd0e2e940b21db26bc05d39f7c454f609f196ac3f29f90ecd2ce6cee4b8389fe"
+    },
+    {
+      "path": "asio/detail/scheduler_task.hpp",
+      "sha256": "8028a5a7583d2ab7f8e1edc7e7001598e417ae62f0b6b06a3261c38c9979ea72"
+    },
+    {
+      "path": "asio/detail/scheduler_thread_info.hpp",
+      "sha256": "6d3363db998af56e90c11b1e57ccb098c653fccfc0eb1ec13948eacc581af21b"
+    },
+    {
+      "path": "asio/detail/scoped_lock.hpp",
+      "sha256": "e38b6488f3a0c4a7bb9ed34d2011cfe428decbac1a2370c40505beccbb78b032"
+    },
+    {
+      "path": "asio/detail/scoped_ptr.hpp",
+      "sha256": "bd7ff372f09d7deddb18c2226949fbb49db922f57bad731d0a5f5fa89c9a878a"
+    },
+    {
+      "path": "asio/detail/select_interrupter.hpp",
+      "sha256": "8cda198301930f8ac43267089406910aaf6aa7e9bccaf753ee9ad6130e44a4c5"
+    },
+    {
+      "path": "asio/detail/service_registry.hpp",
+      "sha256": "cc10128c120ee954848cefdb605dfcc8f17693e50815bd57c8e14881b106a4a6"
+    },
+    {
+      "path": "asio/detail/signal_blocker.hpp",
+      "sha256": "f384fbb0191cbccbe98dcbc74a8e62d5e771ba1a90cd792f6c871a85d51672c3"
+    },
+    {
+      "path": "asio/detail/signal_handler.hpp",
+      "sha256": "02cfe107e415776139a7070db61167c6492dfea77f1d08eaa0450c610e6e71c9"
+    },
+    {
+      "path": "asio/detail/signal_op.hpp",
+      "sha256": "0908f6b7a02850c1e2912af9f3d9f71172e6d60147a6c08f1ac7058a7c6411f1"
+    },
+    {
+      "path": "asio/detail/signal_set_service.hpp",
+      "sha256": "6788cca529464b0cd51ff4433f7e590e3c0a73eb5290c21476691833df810ea4"
+    },
+    {
+      "path": "asio/detail/slim_mutex.hpp",
+      "sha256": "6886261b44eee17f3871045e28b914a1de13e182a3857af836c229fa5f21d952"
+    },
+    {
+      "path": "asio/detail/socket_holder.hpp",
+      "sha256": "74700049b4c4f4ee3c44903ca0674dd635e6086983659975b1bf452d0f0c4bbe"
+    },
+    {
+      "path": "asio/detail/socket_ops.hpp",
+      "sha256": "82b4b07667283ebfe622b2b79def05a3f880ce07d0e73bf072f7eb369f6f7238"
+    },
+    {
+      "path": "asio/detail/socket_option.hpp",
+      "sha256": "3459ee31ed28ff232b3d98342169d837e5f36725ea92289aebb02006c4ba11cd"
+    },
+    {
+      "path": "asio/detail/socket_types.hpp",
+      "sha256": "b1e669b80eb885cfe650fcb72d540ab5c4dee86571448eaa206986f133428ad3"
+    },
+    {
+      "path": "asio/detail/static_mutex.hpp",
+      "sha256": "ad87ba1761d752ae6ec147f8f281493a76933b891072eb30be2a00b4be30aeb4"
+    },
+    {
+      "path": "asio/detail/std_fenced_block.hpp",
+      "sha256": "414bfd73714a8bac9aebf9891bab307aa4868305abd5eec211c3e6f3d3600ef1"
+    },
+    {
+      "path": "asio/detail/strand_executor_service.hpp",
+      "sha256": "25e37980be5c114d299113d5d40ee09da3215b1fb8e91e7cf3dca478b5d66be2"
+    },
+    {
+      "path": "asio/detail/strand_service.hpp",
+      "sha256": "c8f0e298f4e86c0928fce6288832b2280e9feeb5ef0c0b7bd67d2cce1b5210c1"
+    },
+    {
+      "path": "asio/detail/string_view.hpp",
+      "sha256": "ff8a77e4876497808e6524232d67f1f19713f05e0a7ed0eccedbaf653e23a408"
+    },
+    {
+      "path": "asio/detail/thread.hpp",
+      "sha256": "fc8868cf95861943abcd648ddb053f27a494fb48e701a883fa2a9c103bcdecfe"
+    },
+    {
+      "path": "asio/detail/thread_context.hpp",
+      "sha256": "24edfed4d2ffef7e06421406c4c96d901c17b73a23f60eba423a1cf0ba6438eb"
+    },
+    {
+      "path": "asio/detail/thread_group.hpp",
+      "sha256": "0a973ce3cf10177cce1834344a0adc6fc1d5873bb8920f4e0eba574f77405b8f"
+    },
+    {
+      "path": "asio/detail/thread_info_base.hpp",
+      "sha256": "0a1882013ba43d4bc35e6102dd297a9884778eb9fb9cfbe52c8a14a188cfa8ab"
+    },
+    {
+      "path": "asio/detail/throw_error.hpp",
+      "sha256": "6886f3aa3b88dd3369ca94ffd7404e8c23d24a0cbe6fde0baeb4190d17282d7a"
+    },
+    {
+      "path": "asio/detail/throw_exception.hpp",
+      "sha256": "31dc0169f11322b08fab14d0997e56d5443c816916c911efa1cdce36c85c5b2f"
+    },
+    {
+      "path": "asio/detail/timed_cancel_op.hpp",
+      "sha256": "960b817907f722d79258693b890b9cdebf92860f90d0bca7f6734c8c029f64c3"
+    },
+    {
+      "path": "asio/detail/timer_queue.hpp",
+      "sha256": "0dc13c129789aacdf0fed913925a78e67849c9f26aeeed3bb84ada24b4c675ba"
+    },
+    {
+      "path": "asio/detail/timer_queue_base.hpp",
+      "sha256": "1f73c0b59fc06614672c1e97e0e0ef45ec2bdf5fc99579f1fcbfc2d34da4abec"
+    },
+    {
+      "path": "asio/detail/timer_queue_set.hpp",
+      "sha256": "9d063c3548e6f6bcefb4000117b435f7a47848a4c543135c1cb25f190cae792d"
+    },
+    {
+      "path": "asio/detail/timer_scheduler.hpp",
+      "sha256": "8bc938ddfb0da4a658bf7ce9538c72f88a15bf89e3d54639392735d66819a523"
+    },
+    {
+      "path": "asio/detail/timer_scheduler_fwd.hpp",
+      "sha256": "50c45fb70fc172386ee9b48ffe199a9488f107f2d1a6350f6421c548e8089a02"
+    },
+    {
+      "path": "asio/detail/tss_ptr.hpp",
+      "sha256": "62e4768b70b753e153e368c5bfa736b78e944e1fb37661bba41c843e996e024d"
+    },
+    {
+      "path": "asio/detail/type_traits.hpp",
+      "sha256": "c2a2c1deb9e81c392ded583e696c8ea55c36dbce87a862953cd75ff490a998ca"
+    },
+    {
+      "path": "asio/detail/utility.hpp",
+      "sha256": "0d3bf667b2165f5fbd227e65056ec21c405e425a21a592ea7a45ee0402ad20b2"
+    },
+    {
+      "path": "asio/detail/wait_handler.hpp",
+      "sha256": "a92b86157a0e41adec1abf45c6c18177b6feac50b8bf5b3fa82c90393876cf30"
+    },
+    {
+      "path": "asio/detail/wait_op.hpp",
+      "sha256": "b3cfc99532d95f975d82acc4bbc4290ce5c288016f547d216a424ea05ba65c26"
+    },
+    {
+      "path": "asio/detail/winsock_init.hpp",
+      "sha256": "3867614885521afe3a7f0851334cb247de056c0bb49bab905df2a9e5e1b94fc4"
+    },
+    {
+      "path": "asio/detail/work_dispatcher.hpp",
+      "sha256": "09490858f3acf0ac82c0a0cba9b8a386a0dc7d8f1717bb02bc662fbc7abd44a2"
+    },
+    {
+      "path": "asio/detail/wrapped_handler.hpp",
+      "sha256": "06691cba96ee914fbbcb135b3cd0572cb021a1ba65b6c776c278862e6c25cf18"
+    },
+    {
+      "path": "asio/dispatch.hpp",
+      "sha256": "9a8c079cecac7fdf53c2b91d988d303b26fb8a138d3bcec3cdf9ffd9f840e546"
+    },
+    {
+      "path": "asio/disposition.hpp",
+      "sha256": "79fe7b76e384a75d60bafeea01f806da47ef2bced79e74a2b7e690369ab0e269"
+    },
+    {
+      "path": "asio/error.hpp",
+      "sha256": "a080bf5178cd272d1237f442696a9c2b9d86680bdabef5d7748615f74447dd2a"
+    },
+    {
+      "path": "asio/error_code.hpp",
+      "sha256": "51b9a8490a827a62b72c15d824e8df67dfa8e84ec11e9038ca0cb0c42b1591ef"
+    },
+    {
+      "path": "asio/execution/allocator.hpp",
+      "sha256": "2ef3084bd0eaf73201d0acf35bf8f66539e7535a6c359cec5eb6cea547ac47ac"
+    },
+    {
+      "path": "asio/execution/any_executor.hpp",
+      "sha256": "c09a464825a11b20358ade0a172322f07f1ee80733b5fc2fbcbe68951cf922f0"
+    },
+    {
+      "path": "asio/execution/bad_executor.hpp",
+      "sha256": "053a72bce2fc4865c750ac8f4ee3167f22f7c78d009f5db7a7cd5c11f93b0225"
+    },
+    {
+      "path": "asio/execution/blocking.hpp",
+      "sha256": "e1bebf7e439b0b6c1bb5131132369d52cdf0aba574aa1a2be713683ed549a4ed"
+    },
+    {
+      "path": "asio/execution/blocking_adaptation.hpp",
+      "sha256": "0db2c3db40aa3d5302f6c7f42585ee4185775779485c136c5898b3adf3cc9161"
+    },
+    {
+      "path": "asio/execution/context.hpp",
+      "sha256": "d7b09939b50b679610e2c0dd5bf7ab4f2699f0272b03d78e54c4e2001d6e2204"
+    },
+    {
+      "path": "asio/execution/context_as.hpp",
+      "sha256": "22492de3b0bf1769abc57d4a2e0aebf1e7b2b56e6d13ba7a43c42a2929c8584a"
+    },
+    {
+      "path": "asio/execution/executor.hpp",
+      "sha256": "0549d746e80e0b308e23d5eed8558fca07250ff294147485d0e3fe7f7814e2f2"
+    },
+    {
+      "path": "asio/execution/inline_exception_handling.hpp",
+      "sha256": "dcea0b193b27da0d8e8b85f689eed3089e5a1534981fdfbc5e132e09914c193f"
+    },
+    {
+      "path": "asio/execution/invocable_archetype.hpp",
+      "sha256": "da8a88f44f3eacb5c52664e78def081a6ba802b4b0d5ef6f9b060b0def85cba4"
+    },
+    {
+      "path": "asio/execution/mapping.hpp",
+      "sha256": "af2ca6f7ee30e5d2609f57d8826e5fa494d99ddf7a581b71bd02c981f8270a16"
+    },
+    {
+      "path": "asio/execution/occupancy.hpp",
+      "sha256": "e3c201f9ceea2895c5dc09e3087f6a89565d1d047bf1da838ea2f716cd6687ba"
+    },
+    {
+      "path": "asio/execution/outstanding_work.hpp",
+      "sha256": "f131c2bde6da0a517ff77384114572e361c96227c3715b73259045ba8efc1066"
+    },
+    {
+      "path": "asio/execution/prefer_only.hpp",
+      "sha256": "c8e7a749da1735a3dd8f6481510f223fcbd2b72b11ac2cdbaad5673073c5f58f"
+    },
+    {
+      "path": "asio/execution/relationship.hpp",
+      "sha256": "bac349dd5d31cc73025d0959c5d5e34f761edafff380aca309a19d558fde37b7"
+    },
+    {
+      "path": "asio/execution.hpp",
+      "sha256": "6470d294895bf22b8b3de175c542639f2f2d184d871d12ebb94b8127f678e2e4"
+    },
+    {
+      "path": "asio/execution_context.hpp",
+      "sha256": "9550183086b506b75917dc13262ea917823edadf3f6fea3aceacbbc126c5f07e"
+    },
+    {
+      "path": "asio/executor.hpp",
+      "sha256": "5eeda08b9d723bf4b29dfd3507c5ab791056ac054a9f061aa04b6b039a21c7e3"
+    },
+    {
+      "path": "asio/executor_work_guard.hpp",
+      "sha256": "7d3f7247dd41015adc10cf8f2d792ff80fae2df130170fff672e660285ef567d"
+    },
+    {
+      "path": "asio/file_base.hpp",
+      "sha256": "3023159a248f8c19d5f80a22f374601631cb168edcd2cc1c0aa1dc1ff25e8c53"
+    },
+    {
+      "path": "asio/generic/basic_endpoint.hpp",
+      "sha256": "d0caf252329c3d7004661c970574d97da9a3d2adac53bd574541924c48b7e83e"
+    },
+    {
+      "path": "asio/generic/datagram_protocol.hpp",
+      "sha256": "571f146b4ef5a9a4e5c0693f689235ff419fe99e44244f05f468b299f5942118"
+    },
+    {
+      "path": "asio/generic/detail/endpoint.hpp",
+      "sha256": "83071f9afa8593843755570a55851e5596d1a6e7473ffc335c0da93acd36e02f"
+    },
+    {
+      "path": "asio/generic/detail/impl/endpoint.ipp",
+      "sha256": "31d2dae6ef2c66974ae25f52cb063ea4867cb3c4e70a72d4899fc2aebe42e900"
+    },
+    {
+      "path": "asio/generic/raw_protocol.hpp",
+      "sha256": "2b3b85ecbe7419fc5803c742e8e7b0173a102cc2f0bfbee6c5a25b49b1148aa1"
+    },
+    {
+      "path": "asio/generic/seq_packet_protocol.hpp",
+      "sha256": "d99c46a37f56382286e1883c886e3ba35b92bb77b54865ff85ba841789ba225b"
+    },
+    {
+      "path": "asio/generic/stream_protocol.hpp",
+      "sha256": "6a8f5c99612d7ae9d72fd16dcf6cd63b6cd48a2362ca5a45df32da8cbbb390a7"
+    },
+    {
+      "path": "asio/handler_continuation_hook.hpp",
+      "sha256": "9b9d32554018884f84ddad5ca125c457884df6468661f88cba2e47d1c8f28ebf"
+    },
+    {
+      "path": "asio/high_resolution_timer.hpp",
+      "sha256": "c51f93ed98a81463360b0a123940d7ffe784a356895ce22c0c74d8f113cba4e6"
+    },
+    {
+      "path": "asio/immediate.hpp",
+      "sha256": "7e921cd8efd951521f0f348d500b6d5b4d253ff251d2f913dbd32c50d8648c2e"
+    },
+    {
+      "path": "asio/impl/any_completion_executor.ipp",
+      "sha256": "05b72c28f6eaccb66e061df7b39d279d973fdc92a4ab2af9f9692588d327ee94"
+    },
+    {
+      "path": "asio/impl/any_io_executor.ipp",
+      "sha256": "5f790b080e9707f2eac7d3dea92adc9d2e218d9f9541721dc6a1e684c20be6b9"
+    },
+    {
+      "path": "asio/impl/append.hpp",
+      "sha256": "9f5d46bca078d1ad4281f70fbc700c0f39fca17a5089ac5fb2c10a64d7b9bc56"
+    },
+    {
+      "path": "asio/impl/as_tuple.hpp",
+      "sha256": "ccdb959c837c241bcfde18d61a466972b522cf30afaab764f679cbf52ac15f98"
+    },
+    {
+      "path": "asio/impl/awaitable.hpp",
+      "sha256": "5ef353a54789a676723c62f62f041a24d07b4f69ce25fa9587b002ef69ad0657"
+    },
+    {
+      "path": "asio/impl/awaitable.ipp",
+      "sha256": "accd89c909d28684e6c642e56fc582c465b6fad2494a3c3c27f7d90db8402595"
+    },
+    {
+      "path": "asio/impl/buffered_read_stream.hpp",
+      "sha256": "1310c95bbc67c6315695f03de455d4816d110ee7df62ce591b1d4751c3280c2e"
+    },
+    {
+      "path": "asio/impl/buffered_write_stream.hpp",
+      "sha256": "516b1b14b8bbfc4cac757dd0312afba70aa57df2931d508741a37df04bd04908"
+    },
+    {
+      "path": "asio/impl/cancel_after.hpp",
+      "sha256": "b37bb681ffa548c31a03a975c32ea1bd00977e856d53dadf010b9cdc191d48a3"
+    },
+    {
+      "path": "asio/impl/cancel_at.hpp",
+      "sha256": "a62c0daa8fb4fa1fa7c2c3dd20e13117f9382b98171ead536de00fecbeb288ec"
+    },
+    {
+      "path": "asio/impl/cancellation_signal.ipp",
+      "sha256": "d82512cbe19e237d278ce4ab7419baef42b88848a2a2b898100efaa813fd4514"
+    },
+    {
+      "path": "asio/impl/co_spawn.hpp",
+      "sha256": "98982f92f9396bc88eba03cf18c998b1439a4b23457db052e8bf94e243437b7b"
+    },
+    {
+      "path": "asio/impl/config.hpp",
+      "sha256": "5e0567325ac6c638ecf89877e3239317ccc6cf95133a6038f876a1b705e24856"
+    },
+    {
+      "path": "asio/impl/config.ipp",
+      "sha256": "2aad632a030fe0980def80b87d4f9e5e00b0c2d98f49b0f26e883403ad0ddcaa"
+    },
+    {
+      "path": "asio/impl/connect.hpp",
+      "sha256": "01f6e59e14d075fbca36e7a21ac4b399f92ba64a2f3962151f032054fb4eda76"
+    },
+    {
+      "path": "asio/impl/connect_pipe.hpp",
+      "sha256": "8cc80f411a0c3aadfc6491d64295a37ae1fd670ac1dddf9c9f61c756f099a36f"
+    },
+    {
+      "path": "asio/impl/connect_pipe.ipp",
+      "sha256": "0277b88d04b62ee9adb40630076ecfe30e2fa61a0e5aabf37d94e1275f89f6a1"
+    },
+    {
+      "path": "asio/impl/consign.hpp",
+      "sha256": "bb79c4e9a1316c2b1df0f9b0358082aa590cc2e1db0373d46a3c8afb5bd57cf9"
+    },
+    {
+      "path": "asio/impl/deferred.hpp",
+      "sha256": "18ded281d5dc4760c5eb9d10dc5dadc793c5c13a884b5f8b73a7f5541b902fa1"
+    },
+    {
+      "path": "asio/impl/detached.hpp",
+      "sha256": "68013f962ae62ac2ffdab235b4751740c9c2d905d10d1b4381a211c7b6a4231e"
+    },
+    {
+      "path": "asio/impl/error.ipp",
+      "sha256": "3c2a090049b24b522998966297e8a4901b817d69af2bb0a8b553d7e450a37695"
+    },
+    {
+      "path": "asio/impl/error_code.ipp",
+      "sha256": "b47bbd7d4856d7fade624e7458f728130d741892164d61898256f40af96cd851"
+    },
+    {
+      "path": "asio/impl/execution_context.hpp",
+      "sha256": "c2442c230d140b0a9ee949e28a236d71b813d78ad5bc0bf622cd05f091eb25c9"
+    },
+    {
+      "path": "asio/impl/execution_context.ipp",
+      "sha256": "3f97d3fe43d832fd615a085b9308aea5aab1443a84d2a06ecf9853baa9adcdb2"
+    },
+    {
+      "path": "asio/impl/executor.hpp",
+      "sha256": "837af279f60bf1cbe67078844eb564f7015d2c4fdf1597c4251753185b15e8e4"
+    },
+    {
+      "path": "asio/impl/io_context.hpp",
+      "sha256": "8445b9118596c0e5dbcbe4adf48ba15690f8d47ce4f40c180f9fef01b253fada"
+    },
+    {
+      "path": "asio/impl/io_context.ipp",
+      "sha256": "375a8a6709a2ba7df82572366f5cfc4c72214e6af93f4465a84fb5b801ccce27"
+    },
+    {
+      "path": "asio/impl/prepend.hpp",
+      "sha256": "655a2133ab5eeebc7a79360bbcc4a38bad53951b3250b2581bac8e2110ff9569"
+    },
+    {
+      "path": "asio/impl/read.hpp",
+      "sha256": "13a61b6abb87327db5d3990e617f23e10f8422621d7d5152b8dc7710e11129e5"
+    },
+    {
+      "path": "asio/impl/read_at.hpp",
+      "sha256": "ee370b40181a3b482135001c8d35e118f6d705b8eeefa19edb666c3b5a32eeec"
+    },
+    {
+      "path": "asio/impl/read_until.hpp",
+      "sha256": "227b65982ede3cd7aa6e18e90538214ae66f7badb2c3fda6772a32b8c1b803da"
+    },
+    {
+      "path": "asio/impl/redirect_disposition.hpp",
+      "sha256": "6f988676dbfc1455dd69036a17f35ec7101285213797b05f4dcfa95491f1140f"
+    },
+    {
+      "path": "asio/impl/redirect_error.hpp",
+      "sha256": "ac2dab18372f020c5a63750a9298596588c30497c89e7d85c605777084474ac9"
+    },
+    {
+      "path": "asio/impl/serial_port_base.hpp",
+      "sha256": "077fbee14df27a27474c5ecb623d10c575c36668528e4a3e33328d7395ae6438"
+    },
+    {
+      "path": "asio/impl/serial_port_base.ipp",
+      "sha256": "9dc33b29758c64d33b30aa440461db01925615cc8505e2c4cd4042cdb03a4be9"
+    },
+    {
+      "path": "asio/impl/system_context.hpp",
+      "sha256": "d0dd4e4f95f1a7ef6fcd844e15dfa4c00ffe66e1c3c1b5614667853090c16023"
+    },
+    {
+      "path": "asio/impl/system_context.ipp",
+      "sha256": "645f6d4b642f8a5a9edc6bce2c8a638d15bf5885fd3985382cc957d4d63bef6c"
+    },
+    {
+      "path": "asio/impl/system_executor.hpp",
+      "sha256": "860ba7c9f7a9b9ec5f2dab5b36d7369f2008a01d67ddb3a501bb2f548171b69a"
+    },
+    {
+      "path": "asio/impl/thread_pool.hpp",
+      "sha256": "ca12a6b7f3c77d70f8c17e922c7ff8148ff61b2f8b55c3711c3edf2c56dc772d"
+    },
+    {
+      "path": "asio/impl/thread_pool.ipp",
+      "sha256": "b4b8436b0687c8cb1bdbf49adba846b601c2db0d5050403f1b2cbea01f745588"
+    },
+    {
+      "path": "asio/impl/use_awaitable.hpp",
+      "sha256": "724882c7223d43c406a457b56e538e55da4a0d30a2e953264a0c8b590c4e5e24"
+    },
+    {
+      "path": "asio/impl/use_future.hpp",
+      "sha256": "344d585b41c25b604222d87a701f5764bb255aae776dab23b9e5b47c662c961e"
+    },
+    {
+      "path": "asio/impl/write.hpp",
+      "sha256": "2470adf131c969feaf4a856f908903b6f7194a087460d1209c90d92c28c2e959"
+    },
+    {
+      "path": "asio/impl/write_at.hpp",
+      "sha256": "52f77f15e04a8b579f180917f69d8f6b2b92f9ebf1b3fd4f3b6ce456958b8744"
+    },
+    {
+      "path": "asio/inline_executor.hpp",
+      "sha256": "fae2758f32d0914f4c0c0f05c65ba1a09dce01818af1647c5be92bfdb326d894"
+    },
+    {
+      "path": "asio/inline_or_executor.hpp",
+      "sha256": "4c4afe67c14a6b4ed33b77b244d9ab4f4110c281de45614f69c802010d89c236"
+    },
+    {
+      "path": "asio/io_context.hpp",
+      "sha256": "7ca86b6d574d01b66926aa047e4a6dd2e9bd1ad6543836557d46d12f242a63d4"
+    },
+    {
+      "path": "asio/io_context_strand.hpp",
+      "sha256": "1986a620815a5a39f035db1650e57d111eadac6bbed1a0c8ba6603db243234fb"
+    },
+    {
+      "path": "asio/ip/address.hpp",
+      "sha256": "75f6f7aae8f3c97ce4169d76639365c1a6e0c713249eae1874cef6c440500bef"
+    },
+    {
+      "path": "asio/ip/address_v4.hpp",
+      "sha256": "fd28dc55648bcf07802a6e218f43d662811817ee35b620e2df202ac93a3e32b3"
+    },
+    {
+      "path": "asio/ip/address_v4_iterator.hpp",
+      "sha256": "926279a5932c1694fcdf56b527d1946e28a60b594cc08513bae3ba2e0e4bd6ed"
+    },
+    {
+      "path": "asio/ip/address_v4_range.hpp",
+      "sha256": "e238726c26e51c321d624a15ccc8385ee210089b5bf3af9eff05122d2f144b15"
+    },
+    {
+      "path": "asio/ip/address_v6.hpp",
+      "sha256": "ea99d2e5e914f246b8c54a0a86098bfc9e22c2311631187dea2b017962b95190"
+    },
+    {
+      "path": "asio/ip/address_v6_iterator.hpp",
+      "sha256": "37ef33839cca8573c793245a839c9ca16eaa307791e4a72192df457b47b4f9b0"
+    },
+    {
+      "path": "asio/ip/address_v6_range.hpp",
+      "sha256": "323a9f233159eb25c2f72eee448d13eac95ebc59d69d7b92483e1e253288e9a8"
+    },
+    {
+      "path": "asio/ip/bad_address_cast.hpp",
+      "sha256": "3d5a64850dfa0dabb33293840ccb59e5024565f1c2100be37f81d7a31d44b992"
+    },
+    {
+      "path": "asio/ip/basic_endpoint.hpp",
+      "sha256": "3c8be765838788e2a70e3c8e9d72f3e13b8d81936d14f6591be0ff4c17ca7293"
+    },
+    {
+      "path": "asio/ip/basic_resolver.hpp",
+      "sha256": "c649060c8844451029a012fd48683196aca446d0696f1e8d4c228528907372e8"
+    },
+    {
+      "path": "asio/ip/basic_resolver_entry.hpp",
+      "sha256": "b8e3b4e8ca316c5240ce21fc2b312cb1cb5930604d9d7f3236b1967555588e36"
+    },
+    {
+      "path": "asio/ip/basic_resolver_iterator.hpp",
+      "sha256": "428646b1b028ec838cb845a960e47ec1aee8adf8503f07b83615f25bd749aeaa"
+    },
+    {
+      "path": "asio/ip/basic_resolver_query.hpp",
+      "sha256": "9031644983fc50cca1bf862be1adcd2070cf7736b60ed78bc00081969014d3cd"
+    },
+    {
+      "path": "asio/ip/basic_resolver_results.hpp",
+      "sha256": "efd4ba263193c2a84d80a17126f8d9fd36338a6c071f0ddba408453a57ec1dc0"
+    },
+    {
+      "path": "asio/ip/detail/endpoint.hpp",
+      "sha256": "0b0a35c421a1d375aae5907cc0aab4a0cbc4e7b9312fd28fc82386cc7c156018"
+    },
+    {
+      "path": "asio/ip/detail/impl/endpoint.ipp",
+      "sha256": "a05a867d51ae9887121ed5b3085bf709ff883d831257126df491003a59b0f19d"
+    },
+    {
+      "path": "asio/ip/detail/socket_option.hpp",
+      "sha256": "967fec07e67f3241b7b5ab79c999772d58dc7aad29503432f9d43485db0747cd"
+    },
+    {
+      "path": "asio/ip/host_name.hpp",
+      "sha256": "9e84ec3e31a566dac1e00b16ba35f214a596aef6c61663caa6c4ebeca98626e2"
+    },
+    {
+      "path": "asio/ip/icmp.hpp",
+      "sha256": "7a1f0ed10cea40b2f48f1fbc27a935e2403b5688463bc55dc5ed022a58c356ad"
+    },
+    {
+      "path": "asio/ip/impl/address.hpp",
+      "sha256": "203202a71b54177849a71993c9f9a6818a4fe3c1ad866522bc9c2374370b6988"
+    },
+    {
+      "path": "asio/ip/impl/address.ipp",
+      "sha256": "b60ab1fe7cf3a81f8ce91460343366c4eabce24e15f5b911830e4b84a6f99307"
+    },
+    {
+      "path": "asio/ip/impl/address_v4.hpp",
+      "sha256": "303251953cd67c09aece3ff7c77f348b947a12947f02acf9c7e2a1fff98c5ffa"
+    },
+    {
+      "path": "asio/ip/impl/address_v4.ipp",
+      "sha256": "468f73bf7ce81e4cc2446b08922555b8a197f2e3a7ede98c3061ba31c84bdd3a"
+    },
+    {
+      "path": "asio/ip/impl/address_v6.hpp",
+      "sha256": "dbbf26c55614547bc2b71023a8f590b31d86feb9ec3e0ef671a99e1f0a0b7a7b"
+    },
+    {
+      "path": "asio/ip/impl/address_v6.ipp",
+      "sha256": "d4b12056be4bf314b9690d1c9cc3270f5750f9394429be1ec9918efd48226f48"
+    },
+    {
+      "path": "asio/ip/impl/basic_endpoint.hpp",
+      "sha256": "2ba5b4bf8308fb4bed50cde3eaeab3e9148a4bf1908ca77b42bebb4400dd7047"
+    },
+    {
+      "path": "asio/ip/impl/host_name.ipp",
+      "sha256": "7bad4769ba664e4b27546e5037174f5d133cd2f02be047eb1f79ece67d2717d9"
+    },
+    {
+      "path": "asio/ip/impl/network_v4.hpp",
+      "sha256": "7d2fd52dc4f460e86625f17f8d6e12c14e6ec8e387e1e5d171c46ff24af940e5"
+    },
+    {
+      "path": "asio/ip/impl/network_v4.ipp",
+      "sha256": "fd88ff7a87744494df5c5553d3b5992586d6e3417e488f42810aa8d3199c4999"
+    },
+    {
+      "path": "asio/ip/impl/network_v6.hpp",
+      "sha256": "9f5fdd6442827a30c4c0a1e2f570e99d7096351476fc3ebb5ee8b362378f5911"
+    },
+    {
+      "path": "asio/ip/impl/network_v6.ipp",
+      "sha256": "132efa670a43d2bd13056adbac6c717b3444633ddf9cf545c2e93e9c53bb9c93"
+    },
+    {
+      "path": "asio/ip/multicast.hpp",
+      "sha256": "e67f95546e61137fd14102e82c196e138b2206c55fc22298604bad95cf891410"
+    },
+    {
+      "path": "asio/ip/network_v4.hpp",
+      "sha256": "cebce18886b5985d76e670aadc2ee371525f65925d47548d68c1eca8c6bcf397"
+    },
+    {
+      "path": "asio/ip/network_v6.hpp",
+      "sha256": "783d2e80fc33395cab185a2a733d26c928ff037a991df1748c1dce1a7726729b"
+    },
+    {
+      "path": "asio/ip/resolver_base.hpp",
+      "sha256": "54c492875b6a8ab7e9748536d907e6359aaac03fca57ee93d9391acaae45e6a7"
+    },
+    {
+      "path": "asio/ip/resolver_query_base.hpp",
+      "sha256": "a94404f78cb9d13b7f3df095defbae207e68894577c6559ba94f938c8a5c2e80"
+    },
+    {
+      "path": "asio/ip/tcp.hpp",
+      "sha256": "9c533efe928391492daf5074d187115a58cc9422d29fb9eb650dc5ba7f446991"
+    },
+    {
+      "path": "asio/ip/udp.hpp",
+      "sha256": "3c4b3dd43f30059a1f5820a5b1a900ba06e0d88e3f016112078897e3fdd017e2"
+    },
+    {
+      "path": "asio/ip/unicast.hpp",
+      "sha256": "f01336bebad07b2a7e096aee47ae76428cde56ee6050ab3961cd13edcf858b46"
+    },
+    {
+      "path": "asio/ip/v6_only.hpp",
+      "sha256": "3948e7e0a51f9a22a413acd1049de607d56e98dfd2c9d54cf47a9b757ff9fc37"
+    },
+    {
+      "path": "asio/is_applicable_property.hpp",
+      "sha256": "7303da5fbc3cb1ca8612935d2984744d3734a489873bfed74139334b0db05a2f"
+    },
+    {
+      "path": "asio/is_contiguous_iterator.hpp",
+      "sha256": "df53b3781456e9c973568516c0716fd05c9cd74056b7cfeac1510dee9a271b0b"
+    },
+    {
+      "path": "asio/is_executor.hpp",
+      "sha256": "80a2bc5b5612eea9b535953b16ec2872b513e7325965f594e8a22584d103c216"
+    },
+    {
+      "path": "asio/is_read_buffered.hpp",
+      "sha256": "642d84d20d301d1b76d665b54bd85acd8c967d1bdbc4c6c16f2c0dfa2bbeb5b5"
+    },
+    {
+      "path": "asio/is_write_buffered.hpp",
+      "sha256": "89920f5153825350eb22922126a9cd50dbe706f212fd69190d62465fc88066ae"
+    },
+    {
+      "path": "asio/local/basic_endpoint.hpp",
+      "sha256": "ab7aa0bd47293a75f092a67e7755557d8e1d4cc0075c3ac2c9521deef9d1fc76"
+    },
+    {
+      "path": "asio/local/connect_pair.hpp",
+      "sha256": "0c1aa42acc3cc2ffaccfa91e6eb967ca3326b4fdbc662c055b4bfafe744b3305"
+    },
+    {
+      "path": "asio/local/datagram_protocol.hpp",
+      "sha256": "244f6163ba988e352e4a93e738b0d4de8bf1a58e082bf390e3de9d7ed1b13a9b"
+    },
+    {
+      "path": "asio/local/detail/endpoint.hpp",
+      "sha256": "eb7b61b0d6de8eeb7f2a5a47c20d137604f51345b64bdd2562e48fff6434f068"
+    },
+    {
+      "path": "asio/local/detail/impl/endpoint.ipp",
+      "sha256": "cb189f82670615b90b4e5c8294cd97ae61105af0cd57a00af4f06a3dabb3247b"
+    },
+    {
+      "path": "asio/local/seq_packet_protocol.hpp",
+      "sha256": "161cbb010d9c693e71f9fb096a38d7fcc33460d9b731a88d7ba5d8920cf8f2be"
+    },
+    {
+      "path": "asio/local/stream_protocol.hpp",
+      "sha256": "6e750f529f6ce6038ee64fc95518f25cd6fe9314aaa64682723de8e93f1ab99c"
+    },
+    {
+      "path": "asio/multiple_exceptions.hpp",
+      "sha256": "5e736cb8c863509df601833d22365607091ffe0674f2f4026150a4c2d45ccdcf"
+    },
+    {
+      "path": "asio/packaged_task.hpp",
+      "sha256": "2e1e0da1d51358d082759f82327dbfdd47564020807ad3278b78876a1f9488e4"
+    },
+    {
+      "path": "asio/placeholders.hpp",
+      "sha256": "ef38f3329853684a82510c913b0f5712fc7a215db791eeea877ab0e97891a4d3"
+    },
+    {
+      "path": "asio/posix/basic_descriptor.hpp",
+      "sha256": "8a0bc56d7b60efcdd092eff9e8691eded10e015c7e633ee851dc44d5024c5e0a"
+    },
+    {
+      "path": "asio/posix/basic_stream_descriptor.hpp",
+      "sha256": "b33d7515cdce098a404192f60105fd1c23d6c76d945fc932825ef978775fc456"
+    },
+    {
+      "path": "asio/posix/descriptor.hpp",
+      "sha256": "35655a648e776a4c47c637df9aeb2414af0c482e12428a9cf5b626f289ac2d31"
+    },
+    {
+      "path": "asio/posix/descriptor_base.hpp",
+      "sha256": "4657943c8ce5c8c803042a6dc347efbfcfe5e8f15b1a2b4783d7bf4b6346cfe4"
+    },
+    {
+      "path": "asio/posix/stream_descriptor.hpp",
+      "sha256": "e92f6883d98539b6b1bd57b8647f0d593849113131bf95e427508ee439137cb4"
+    },
+    {
+      "path": "asio/post.hpp",
+      "sha256": "7dbfa5c590d33ade119f41a663b615af70e3e3373c9029438c756257c2c73901"
+    },
+    {
+      "path": "asio/prefer.hpp",
+      "sha256": "d78b5cd9321e05ed43f947c880b30fc6c6af2afa27fe9660caf5d0d2a8053654"
+    },
+    {
+      "path": "asio/prepend.hpp",
+      "sha256": "8758792dccff44dd9a586d265958ad8b8cf23e5810300d98fe853625fd9cf0fa"
+    },
+    {
+      "path": "asio/query.hpp",
+      "sha256": "eba7bac536d045809e52f6d265824eff991653989febdb8d4cf17e1599fba62e"
+    },
+    {
+      "path": "asio/random_access_file.hpp",
+      "sha256": "887e32d9f9023e2986e472f57c2038af410b3be7d7121259aac046e84c6118df"
+    },
+    {
+      "path": "asio/read.hpp",
+      "sha256": "12a3a70b65a539b31de47fb1f82046e8b6be0ab5e2e6664cc4a8eff6e0ff8860"
+    },
+    {
+      "path": "asio/read_at.hpp",
+      "sha256": "57ea883ed9f93329ac43f9bd5574bc5164c5f821b590ccd05f4a7c8b9f2a1830"
+    },
+    {
+      "path": "asio/read_until.hpp",
+      "sha256": "ff6cb06abaaad3e571efba5fcb7eda4716f981caf0ca739949f8a0a434d86b94"
+    },
+    {
+      "path": "asio/readable_pipe.hpp",
+      "sha256": "d623698bd12def27d45fe26d7ed18288920e727c3c24a4c0d0007c30779fd86c"
+    },
+    {
+      "path": "asio/recycling_allocator.hpp",
+      "sha256": "336864863d113e503073024133a07ff2256181bf6fb718ff8cddff41b955428a"
+    },
+    {
+      "path": "asio/redirect_disposition.hpp",
+      "sha256": "6f2d31eb939a6e2f7bccef21f3c016627e08db175c8091dea3852c399bcd6d7e"
+    },
+    {
+      "path": "asio/redirect_error.hpp",
+      "sha256": "5a7a64bf184a6caa3ac80f0fc21fb698324537a04f2052a175c0c4c6948574f8"
+    },
+    {
+      "path": "asio/registered_buffer.hpp",
+      "sha256": "9b74b2ea0ea60c2630ab2544faec0a62c8866d17ae4cf94d664d135249a44fee"
+    },
+    {
+      "path": "asio/require.hpp",
+      "sha256": "2b03017aff7371a3ef1ce63f4ca22ab11192166b446b428b1b31db41821808be"
+    },
+    {
+      "path": "asio/require_concept.hpp",
+      "sha256": "4cc11722c3e525389d35b8be3e859cfb79973b4c24fd1f0c72f1ad87edff0eb7"
+    },
+    {
+      "path": "asio/serial_port.hpp",
+      "sha256": "696c2678ba8e7188c6d84f8477ed46e1323bfd6269c705cf8b854b58fd90583a"
+    },
+    {
+      "path": "asio/serial_port_base.hpp",
+      "sha256": "0c30dbc0c6014bc5ae6875aa98fb6174951c618a933dc163f1074f689e9be7e3"
+    },
+    {
+      "path": "asio/signal_set.hpp",
+      "sha256": "c3b55636773ea1cec0bdf0dcc878eabc1a62a984ede1b202b2d383d18d20cb21"
+    },
+    {
+      "path": "asio/signal_set_base.hpp",
+      "sha256": "a0cc5f59be49569a77c063ce2788c9a92323cc4d84de4b41c44b6f296f21a526"
+    },
+    {
+      "path": "asio/socket_base.hpp",
+      "sha256": "ce7ffb3ffb2f8d4f3fac505813f9e1b185fa365c6131a80ba0f932b1f97e14b0"
+    },
+    {
+      "path": "asio/static_thread_pool.hpp",
+      "sha256": "5b0bd845dedb34d31b85c6df8cce6e4863ae1001cda24f161bfae6317ec2a238"
+    },
+    {
+      "path": "asio/steady_timer.hpp",
+      "sha256": "a28adaaedc442483a1940d7b2a5121ea4713a94332ebd0dabcf39503ad69dfc5"
+    },
+    {
+      "path": "asio/strand.hpp",
+      "sha256": "4973e2ea29abf74d134aec0dcbb422865ca67199b0214a2841aa9bacf26c177b"
+    },
+    {
+      "path": "asio/stream_file.hpp",
+      "sha256": "1f24535ab81d5cbd10d2acefd6648028c544406780c2ee7e312ccd068c04f993"
+    },
+    {
+      "path": "asio/streambuf.hpp",
+      "sha256": "6dc21b5a6c8ddf6cf68a597e47be2247287983828c96035c3a3c9bd2a81c3adc"
+    },
+    {
+      "path": "asio/system_context.hpp",
+      "sha256": "5716d2b50db434dab441bd9ea13ab435b6f821dfa89bf04413038c823ff8e468"
+    },
+    {
+      "path": "asio/system_error.hpp",
+      "sha256": "d01d15123f8ac354978b05b7603d794d87af059868d3327302c34d8687ee2e97"
+    },
+    {
+      "path": "asio/system_executor.hpp",
+      "sha256": "65aa35439e6755a8b74b9b561e4a8445784ff7860e8351ba4066dd9b267a1d4a"
+    },
+    {
+      "path": "asio/system_timer.hpp",
+      "sha256": "271807abf3964316419e1f51c4b8664bc89af699cc9262113243def4323dbc8e"
+    },
+    {
+      "path": "asio/this_coro.hpp",
+      "sha256": "f8ff083fd978bd5208c546bcabec789539215abcc4dca6f60dd93ccb8b73417d"
+    },
+    {
+      "path": "asio/thread.hpp",
+      "sha256": "6055371fbb3821867da754dbc11bc3139864482813f9c80a855af07e9c6b7740"
+    },
+    {
+      "path": "asio/thread_pool.hpp",
+      "sha256": "0adceea0f025af8c80879590ab4c4ea9cebb087ee85d1ddd9ca6b809c732a6c9"
+    },
+    {
+      "path": "asio/traits/equality_comparable.hpp",
+      "sha256": "ab5bbc975cac66e9799e440f245ffbb8ad6279159256a261c77b1e71e4cdf191"
+    },
+    {
+      "path": "asio/traits/execute_member.hpp",
+      "sha256": "524a68692d5c52430840de66588bdd9f7ca4605ad5cab37ae68c3be41488b2f2"
+    },
+    {
+      "path": "asio/traits/prefer_free.hpp",
+      "sha256": "d94025ce138a9ed9607cd376c40a11c77b4eacbf0de43856b8185b901372114b"
+    },
+    {
+      "path": "asio/traits/prefer_member.hpp",
+      "sha256": "c62ed0e61d997788b677b80ba6338786ef8b11d8cea7b88491a291e41ad96891"
+    },
+    {
+      "path": "asio/traits/query_free.hpp",
+      "sha256": "535cc1f2e67cd11b6c0f2034db1223bc9053ffb151bf458c21c2b9996123f942"
+    },
+    {
+      "path": "asio/traits/query_member.hpp",
+      "sha256": "ca24f0f7890566f76b41a6530aabd090666f7f2c8e19cf17d50b68b680081349"
+    },
+    {
+      "path": "asio/traits/query_static_constexpr_member.hpp",
+      "sha256": "a41f909eb9b4bfd5a8fee10042dbfd21ccc82d4f3c289f7258947d2cd1ac776f"
+    },
+    {
+      "path": "asio/traits/require_concept_free.hpp",
+      "sha256": "e1fe7d9d16615e4f70eb0e20ca6041ba205062f94c88f39e3a966402d54b3b00"
+    },
+    {
+      "path": "asio/traits/require_concept_member.hpp",
+      "sha256": "828f8e4d9e3d451d6d26da086e9694d70f2e6aa362ba970bcd6e2d4fb81418f3"
+    },
+    {
+      "path": "asio/traits/require_free.hpp",
+      "sha256": "92b2463274ae5569ca27dffec924bc10375404f85b09018fe47f2f836045cb11"
+    },
+    {
+      "path": "asio/traits/require_member.hpp",
+      "sha256": "e29197c43dac3bcc3adec335814f76207e30c872b9b92b2cf497c5040736ac9e"
+    },
+    {
+      "path": "asio/traits/static_query.hpp",
+      "sha256": "0a3df0a9363f8abfd12a879be69d8d298118e2228fe37c0591c2f295dd152dc1"
+    },
+    {
+      "path": "asio/traits/static_require.hpp",
+      "sha256": "43e56105bd9949d3bd9a346399d2ccacd214616f635345cec600b12557c889ad"
+    },
+    {
+      "path": "asio/traits/static_require_concept.hpp",
+      "sha256": "fc4f3431d14e002663e40314bfad25f0b07e20f34063de4d7dad96d88b2e6c86"
+    },
+    {
+      "path": "asio/use_awaitable.hpp",
+      "sha256": "8724ce1042f1d8393a1945b058b8502b1b883505c5dba21105611d42406d84c2"
+    },
+    {
+      "path": "asio/use_future.hpp",
+      "sha256": "619459375296e1e7f4d37acfe8300cbc5f192bd42ef697a87d45086b6e745505"
+    },
+    {
+      "path": "asio/uses_executor.hpp",
+      "sha256": "aaf98e9254957497969e982f25410dc96cc5bf73b9750b203c1020941a595f7e"
+    },
+    {
+      "path": "asio/version.hpp",
+      "sha256": "89d0c5c620e6626d3bee2f33522c7a9d54e00231325edb69f5c25ff65c54adb0"
+    },
+    {
+      "path": "asio/wait_traits.hpp",
+      "sha256": "0e2e7211e593a920300f8d4f8e77deb1f684499eec91c3db8a1bbfe10e8ffa18"
+    },
+    {
+      "path": "asio/windows/basic_object_handle.hpp",
+      "sha256": "1031be830a2640b589679b9847e521e538db77e8dc3aedac5c85875afa66a13a"
+    },
+    {
+      "path": "asio/windows/basic_overlapped_handle.hpp",
+      "sha256": "43148867c45cfbc29b1d35a97405029e2a57db7cdd78a4c124b2baaa0e560a5e"
+    },
+    {
+      "path": "asio/windows/basic_random_access_handle.hpp",
+      "sha256": "66f86cf364066aa6c9e61c303855840bf88d49670b47dd7a3591b8daea2a7010"
+    },
+    {
+      "path": "asio/windows/basic_stream_handle.hpp",
+      "sha256": "d0484b45b7ecba0de89224ae909a8b21eb98ecbb2e9df3c27358112ae5a921a1"
+    },
+    {
+      "path": "asio/windows/object_handle.hpp",
+      "sha256": "0fa7fd6184d6d13a9d37129d36d41cc51b707d858ae1c1298fcf94218d403f75"
+    },
+    {
+      "path": "asio/windows/overlapped_handle.hpp",
+      "sha256": "205be10264e555a591c96ab84064c563603eb6a820448317796f73b10623eba1"
+    },
+    {
+      "path": "asio/windows/overlapped_ptr.hpp",
+      "sha256": "59085f539025891775a97d54c54c95dc399c3bebf20dfb242fc48a7dfc056f46"
+    },
+    {
+      "path": "asio/windows/random_access_handle.hpp",
+      "sha256": "716e54954c60d8bd88d644f4a89b0ed5c10f1f55e660ea5491c2a984fda699e8"
+    },
+    {
+      "path": "asio/windows/stream_handle.hpp",
+      "sha256": "e65d87605f971ebf7fc894dd0e3a1c087ad3258a9e4f9af54d7338d3bfb9c098"
+    },
+    {
+      "path": "asio/writable_pipe.hpp",
+      "sha256": "2c678cc2df010d4dd691886f75922f2eae5d48cc476964b4090a50782f52e207"
+    },
+    {
+      "path": "asio/write.hpp",
+      "sha256": "04963fb7a05db91fbbe116e7e22c26d5010031c4aa2d23d93cb5540e1f311e39"
+    },
+    {
+      "path": "asio/write_at.hpp",
+      "sha256": "00fbbfd083e267ab9053f9a4e1874bb3e55b4d8cd5b0971808b193b7242547a8"
+    },
+    {
+      "path": "asio.hpp",
+      "sha256": "a33fba487e6dbe33831f03065fb4d1481a82e9f3cbcc399911458fb0d161572d"
+    },
+    {
+      "path": "gsl/algorithm",
+      "sha256": "82449c00250b88f24c867050af67aa21a14178a064a5420aae6b7a820d729d1a"
+    },
+    {
+      "path": "gsl/assert",
+      "sha256": "feedac3b49ac61bb04abb75d330ba87ca32001215993824f272da350dfae04f1"
+    },
+    {
+      "path": "gsl/byte",
+      "sha256": "26ca1b782104db86fc9d3e0a214809928e818abd983c620fa3d7b75986c0ffe8"
+    },
+    {
+      "path": "gsl/dyn_array",
+      "sha256": "7be1055fe7b58fc1cbb30268b8d20bbdaf243d2fd19d512989723d936ce102f0"
+    },
+    {
+      "path": "gsl/gsl",
+      "sha256": "ae1e15422773408c6ae48d44b5b3ed0ba72f9a9bfb053d5c9dec3e26cb3a2b49"
+    },
+    {
+      "path": "gsl/narrow",
+      "sha256": "32c0c10e78060072b30aa3942409c57e3f8ff8f06e14150ae8c0ec145f160c19"
+    },
+    {
+      "path": "gsl/pointers",
+      "sha256": "04a9b7b3cfa4b9970fc78882eb8f0ef7f39c9ade65c2c00068b27ada94c3f087"
+    },
+    {
+      "path": "gsl/span",
+      "sha256": "a53f7d95d2a312d36bd139d7e2d80c940b82bb69568805fc8670b98d1cd0a5ff"
+    },
+    {
+      "path": "gsl/span_ext",
+      "sha256": "a3cf89eb41a515b4af683805677cafa6323e7d7c5bb3dd0c85b11d2bdd0ea4d6"
+    },
+    {
+      "path": "gsl/util",
+      "sha256": "a55a7598da879cefb5f6ae37c40473fdd648389e1c1848bbb1ec23950dbe98ec"
+    },
+    {
+      "path": "gsl/zstring",
+      "sha256": "bb5ffc12aae975786c1ce599fcdaa669f5e4551aba17259a32b5cbcb45663bf9"
+    },
+    {
+      "path": "nod/nod.hpp",
+      "sha256": "0a3758a90e6e07a09f2ebc6827e199752deff1b07ebb37c8969a583d52396607"
+    },
+    {
+      "path": "pqrs/dispatcher/dispatcher.hpp",
+      "sha256": "ba13c1a71b4ab7502fb0e1a71ddbe0a940b02ae98d4e4df50f0c03b8f966e8eb"
+    },
+    {
+      "path": "pqrs/dispatcher/extra/debounced_task.hpp",
+      "sha256": "235489780698ecdb105cf777a12a0cfd082895ebcd05150fe7e669219296091e"
+    },
+    {
+      "path": "pqrs/dispatcher/extra/dispatcher_client.hpp",
+      "sha256": "1543f816e926943666b50b5f96784c2cf9ec6ad368b23f66774624ca5fc3688c"
+    },
+    {
+      "path": "pqrs/dispatcher/extra/dispatcher_client_constructor_exception_guard.hpp",
+      "sha256": "0e46aede969f6586ef46b2150a874ba3247eea30f692d416aa610d5a8294cd42"
+    },
+    {
+      "path": "pqrs/dispatcher/extra/shared_dispatcher.hpp",
+      "sha256": "0b3d76405451276f980fd2aa314f44199e4e714e4424e40b9e6db5e33e7f82f1"
+    },
+    {
+      "path": "pqrs/dispatcher/extra/timer.hpp",
+      "sha256": "e8748a9af409467a40d9e006b5b1673a922ea7f40399e6528032809ca0430766"
+    },
+    {
+      "path": "pqrs/dispatcher/object_id.hpp",
+      "sha256": "d42b633c081e48e274617e30624672a82c308f18d23a560d8d81997840796e84"
+    },
+    {
+      "path": "pqrs/dispatcher/time_source.hpp",
+      "sha256": "2a83335fc4b13c54ee604c421d35ba31d08dcc725e8d43a85d4ad0ee7fa0db28"
+    },
+    {
+      "path": "pqrs/dispatcher/types.hpp",
+      "sha256": "58e3bade860fd579cb11c7d8eace5a4bdf161902d2eeea9872b871c8d66eba77"
+    },
+    {
+      "path": "pqrs/dispatcher.hpp",
+      "sha256": "250e62b604cea3cf8db8e7a9ae4b8ae8c4f3420ee9ec5c2f3b0d33adca979960"
+    },
+    {
+      "path": "pqrs/gsl.hpp",
+      "sha256": "1d8162c5b39252534b8cdb59c3b7bd8cffae83cadd6dec7a0738087721fb4db7"
+    },
+    {
+      "path": "pqrs/hash.hpp",
+      "sha256": "187f915851d126016c45c68a7e8d6fb434ab90185900d5096e65411a7bc3becd"
+    },
+    {
+      "path": "pqrs/hid/country_code.hpp",
+      "sha256": "b54664ac9d67975a5abe0857f27067009c976cea42bc5a1c34c59698e00be8de"
+    },
+    {
+      "path": "pqrs/hid/hash.hpp",
+      "sha256": "cd015d2d3378fe342ca853b293ee08bdfd94811f21fd3977160c0baadd811662"
+    },
+    {
+      "path": "pqrs/hid/manufacturer_string.hpp",
+      "sha256": "e138e9a2c4077512d7f88774301f6c9e1a436644bbd264e397c80cdd9bb98dd7"
+    },
+    {
+      "path": "pqrs/hid/product_id.hpp",
+      "sha256": "8dcfa290c351ea1142fa5daa0c8b19064a47c35c79be521b93acae484abf69bb"
+    },
+    {
+      "path": "pqrs/hid/product_string.hpp",
+      "sha256": "8000535ad6eda71e20abc02add75d207b125f38bb6abdcc22a56fdc9e369fe8f"
+    },
+    {
+      "path": "pqrs/hid/report_descriptor/descriptor.hpp",
+      "sha256": "61704bc09e8befd8662a56b26c0a1f3fb52012666a523735b799a1f9b12a568d"
+    },
+    {
+      "path": "pqrs/hid/report_descriptor/parser.hpp",
+      "sha256": "b2e75b58615866020593329c55f002ecb538144f2d3903bbe0de2afe2aee7256"
+    },
+    {
+      "path": "pqrs/hid/report_id.hpp",
+      "sha256": "ca5745f462fcfeaa6715d944f09c0d5510f49df1ead170085232735d10d653a2"
+    },
+    {
+      "path": "pqrs/hid/usage.hpp",
+      "sha256": "198e4b1425a9728d101347625fade73c3c7c5e945d012459f227af1f34ead358"
+    },
+    {
+      "path": "pqrs/hid/usage_page.hpp",
+      "sha256": "2163bc6d76c9083676857e08fa8b3900be8a05d7f3777f02a5d5e9a2059de123"
+    },
+    {
+      "path": "pqrs/hid/usage_pair.hpp",
+      "sha256": "54af692b1fa5655903cb507f5171605e1d76481c6ff0033287439efbb940ad9d"
+    },
+    {
+      "path": "pqrs/hid/vendor_id.hpp",
+      "sha256": "074ee9b04b683727d47ab96c7a176b73f678580b87ec840ac757bb2e800ec4d2"
+    },
+    {
+      "path": "pqrs/hid.hpp",
+      "sha256": "15123f87e02d2c0fcb65f22cdcdec8b5d8be98c42397967b0b26fc0d8a8982bd"
+    },
+    {
+      "path": "pqrs/thread_wait.hpp",
+      "sha256": "237ce8b32ce019ac80a182d00480a9792134a6383b60c3b3e2ab5b7620899955"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/client.hpp",
+      "sha256": "c22d56857a2aa1b5f09bad29e2085dc5cb91b8d8046f5f0578a2ad8111cfb69f"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/asio_helper.hpp",
+      "sha256": "9a58f14b2d720e4b898cb04a778dcb415a8b6ddf2d9347461d36ec07bc841646"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/credentials.hpp",
+      "sha256": "95d758b9f51c1b2bd700252536bb6215750594ccddd72c67a0cc630521e675b1"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/notification_scope.hpp",
+      "sha256": "af8195eb859b63f096817eace41f49581911d9382a0dd9dd6a773ab1834c5667"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/peer.hpp",
+      "sha256": "0e7375d523ea7d675492b83d03bf485c71ca06d8591aaa7a619233ff57c17fb8"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/protocol.hpp",
+      "sha256": "597fb52982df0bc1042fdb38427e3bc4de9f1e003419709c32f47ab0604d8017"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/request_manager.hpp",
+      "sha256": "84d5c5606e5eb87e0da0d9e427ddc4720bb79b53e5f5bd8b35b04409770eb4ba"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/impl/runtime.hpp",
+      "sha256": "75f36b3467bf42a180e4e4f02f3b2e471483edbd21d9dab0551f49a64948d650"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/options.hpp",
+      "sha256": "1ac6ec825e132c2fb3cdc8cbc27936373cd6127ee7d97ccb6c373f79610a22a3"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/peer_credentials.hpp",
+      "sha256": "98b3738c5801ff1a37abe754e73336cde463ba2bde67d4e0deb1a750869e3feb"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/server.hpp",
+      "sha256": "473ea6907ac9e87a0321b4126b910b5b37cd153095c3aee9aeefcb4ac77d310d"
+    },
+    {
+      "path": "pqrs/unix_domain_stream/types.hpp",
+      "sha256": "061ec3512ec605f4d7d2ecf5113d1e47ba6ef3109754f3a2276842b5be679242"
+    },
+    {
+      "path": "pqrs/unix_domain_stream.hpp",
+      "sha256": "23033a7429473aad32ce113f1ade92f080546f4201e89c88789c53b5eccc720e"
+    },
+    {
+      "path": "type_safe/config.hpp",
+      "sha256": "8dcd05860130c2197838844f31421d63b07dcabbb2ccc4025c8765b58796d33f"
+    },
+    {
+      "path": "type_safe/detail/all_of.hpp",
+      "sha256": "aba0bb209c60eb9b5da2244642ab15a7ea69ddec56a0d8f085fa94acefac12b7"
+    },
+    {
+      "path": "type_safe/strong_typedef.hpp",
+      "sha256": "0129f37985b51b2ca9ff969ca5e652864cca6b956845e6c9e46cecee89fa3864"
+    }
+  ]
+}

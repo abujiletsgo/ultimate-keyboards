@@ -2,26 +2,21 @@ import { ConfirmBanner } from '@/components/ui'
 import React, { useState, useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
-import { MODIFIER_NAMES, type ComboRule } from '@/lib/karabinerGenerator'
+import { type ComboRule } from '@/lib/karabinerGenerator'
 import type { MacKey } from '@/lib/macbookLayout'
+import BindingParamPicker from '@/components/board/BindingParamPicker'
+import { NATIVE_KEYS, NATIVE_KEY_CHOICES, NATIVE_MODIFIERS, nativeKeyChoice, selectNativeKeyChoice, type NativeBinding } from '@/lib/nativeBinding'
 import MacbookKeyboard from './MacbookKeyboard'
 
 const COMBO_COLORS = [
-  'rgba(96,165,250,0.7)',
-  'rgba(52,211,153,0.7)',
-  'rgba(251,146,60,0.7)',
-  'rgba(56,189,248,0.7)',
-  'rgba(244,114,182,0.7)',
-  'rgba(245,158,11,0.7)',
-  'rgba(239,68,68,0.7)',
-  'rgba(167,243,208,0.7)',
-]
-
-const COMMON_TO_KEYS = [
-  'return_or_enter', 'escape', 'delete_or_backspace', 'tab', 'spacebar',
-  'left_command', 'left_option', 'left_control', 'left_shift',
-  'up_arrow', 'down_arrow', 'left_arrow', 'right_arrow',
-  'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12',
+  '#60a5fa',
+  '#34d399',
+  '#fb923c',
+  '#38bdf8',
+  '#f472b6',
+  '#f59e0b',
+  '#f87171',
+  '#a7f3d0',
 ]
 
 const KEY_LABELS: Record<string, string> = {
@@ -51,10 +46,13 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
   const [toMods, setToMods] = useState<string[]>(editing?.toModifiers ?? [])
   const [error, setError] = useState('')
 
+  const output: NativeBinding = { behavior: 'key', key: toKey, modifiers: toMods, layer: '', modifier: 'left_shift', holdBehavior: 'balanced' }
   const selectedKeys = useMemo(() => new Set(fromKeys), [fromKeys])
 
   const toggleKey = (key: MacKey) => {
     const code = key.code
+    if (!NATIVE_KEYS.includes(code) && !fromKeys.includes(code)) { setError('Fn and Touch ID cannot be combo triggers in native remapping.'); return }
+    setError('')
     setFromKeys(prev =>
       prev.includes(code) ? prev.filter(k => k !== code) : [...prev, code]
     )
@@ -65,9 +63,11 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 
   const handleSave = () => {
     if (fromKeys.length < 2) { setError('Select at least 2 keys on the keyboard below'); return }
-    if (!toKey.trim()) { setError('Output key is required'); return }
+    if (fromKeys.some(key => !NATIVE_KEYS.includes(key))) { setError('Remove unsupported trigger keys before saving this native combo.'); return }
+    if (!NATIVE_KEYS.includes(toKey) || toMods.some(mod => !NATIVE_MODIFIERS.includes(mod))) { setError('Choose a supported native output key and modifiers.'); return }
     const desc = `${fromKeys.join('+')} → ${toMods.length ? toMods.join('+')+'+' : ''}${toKey}`
     onSave({
+      ...editing,
       type: 'combo',
       description: desc,
       fromKeys,
@@ -85,32 +85,20 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
       {/* Output key */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Output key</span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input
-            style={{ width: 140 }}
-            value={toKey}
-            onChange={e => setToKey(e.target.value)}
-            placeholder="escape"
-          />
-          <select
-            value=""
-            onChange={e => { if (e.target.value) setToKey(e.target.value) }}
-          >
-            <option value="">Common…</option>
-            {COMMON_TO_KEYS.map(k => <option key={k} value={k}>{displayKey(k)}</option>)}
-          </select>
-        </div>
+        <BindingParamPicker options={NATIVE_KEY_CHOICES} value={nativeKeyChoice(output)} label="Combo output key" allowCustom={false}
+          hint="US ANSI symbols include Shift. Choose the symbol’s raw base key to remove Shift."
+          onChange={choice => { const selected = selectNativeKeyChoice(output, choice); setToKey(selected.key); setToMods(selected.modifiers); setError('') }} />
       </div>
 
       {/* Modifiers */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Output modifiers (optional)</span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {MODIFIER_NAMES.map(mod => {
+          {[...new Set(['command', 'option', 'control', 'shift', ...toMods])].map(mod => {
             const active = toMods.includes(mod)
             const sym: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
             return (
-              <button key={mod} onClick={() => toggleMod(mod)} style={{
+              <button key={mod} aria-label={mod.replace(/_/g, ' ')} aria-pressed={active} onClick={() => toggleMod(mod)} style={{
                 padding: '3px 8px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
                 background: active ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.06)',
                 border: active ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(255,255,255,0.1)',
@@ -146,7 +134,7 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 
       {/* Keyboard picker */}
       <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 6 }}>
           Click keys to add/remove from trigger — highlighted = selected
         </div>
         <MacbookKeyboard
@@ -157,7 +145,7 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
         />
       </div>
 
-      {error && <div style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
+      {error && <div role="alert" style={{ fontSize: 11, color: 'var(--danger)' }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn btn-primary btn-sm" onClick={handleSave}>{editing ? 'Save Changes' : 'Add Combo'}</button>
@@ -174,12 +162,21 @@ const MacComboEditor: React.FC = () => {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<{ combo: ComboRule; idx: number } | null>(null)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null)
 
   const combos = rules
     .map((r, i) => ({ rule: r, idx: i }))
     .filter(({ rule }) => rule.type === 'combo') as { rule: ComboRule; idx: number }[]
 
-  const hoveredCombo = hoveredIdx !== null ? combos.find(c => c.idx === hoveredIdx)?.rule ?? null : null
+  const activeIdx = focusedIdx ?? hoveredIdx
+  const activeComboIndex = combos.findIndex(c => c.idx === activeIdx)
+  const hoveredCombo = activeComboIndex >= 0 ? combos[activeComboIndex].rule : null
+  const activeColor = COMBO_COLORS[Math.max(0, activeComboIndex) % COMBO_COLORS.length]
+  const comboColors = new Map<string, string[]>()
+  combos.forEach(({ rule }, index) => {
+    const color = COMBO_COLORS[index % COMBO_COLORS.length]
+    rule.fromKeys.forEach(code => comboColors.set(code, [...(comboColors.get(code) ?? []), color]))
+  })
   const comboHighlights = useMemo(
     () => hoveredCombo ? new Set(hoveredCombo.fromKeys) : undefined,
     [hoveredCombo]
@@ -222,18 +219,20 @@ const MacComboEditor: React.FC = () => {
         />
       )}
 
-      {/* Keyboard preview — hover a combo to see its keys lit up */}
+      {/* Keyboard preview — all configured triggers at idle; focus and hover isolate a combo */}
       {combos.length > 0 && !showForm && !editing && (
         <div className="panel-inset" style={{ padding: '8px 12px', overflowX: 'auto' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 6 }}>
             {hoveredCombo
-              ? `${hoveredCombo.fromKeys.map(k => displayKey(k)).join(' + ')} — highlighted trigger keys`
-              : 'Hover a combo below to preview its trigger keys'}
+              ? `${hoveredCombo.fromKeys.map(k => displayKey(k)).join(' + ')} → ${displayKey(hoveredCombo.toKey)} — highlighted trigger keys`
+              : 'Coloured keys are combo triggers. Split colours mean shared keys. Hover or focus a row to isolate a combo.'}
           </div>
           <MacbookKeyboard
             rules={rules}
             selectorMode
             comboHighlights={comboHighlights}
+            comboColors={comboColors}
+            comboHighlightColor={activeColor}
           />
         </div>
       )}
@@ -255,15 +254,19 @@ const MacComboEditor: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {combos.map(({ rule, idx }, i) => {
             const color = COMBO_COLORS[i % COMBO_COLORS.length]
-            const isHov = hoveredIdx === idx
+            const isHov = activeIdx === idx
             return (
               <div
                 key={idx}
+                data-combo-row={idx}
+                onFocus={() => setFocusedIdx(idx)}
+                onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedIdx(null) }}
                 onMouseEnter={() => setHoveredIdx(idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 style={{
                   background: isHov ? 'var(--glass-bg-hover)' : 'var(--glass-bg)',
                   border: `1px solid ${isHov ? color : 'var(--glass-border)'}`,
+                  boxShadow: isHov ? `inset 3px 0 ${color}` : undefined,
                   borderRadius: 8, padding: '7px 10px',
                   display: 'flex', alignItems: 'center', gap: 8, cursor: 'default',
                   transition: 'border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out)',
@@ -278,7 +281,7 @@ const MacComboEditor: React.FC = () => {
                       className="tag"
                       style={{
                         fontFamily: 'var(--font-mono)',
-                        ...(isHov ? { background: color, color: '#fff', borderColor: color } : {}),
+                        background: color, color: '#101827', borderColor: color, fontWeight: 650,
                       }}
                     >{displayKey(kc)}</span>
                   ))}
@@ -290,10 +293,10 @@ const MacComboEditor: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditing({ combo: rule, idx }); setShowForm(false) }}>
+                  <button aria-label={`Edit combo ${rule.fromKeys.map(displayKey).join(" + ")}`} className="btn btn-secondary btn-sm" onClick={() => { setEditing({ combo: rule, idx }); setShowForm(false) }}>
                     Edit
                   </button>
-                  <button className="btn btn-danger btn-sm" onClick={() => handleDelete(idx)}>×</button>
+                  <button aria-label={`Delete combo ${rule.fromKeys.map(displayKey).join(" + ")}`} className="btn btn-danger btn-sm" onClick={() => handleDelete(idx)}>×</button>
                 </div>
               </div>
             )

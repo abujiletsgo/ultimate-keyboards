@@ -1,0 +1,542 @@
+{
+  "source": "macos-26.5.2-passive-devices.json",
+  "staticDescriptorOnly": true,
+  "inputReportsRead": false,
+  "devices": [
+    {
+      "product": "Apple Internal Keyboard / Trackpad",
+      "registryId": 4294970104,
+      "descriptorBytes": 189,
+      "items": [
+        {
+          "descriptorOffset": 22,
+          "kind": "input",
+          "usagePage": 7,
+          "reportId": 1,
+          "reportSizeBits": 1,
+          "reportCount": 8,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usageMinimum": 224,
+          "usageMaximum": 231,
+          "bitOffset": 0,
+          "totalBits": 8,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 28,
+          "kind": "input",
+          "usagePage": 7,
+          "reportId": 1,
+          "reportSizeBits": 8,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 8,
+          "totalBits": 8,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 40,
+          "kind": "output",
+          "usagePage": 8,
+          "reportId": 1,
+          "reportSizeBits": 1,
+          "reportCount": 5,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usageMinimum": 1,
+          "usageMaximum": 5,
+          "bitOffset": 0,
+          "totalBits": 5,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 46,
+          "kind": "output",
+          "usagePage": 8,
+          "reportId": 1,
+          "reportSizeBits": 3,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 5,
+          "totalBits": 3,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 63,
+          "kind": "input",
+          "usagePage": 7,
+          "reportId": 1,
+          "reportSizeBits": 8,
+          "reportCount": 6,
+          "logicalMinimum": 0,
+          "logicalMaximum": 255,
+          "usageMinimum": 0,
+          "usageMaximum": 255,
+          "bitOffset": 16,
+          "totalBits": 48,
+          "flags": 0,
+          "constant": false,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 77,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 1,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            184
+          ],
+          "bitOffset": 64,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 87,
+          "kind": "input",
+          "usagePage": 255,
+          "reportId": 1,
+          "reportSizeBits": 7,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            3
+          ],
+          "bitOffset": 65,
+          "totalBits": 7,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 1,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 108,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            205
+          ],
+          "bitOffset": 0,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 112,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            179
+          ],
+          "bitOffset": 1,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 116,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            180
+          ],
+          "bitOffset": 2,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 120,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            181
+          ],
+          "bitOffset": 3,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 124,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            182
+          ],
+          "bitOffset": 4,
+          "totalBits": 1,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 126,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 5,
+          "totalBits": 1,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 128,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 6,
+          "totalBits": 1,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 130,
+          "kind": "input",
+          "usagePage": 12,
+          "reportId": 82,
+          "reportSizeBits": 1,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 7,
+          "totalBits": 1,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 147,
+          "kind": "feature",
+          "usagePage": 65281,
+          "reportId": 9,
+          "reportSizeBits": 8,
+          "reportCount": 1,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "usages": [
+            11
+          ],
+          "bitOffset": 0,
+          "totalBits": 8,
+          "flags": 2,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 153,
+          "kind": "feature",
+          "usagePage": 65281,
+          "reportId": 9,
+          "reportSizeBits": 8,
+          "reportCount": 2,
+          "logicalMinimum": 0,
+          "logicalMaximum": 1,
+          "bitOffset": 8,
+          "totalBits": 16,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 12,
+              "usages": [
+                1
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 179,
+          "kind": "input",
+          "usagePage": 65280,
+          "reportId": 63,
+          "reportSizeBits": 8,
+          "reportCount": 64,
+          "logicalMinimum": 0,
+          "logicalMaximum": 255,
+          "usages": [
+            6
+          ],
+          "bitOffset": 0,
+          "totalBits": 512,
+          "flags": 34,
+          "constant": false,
+          "variable": true,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 65280,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        },
+        {
+          "descriptorOffset": 186,
+          "kind": "feature",
+          "usagePage": 65280,
+          "reportId": 63,
+          "reportSizeBits": 16384,
+          "reportCount": 2,
+          "logicalMinimum": 0,
+          "logicalMaximum": 255,
+          "bitOffset": 0,
+          "totalBits": 32768,
+          "flags": 1,
+          "constant": true,
+          "variable": false,
+          "relative": false,
+          "bufferedBytes": false,
+          "collections": [
+            {
+              "usagePage": 65280,
+              "usages": [
+                6
+              ],
+              "collectionType": 1
+            }
+          ]
+        }
+      ],
+      "descriptorAvailable": true
+    }
+  ]
+}

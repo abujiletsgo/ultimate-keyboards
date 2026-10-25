@@ -205,7 +205,7 @@ function KeyboardRow({ kb, editing, onEdit, onSave, confirming, onAskRemove, onC
             <span style={{ color: "var(--text-secondary)" }}>Config folder (for Build and Pointing)</span>
             <div style={{ display: "flex", gap: 6 }}>
               <input value={repoPath} onChange={e => setRepoPath(e.target.value)} className="mono" placeholder="none" style={{ height: 30, fontSize: 11, flex: 1 }} />
-              <button className="btn btn-secondary btn-sm" onClick={async () => { const d = await open({ directory: true, multiple: false }); if (d && !Array.isArray(d)) setRepoPath(d) }}>Choose…</button>
+              <button className="btn btn-secondary btn-sm" onClick={async () => { const d = await open({ directory: true, recursive: true, multiple: false }); if (d && !Array.isArray(d)) setRepoPath(d) }}>Choose…</button>
             </div>
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12 }}>

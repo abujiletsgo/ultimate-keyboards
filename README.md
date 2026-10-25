@@ -3,26 +3,46 @@
 A macOS app for people who build and tune split keyboards. It edits your ZMK or
 QMK config files directly: keymaps, combos, behaviors, trackpads and
 trackballs, then builds and flashes the firmware through your own GitHub
-Actions. It also remaps the MacBook's built-in keyboard through
-Karabiner-Elements.
+Actions. The native remapping preview runs MacBook key remaps, home-row mods,
+layers and combos through a bundled keyboard service. Karabiner-Elements JSON
+export remains available for existing setups.
 
 MIT licensed. See [what is supported](docs/user/supported.md) and the
 [changelog](CHANGELOG.md).
 
 ## Install
 
-1. Download `Ultimate Keyboards_<version>_aarch64.dmg` from
-   [Releases](https://github.com/abujiletsgo/ultimate-keyboards/releases) and drag the app to Applications.
-2. The app is not signed by Apple yet, so macOS blocks the first launch. Open it once,
-   then go to **System Settings › Privacy & Security**, scroll down and click **Open Anyway**
-   (on macOS 14 and earlier: right-click the app, choose **Open**, then **Open** again).
-   It needs a Mac with Apple silicon (M1 or newer).
-3. Click **Add keyboard…** and pick your config repo folder (for ZMK, the folder
-   that holds `config/` and `build.yaml`). The keymap, physical layout and any
-   trackpad or trackball are detected.
+The current **0.3 standalone MacBook remapping build is a development preview**
+for Apple silicon (M1 or newer) on **macOS 13 or later**. It is not yet a
+notarized public customer release. The published
+[v0.2.0 release](https://github.com/abujiletsgo/ultimate-keyboards/releases/tag/v0.2.0)
+remains available as the historical app-only editor; it does not contain the
+current native remapping product.
 
-Updates arrive in **Settings › Updates**. Each download is checked against the
-release signing key before it is installed.
+For a complete 0.3 development installer supplied by the maintainer:
+
+1. Save your work and quit Ultimate Keyboards. Open its DMG and double-click
+   **Install Ultimate Keyboards.pkg**. Follow the administrator and app-close
+   prompts; this one installer installs the app, helper and standalone driver.
+2. Open **This Mac › MacBook Keys › Remapping**. Follow **Activate keyboard
+   driver** and **Input Monitoring**, approving **Ultimate Keyboards Remapper**,
+   then choose **Check status**.
+3. Edit and save the keymap, then explicitly choose **Apply and enable** in
+   **Remapping**. Local editing and Save do not start remapping. Use **Stop
+   remapping** to release capture.
+
+MacBook remapping does **not** require the Karabiner-Elements application or
+customer-installed development tools. The standalone pqrs virtual keyboard
+components are bundled; their original publisher remains visible in macOS
+approval. Stop overlapping Karabiner mappings before a trial, and keep your
+existing setup until physical testing is complete.
+
+Native updates use the complete installer so the app and privileged helper stay
+together; the old app-only updater is not used for native releases. Public
+release still requires Developer ID certificates, notarization, clean-machine
+installation and physical remapping/recovery acceptance. See
+[native setup and acceptance](docs/user/native-remapping.md) and the
+[standalone release contract](docs/release/standalone-macos.md).
 
 ### Permissions it asks for
 
@@ -30,10 +50,12 @@ release signing key before it is installed.
 |---|---|
 | Documents folder | Your config repos usually live there. Other folders are only read after you pick them. |
 | Accessibility | Only for the scroll engine under **This Mac › Scroll & Mouse**. |
-| Karabiner-Elements | Only for **This Mac › MacBook Keys**; install it separately. |
+| Input Monitoring and administrator authorization | Native MacBook remapping uses a privileged keyboard service. The complete native build bundles its setup; approve the service and virtual-keyboard driver before enabling it. |
 
-The app never runs shell commands you type, never uploads your files, and talks
-to GitHub only through your own `gh` login when you open the Build tab.
+External keyboard firmware builds are a separate workflow: they currently require
+GitHub CLI (`gh`) authentication and git operations on your config repository.
+Those tools are not required for native MacBook remapping. The app does not
+provide an arbitrary shell-command input.
 
 ## What it does
 
@@ -47,7 +69,7 @@ Each keyboard you register is a top-level object with **Keymap**, **Combos**,
 | **Keyboard › Behaviors** | ZMK hold-taps, mod-morphs, tap-dances, macros: edit, add, remove. |
 | **Keyboard › Pointing** | Tune a trackpad/trackball in the shield overlay (speed, scroll, gestures, CPI, axis flips, snipe, scroll layer), or add one from a tested template with a diff preview. QMK: pointing flags in `rules.mk` / `config.h`. |
 | **Keyboard › Build** | GitHub Actions runs, artifact download, UF2 flash. |
-| **This Mac › MacBook Keys** | Karabiner-Elements complex-modification builder: remaps, combos, layers, homerow mods. |
+| **This Mac › MacBook Keys** | Native remaps, combos, layers and homerow mods, with explicit apply/stop controls. Optional Karabiner-Elements compatibility export. |
 | **This Mac › Scroll & Mouse** | Native scroll engine (reverse direction, speed) for discrete-wheel mice. |
 | **Settings** | Add, rename, re-point or remove keyboards; built-in-keyboard mute; updates; what is supported. |
 
@@ -68,11 +90,18 @@ Edit → Save → `git commit && git push` in the config repo → GitHub Actions
 
 ## Develop
 
+Source development requires Bun, Rust and Xcode’s C++23 toolchain. The normal
+development app can edit/export profiles; `bun run build` alone does not produce
+the complete native installer. Native builds require a helper compiled for the
+actual signing Team ID, its repair package embedded in the app, and a combined
+app/helper/driver package. See [native build instructions](docs/user/native-remapping.md#build-locally)
+for the signing sequence and the live verification boundary.
+
 ```sh
-bun install
+bun install --frozen-lockfile
 bun run dev          # web dev build — fs bridge lets the browser read/write the keymap files
 bun run tauri:dev    # desktop app (auto-loads keymaps natively)
-bun run build        # package the desktop app
+bun run build        # app-only build; not the complete native installer
 bun run typecheck    # tsc -b
 bun test
 bun run scripts/gen-supported-doc.ts   # after editing src/lib/supported.ts
@@ -80,16 +109,16 @@ bun run scripts/gen-supported-doc.ts   # after editing src/lib/supported.ts
 
 ### Releasing
 
-1. Once per machine: `bash scripts/setup-updater-key.sh` (creates the updater
-   signing key, stores the GitHub secrets, writes the public key into
-   `tauri.conf.json`).
-2. Bump `version` in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and
-   `package.json`; add a `## [x.y.z]` section to `CHANGELOG.md`.
-3. Tag and push: `git tag vx.y.z && git push origin vx.y.z`. The Release workflow
-   builds, signs the update, and publishes the release with `latest.json`.
+The native product uses `scripts/build-commercial-release.py`. Start with
+`--preflight`; the [release guide](docs/release/standalone-macos.md) documents
+Developer ID Application/Installer identities, notarization credentials, isolated
+outputs and customer acceptance. `--build` creates and verifies a candidate; it
+does not install, enable remapping, tag or publish it.
 
-Local `bun run build` does not sign or produce update archives; only the
-Release workflow does (it passes `createUpdaterArtifacts` and the key secrets).
+The **Legacy app-only release** workflow preserves the historical pre-0.3 path
+and fails before dependency setup for version 0.3 or later. Pushing a new native
+version tag is not a supported release process. Updater-key setup applies only
+to that legacy path and does not replace Apple distribution signing.
 
 The vite dev server picks the first free port from 5173 (another local project often
 holds 5173 — check the `➜ Local:` line).
@@ -116,9 +145,12 @@ src/
     dirty.ts               # app-wide unsaved-changes registry
     pointingParser.ts, karabinerGenerator.ts, keyLabel.ts, tauri-web-shims/
   stores/                  # zustand: registryStore, zmkStore, qmkStore, karabinerStore
-tests/                     # bun test — parser, safety, layout, registry (real keymap fixtures)
-src-tauri/                 # Tauri 2 shell: tray, hidutil toggle, scroll engine, quit guard
-docs/                      # audits, research, phase plan
+tests/                     # frontend tests, real keymap fixtures and visual checks
+src-tauri/                 # Tauri shell, native-service client, tray and OS integration
+native/                    # remapping engine/service, pinned vendor code, packaging and tests
+scripts/                   # catalogue tools, release/preflight builders and maintainer checks
+docs/                      # user setup, release contract, research and task evidence
+archive/                   # historical material retained during repository cleanup
 ```
 
 ## Invariants (do not break)

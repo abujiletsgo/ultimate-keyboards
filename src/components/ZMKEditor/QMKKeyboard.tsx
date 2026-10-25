@@ -2,6 +2,7 @@ import { useState } from 'react'
 import BindingEditor from './BindingEditor'
 import PhysicalBoard, { type KeyVisual } from '@/components/board/PhysicalBoard'
 import { BoardLegend } from '@/components/ui'
+import { keyBehaviorVars } from '@/lib/keyVisual'
 import { LEGACY_CORNE_PROCYON, type PhysicalLayout } from '@/lib/layout'
 
 // ── Behavior type detection ───────────────────────────────────────────────────
@@ -99,21 +100,6 @@ interface Props {
   onBindingChange?: (pos: number, newKeycode: string) => void
 }
 
-/** Per-behavior key colors, injected into .keycap via CSS custom props */
-function getKeyVars(behavior: QMKBehavior): { bg?: string; border?: string; text?: string; dashed?: boolean } {
-  switch (behavior) {
-    case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
-    case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
-    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.16))', border: 'rgba(96,165,250,0.50)', text: '#bfdbfe' }
-    case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
-    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.18), rgba(96,165,250,0.08))', border: 'rgba(96,165,250,0.35)', text: '#93c5fd' }
-    case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
-    case 'shifted':   return { bg: 'linear-gradient(180deg, rgba(52,211,153,0.20), rgba(52,211,153,0.09))', border: 'rgba(52,211,153,0.40)', text: '#6ee7b7' }
-    default:          return {}
-  }
-}
-
-
 export default function QMKKeyboard({ keys, layout = LEGACY_CORNE_PROCYON, highlightedPositions, onKeyClick, onBindingChange }: Props) {
   const [editing, setEditing] = useState<{ pos: number; x: number; y: number; top: number } | null>(null)
   const highlighted = highlightedPositions ?? new Set<number>()
@@ -122,7 +108,7 @@ export default function QMKKeyboard({ keys, layout = LEGACY_CORNE_PROCYON, highl
     const fullKc = keys[pos] ?? 'KC_TRNS'
     const behavior = getBehavior(fullKc)
     const label = abbreviateQMK(fullKc)
-    const vars = getKeyVars(behavior)
+    const vars = keyBehaviorVars(behavior)
     const sub = behavior === 'layer' ? 'hold layer' : behavior === 'layer-tap' ? 'tap/hold layer' : behavior === 'mod-tap' ? 'mod-tap' : behavior === 'toggle' ? 'toggle' : behavior === 'shifted' ? 'shifted' : undefined
     return {
       label, sub, title: fullKc,

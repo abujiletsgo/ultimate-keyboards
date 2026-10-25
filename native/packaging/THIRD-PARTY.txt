@@ -1,0 +1,14 @@
+Ultimate Keyboards native setup includes the unmodified standalone
+Karabiner-DriverKit-VirtualHIDDevice 8.6.0 package by pqrs.org.
+This does not install Karabiner-Elements. No upstream endorsement is implied.
+
+Source: https://github.com/pqrs-org/Karabiner-DriverKit-VirtualHIDDevice
+Pinned commit: 9036bc771259ff8d61341f4d1b7072b954fdb2fa
+Package SHA-256: ff8c7fdc5e25387c7805fc7509a0fa9cf98f69ba582704f717fddcae47424387
+Package license: Unlicense (upstream LICENSE.md).
+Client and header dependency license notices are retained with the native
+service's vendored headers. See native/vendor and its manifest.json inventory.
+The original signed package is retained in the helper's Resources/Provenance.
+The executed driver component uses canonical productbuild layout and is checked
+byte-for-byte against that original archive's contents. Upstream executable
+code signatures remain intact; production outer signing protects the product.

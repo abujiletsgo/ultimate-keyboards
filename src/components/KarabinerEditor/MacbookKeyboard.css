@@ -1,0 +1,35 @@
+/* A static keyboard is an information display, not an unavailable action. */
+.macbook-keyboard .keycap.mac-key-preview:disabled {
+  opacity: 1;
+  cursor: default;
+  transform: none;
+  color: var(--key-text);
+  border-color: var(--key-border);
+  box-shadow: var(--shadow-key), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.macbook-keyboard .keycap[data-combo-trigger] {
+  font-weight: 700;
+  border-width: 2px;
+}
+
+.macbook-keyboard .keycap[data-combo-active]:disabled {
+  box-shadow: 0 0 0 1px #101827, 0 0 0 3px #ffffff, var(--shadow-key);
+}
+
+.macbook-keyboard:not(.mac-keymap-board) .keycap.selected {
+  background: #5eead4;
+  color: #101827;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px #101827, var(--shadow-key);
+}
+
+.macbook-keyboard:not(.mac-keymap-board) .keycap:not(:disabled):hover {
+  color: var(--key-text, #101827);
+  border-color: #f1f5f9;
+}
+
+.macbook-keyboard .keycap:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}

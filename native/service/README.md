@@ -1,0 +1,84 @@
+# Native remapper service
+
+`ultimate-keyboards-remapper` is a Rust LaunchDaemon with a small C++23 C ABI bridge. Rust owns validated snapshots, IPC, device-local remapping engines, timing and cross-device usage reference counts. The bridge owns macOS IOHID capture and the unmodified pqrs protocol-7 daemon client. It never opens the DriverKit user client directly.
+
+Build with `UK_TEAM_ID=<main-app-signing-team> cargo build --release --locked --manifest-path native/service/Cargo.toml`. Xcode 26.4's C++23 toolchain is verified. Production mode rejects a missing compiled Team ID. Development builds remain usable for read-only checks and synthetic tests.
+
+## IPC contract
+
+The fixed production endpoint is `/var/run/com.ultimatekeyboards.remapper.sock`. Each connection carries one newline-terminated JSON request and one newline-terminated response, maximum 1 MiB; socket I/O times out after two seconds. At most 16 clients and 64 queued requests are admitted.
+
+Requests are `{ "version": 1, "command": "status" | "apply" | "disable" | "restart", "profile"?: Profile, "enable"?: boolean }`. Only `apply` accepts the optional fields; it requires a complete profile snapshot. Enable must explicitly be `true`; omission applies the snapshot disabled. Invalid snapshots leave the current validated snapshot intact. Responses are `{ "ok": boolean, "status": NativeStatus, "error"?: string }`, with camelCase status fields agreed with the app.
+
+Read-only status is available locally. Mutations require the active non-root console user's Unix peer audit token to satisfy an Apple-anchored code requirement for `com.ultimatekeyboards.app` and the compiled Team ID. Audit-token verification prevents PID reuse. Only authenticated requests refresh the 15-second lease. The app sends a heartbeat every three seconds. Signing is checked before reading client input, and console identity is checked again before accepting a queued mutation.
+
+Production starts idle. The fixed root-owned 0700 state directory is `/Library/Application Support/com.ultimatekeyboards.app/Native/state`; `profile.json` is atomically replaced at mode 0600. A saved enabled profile waits for an authenticated heartbeat from the same active console UID before resuming. A root-owned flock prevents duplicate helpers and allows stale socket recovery after a crash. Test mode has no persistence and rejects `enable=true` before any native backend is constructed.
+
+## Capture and recovery
+
+Capture requires a validated profile, explicit enable (or the gated persisted equivalent), root, Input Monitoring, trusted root-owned upstream endpoint, and the live daemon's Apple-anchored signature for `org.pqrs.Karabiner-VirtualHIDDevice-Daemon`, team `G43BCU2T37`. A separate peer audit-token probe precedes connection to the official client in the root-only directory. Actual readiness requires all protocol signals: connected, driver activated, driver connected, keyboard ready, no version mismatch and no transport fault.
+
+Only `Built-In=true` keyboard devices are eligible. External/split keyboards and virtual products are excluded. Every advertised key input must be an understood digital usage; unknown pages, analog/relative key values and usages beyond the virtual driver's report descriptor exclude the whole device before seizure. The single evidence-backed non-key exception described below is outside the advertised ordinary-key event contract. Page 7 enters the engine. Consumer, Apple keyboard and Apple top-case/Fn input passes through unchanged in the corresponding official reports. Fn remapping is unsupported. Each output transition is posted separately, including tap down/up pairs from one engine call.
+
+Disable, profile replacement, output failure, permission loss, removal, session change, lease expiry, or helper shutdown reset the engines, queue all-up and release physical devices. `IORegisterForSystemPower` releases physical input before acknowledging will-sleep; wake requires re-enable. A wall-clock and monotonic stall check provides an additional fail-open guard. Daemon disconnect closes the per-client virtual device. The helper does not restart or stop an existing pqrs/Karabiner daemon and does not fall back to CGEventTap.
+
+## Safe checks and current verification boundary
+
+- `cargo test --locked --manifest-path native/service/Cargo.toml` tests bounded/invalid IPC, snapshot validation, unauthorized mutations and heartbeat, device output refcounts, report encoding, readiness gates and device exclusion.
+- `ultimate-keyboards-remapper --self-test` checks report encoding/readiness/device filtering and synthetic capture prohibition without connecting to virtual output or opening HID devices.
+- `ultimate-keyboards-remapper --request-permission` invokes `IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)` only in the active non-root user's setup role. The app verifies the installed helper signature and launches the `.app` through LaunchServices, with a fresh instance and `NSApplication.finishLaunching()`. It does not spawn the binary as an inheriting child. Only an explicit setup action invokes this mode; diagnostics, startup and self-tests never request permission.
+- `ultimate-keyboards-remapper --permission-status` is the passive counterpart, also launched through LaunchServices for fresh helper-bundle attribution. It calls `IOHIDCheckAccess`, never a request or capture API. Both setup modes reject root and the wrong console session. Raw `--check` is process-scoped and may inherit the terminal/launcher’s TCC identity; it does not establish the daemon’s grant.
+- `ultimate-keyboards-remapper --list-devices` passively enumerates matching keyboard descriptors with product/transport/Built-In metadata, eligibility, exclusion reasons and grouped usage/logical/report properties. It never calls device/manager Open, connects to virtual output or posts reports.
+- `ultimate-keyboards-remapper --check` reads permission/install/socket metadata only. It never connects to the daemon, seizes devices or posts HID output. `driverReady` stays false until a real explicit-enable handshake has succeeded.
+- `ultimate-keyboards-remapper --test-socket /tmp/<unique>.sock` exercises the real IPC listener under the invoking user; enable is always rejected. It does not touch production state or endpoints.
+
+Installed root-helper IPC authentication, explicit driver handshake, physical-key capture/remapping, media/Fn pass-through, power notifications and session/disconnect recovery require an installed signed build and explicit interactive acceptance. They were not exercised by development verification. The underlying compiled audit-token authorization function was independently exercised with real signed app peers as described below. No installations, driver activation, real keyboard seizure, injected typing or changes to existing Karabiner were performed.
+
+Passive enumeration on this actual macOS 26.5.2 host now finds four matching keyboard devices and **one eligible built-in keyboard**, without opening or capturing any device. The external CrossCorne36/SplitKeyboard and virtual output remain excluded. The passive receipt is `tests/fixtures/macos-26.5.2-passive-devices.json`; the parsed static descriptor is `tests/fixtures/macos-26.5.2-static-descriptor.json`. These are descriptor/registry metadata, not input reports or typed content.
+
+The ordinary-key event scope includes digital keyboard usages and known media/Fn events. The Apple Internal Keyboard / Trackpad exposes an additional opaque vendor report (page 0xff00/usage 6, report 63), which is **not forwarded or advertised as supported**. Its immutable descriptor declares Data/Variable/Absolute/NoPreferred (flags 0x22), not Constant or BufferedBytes. The helper may exclude this exact non-key input only when all of these facts hold at runtime: Built-In=true, the exact Apple product string, the observed 189-byte static descriptor matches byte-for-byte, one genuine descendant `AppleHIDKeyboardEventDriverV2` publishes a valid nonempty numeric `SupportedKeyboardUsagePairs` contract entirely within supported key pages and excluding 0xff00/6, and all observed input/parent metadata matches the narrow predicate in `bridge/device_policy.hpp`. A missing/malformed contract, advertised target pair, changed report/parent/size/limits, different descriptor, or other unknown report remains ineligible. No claim is made about the vendor payload's purpose or preservation.
+
+Page-7 array backing elements (`IsArray` plus usage UINT32_MAX) are excluded consistently from eligibility, event handling and held-key checks because the Xcode SDK's `IOHIDElement.h` documents those as array indices whose individual usages are separately exposed. The exact non-key report is also skipped in all three paths, before reading any input value or raw bytes. The trusted registry contract is snapshotted immediately before seizure.
+
+Capture teardown uses `IOHIDDeviceClose(..., kIOHIDOptionsTypeNone)` and releases the device references after unregistering callbacks. Every queued key carries its original `IOHIDValueGetTimeStamp`, converted to milliseconds on the same `mach_absolute_time` clock used for engine deadline ticks; batched delivery no longer erases press/release timing. Actual output scheduling still depends on macOS scheduling, and sleep/session/capture recovery remains a live acceptance check.
+
+Direct inspection of the pinned driver's `org_pqrs_Karabiner_DriverKit_VirtualHIDKeyboard.cpp` report descriptor confirms these bounds: keyboard report ID 1 is 67 bytes with eight modifier bits and 32 ordinary 16-bit usage slots; consumer report ID 2 and Apple reports IDs 3/4 are 65 bytes with 32 usage slots each. Keyboard/Apple usages are at most 0xff, consumer usages at most 0x300. The bridge checks capacity before dispatch and fails open rather than silently relying on the upstream fixed-capacity `keys::insert`.
+
+Primary-source rationale and the approved ordinary-key event boundary are recorded in the [native remapping research](../../docs/research/2026-10-23-native-remapping.md#2026-10-24-passive-descriptor-investigation-built-in-keyboard-report-63). The upstream broker maintains a separate virtual keyboard for each socket peer, so this helper resets/disconnects its own virtual keyboard.
+
+## Optional local signing integration test
+
+`tests/signed_peer_smoke.py` verifies the actual compiled bridge's `uk_authorize`, rather than a copied authorization implementation. It requires macOS, the active non-root console session, an existing `libuk_native.a`, and an explicitly selected local Apple Development or Developer ID Application signing identity. This is an optional certificate-dependent developer check, not an unconditional CI test.
+
+```sh
+python3 native/service/tests/signed_peer_smoke.py --identity "$SIGNING_IDENTITY" --team "$TEAM_ID"
+```
+
+Use `--native-lib /absolute/path/libuk_native.a` if more than one release library exists. The script links a tiny untrusted test host to that already-built library; it never builds or replaces the helper or packaged artifacts. It creates temporary signed `.app` clients under `/Volumes/Work` (overridable with `--work-dir`). Each child executes before creating its own Unix socket connection, so the test uses a real peer audit token rather than an inherited socketpair. Fixtures and processes are cleaned up on success or failure. No root, production endpoint, HID initialization/output, permission request, installer, or driver activation is involved.
+
+Verified on macOS 26.5.2 with console/peer UID 501 and Apple Development Team `9878YL387T`:
+
+| Real peer case | Actual `uk_authorize` result |
+| --- | --- |
+| Signed `com.ultimatekeyboards.app`, expected team | Accepted |
+| Same team, different bundle identifier | Rejected |
+| Ad-hoc signature, correct bundle identifier | Rejected |
+| Correct signed bundle, wrong expected team | Rejected |
+
+The actual bridge's `uk_verify_signature` also rejected a mismatched expected UID on the accepted socket. A separate process running under another UID and actual console switching were not attempted; those are distinct live acceptance checks. The linked release library's SHA-256 was `6fa24dec0862fe9eb3e57dd89338898bb435965a3d7c4285148f1b5889461e59` and remained unchanged. The script prints its library hash, fixture signature metadata, each decision, and these verification limits as JSON.
+
+## Permission attribution and explicit recovery
+
+Installation diagnostics on 2026-10-24 confirmed that directly executing the installed helper from a shell could report permission granted while the production daemon reported denied. Unified TCC logs attributed those user-session checks to Orca/Ghostty, whereas the launchd daemon was attributed to its own `com.ultimatekeyboards.remapper` identity. The discrepancy did not establish a stale grant or justify bypassing the daemon's permission gate.
+
+The implementation now uses the HID-specific public APIs documented in Xcode's `IOKit/hidsystem/IOHIDLib.h` for IOHIDManager/IOHIDDevice access. The app uses LaunchServices to invoke the verified helper bundle's setup roles, completing AppKit's launch handshake before the short-lived mode exits. A fresh passive report must match protocol 1, helper bundle ID, the IOHID API, expected request/passive role, no capture, and the current non-root UID. The passive status check's stdout/stderr files are unique, mode 0600 inside a private 0700 directory, bounded, and cleaned after a ten-second launch deadline. Permission-request launches do not use `open -W` or wait for a report, so a person answering macOS’s dialog is not subject to that timeout; Settings opens after the LaunchServices launch handshake.
+
+`native_remapping_refresh_permissions()` is an explicit user action; normal status/heartbeat calls remain passive. If a fresh own-bundle check reports granted while the daemon reports denied, refresh sends the authenticated `restart` command. The helper releases input, retains the profile with enabled=false, replies, and exits gracefully. Launchd restarts only this helper. The app waits up to 15 seconds for a different trusted root peer PID and returns that new daemon's actual status. A fresh user-session grant is only a restart trigger, never proof of root capture readiness. Re-enabling still requires Apply/Enable.
+
+This follows the pinned upstream [current-process permission check](https://github.com/pqrs-org/Karabiner-Elements/blob/1eff53ce872bbb8f8ad9fb8c1d778b4903db0677/src/apps/CoreService/include/core_service/core_service_utility.hpp), [fresh bundle checking and permission recovery](https://github.com/pqrs-org/Karabiner-Elements/blob/1eff53ce872bbb8f8ad9fb8c1d778b4903db0677/src/apps/CoreService/include/core_service/agent/permission_checker.hpp), and [LaunchServices/AppKit finish-launching handshake](https://github.com/pqrs-org/Karabiner-Elements/blob/1eff53ce872bbb8f8ad9fb8c1d778b4903db0677/src/apps/CoreService/include/core_service/main/agent.hpp). Development tests exercise role/response validation, private output handling, authenticated restart rejection, and a real synthetic-socket graceful exit. Actual user permission approval and production restart remain separate interactive acceptance checks; no root service restart, permission DB change, or real capture was performed while implementing this repair.
+
+## Input wake scheduling
+
+Active capture waits in `CFRunLoopRunInMode(..., returnAfterSourceHandled=true)` and drains queued input immediately after the source callback. The wait is the smaller of 3 ms and the nearest engine deadline on the `mach_absolute_time` millisecond clock; due deadlines use a zero-duration pass, then the clock is sampled again for engine ticks. The previous unconditional 3 ms sleep after every active tick has been removed. Previously the loop performed a 1 ms run-loop wait followed by that sleep, leaving newly arriving HID input waiting for the next pump during the sleep. Disabled and synthetic modes retain the 3 ms idle sleep. There is no active busy polling: an unexpectedly finished/stopped run loop marks the bridge faulty and releases capture.
+
+The wait adds at most 3 ms before revisiting IPC and safety checks (excluding work processing and OS scheduling). Driver/power faults, console identity and lease are checked again after the wait before posting output; existing permission checks, sleep/stall watchdog and fail-open teardown remain in force. Tests verify deadline arithmetic and exercise a private CoreFoundation run-loop source that wakes from another thread, plus an idle timeout, without constructing a HID manager or driver client. This proves the scheduling mechanism and removal of an artificial pickup sleep, not a measured physical keyboard-to-display latency improvement. Actual hardware latency, capture and sleep/session recovery remain separate interactive acceptance checks.

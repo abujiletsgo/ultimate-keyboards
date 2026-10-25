@@ -2,15 +2,17 @@
  * MacKeyEditor — click-to-popover for MacBook key remapping.
  * Appears anchored to the clicked key, matching BindingEditor's style.
  */
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useId } from 'react'
 import { Plus, X } from 'lucide-react'
 import { Popover, DeleteButton } from '@/components/ui'
-import { KEY_CODES, MODIFIER_NAMES, type SimpleRemapRule, type ComboRule, type LayerActivatorRule, type LayerBindingRule } from '@/lib/karabinerGenerator'
+import { KEY_CODES, MODIFIER_NAMES, HOMEROW_HOLD_MS, type SimpleRemapRule, type ComboRule, type LayerActivatorRule, type LayerBindingRule } from '@/lib/karabinerGenerator'
 import { useKarabinerStore } from '@/stores/karabinerStore'
+import { macBaseRuleIndex, macLayerBindingIndex, macLayerBindingEdit, macLayers, macKeyFace } from '@/lib/macKeymapView'
 import type { MacKey } from '@/lib/macbookLayout'
 
 interface Props {
   macKey: MacKey
+  selectedLayer?: string | null
   anchorX: number
   anchorY: number
   anchorTop?: number
@@ -56,7 +58,7 @@ function displayKey(k: string) {
 
 // ── Searchable key dropdown ───────────────────────────────────────────────────
 
-function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function KeyDropdown({ value, onChange, emptyLabel = 'Choose a key' }: { value: string; onChange: (v: string) => void; emptyLabel?: string }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -81,7 +83,7 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
         }}
         style={{ width: '100%', justifyContent: 'flex-start', fontFamily: 'var(--font-mono)' }}
       >
-        {displayKey(value)} <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>({value})</span> ▾
+        {value ? displayKey(value) : emptyLabel} {value && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>({value})</span>} ▾
       </button>
       {open && (
         <Popover anchor={anchor} width={220} layer="menu" noBackdrop label="Choose a key" onClose={() => setOpen(false)}
@@ -92,7 +94,13 @@ function KeyDropdown({ value, onChange }: { value: string; onChange: (v: string)
             onChange={e => setQuery(e.target.value)}
             placeholder="Search key…"
             onKeyDown={e => {
-              if (e.key === 'Enter' && filtered.length > 0) { onChange(filtered[0]); setOpen(false); setQuery('') }
+              if (e.key === 'Enter' && filtered.length > 0) {
+                // Closing restores focus to the trigger; suppress Enter's default
+                // activation so that key selection does not reopen the menu.
+                e.preventDefault()
+                e.stopPropagation()
+                onChange(filtered[0]); setOpen(false); setQuery('')
+              }
             }}
             style={{ margin: 6, height: 26, fontSize: 11 }}
           />
@@ -149,13 +157,18 @@ function ModPills({ selected, onChange }: { selected: string[]; onChange: (v: st
 
 // ── Main popover ──────────────────────────────────────────────────────────────
 
-export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onClose }: Props) {
-  const { rules, addRule, removeRule } = useKarabinerStore()
-  const [mode, setMode] = useState<Mode>('remap')
+export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onClose, selectedLayer = null }: Props) {
+  const { rules, addRule, removeRule, updateRule } = useKarabinerStore()
+  const baseIndex = macBaseRuleIndex(rules, macKey.code)
+  const baseRule = rules[baseIndex]
+  const currentRemap = baseRule?.type === 'simple' ? baseRule : undefined
+  const currentLayer = selectedLayer === null && baseRule?.type === 'layer_activator' ? baseRule : undefined
+  const currentBinding = selectedLayer !== null ? rules[macLayerBindingIndex(rules, macKey.code, selectedLayer)] as LayerBindingRule | undefined : undefined
+  const [mode, setMode] = useState<Mode>(selectedLayer !== null ? 'layer_bind' : currentLayer ? 'layer_activate' : 'remap')
 
   // Remap state
-  const [toKey, setToKey] = useState(KEY_CODES[0])
-  const [toMods, setToMods] = useState<string[]>([])
+  const [toKey, setToKey] = useState(currentRemap?.toKey ?? macKey.code)
+  const [toMods, setToMods] = useState<string[]>(currentRemap?.toModifiers ?? [])
 
   // Combo state
   const [comboKeys, setComboKeys] = useState<string[]>([macKey.code])
@@ -163,17 +176,21 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
   const [comboToMods, setComboToMods] = useState<string[]>([])
 
   // Layer activate state
-  const [layerName, setLayerName] = useState(`layer_${macKey.code.replace(/[^a-z0-9]/g, '_')}`)
-  const [tapKey, setTapKey] = useState('')
+  const [layerName, setLayerName] = useState(currentLayer?.layerName ?? `layer_${macKey.code.replace(/[^a-z0-9]/g, '_')}`)
+  const [tapKey, setTapKey] = useState(currentLayer?.tapKey ?? '')
+  const [holdBehavior, setHoldBehavior] = useState<NonNullable<LayerActivatorRule['holdBehavior']>>(currentLayer?.holdBehavior ?? 'balanced')
+  const [editingLayer, setEditingLayer] = useState<LayerActivatorRule | null>(currentLayer ?? null)
+  const timingId = useId()
 
   // Layer bind state — pick an existing layer activator
-  const layerActivators = rules.filter(r => r.type === 'layer_activator') as LayerActivatorRule[]
-  const [bindLayerName, setBindLayerName] = useState(layerActivators[0]?.layerName ?? '')
-  const [bindTo, setBindTo] = useState(KEY_CODES[0])
-  const [bindToMods, setBindToMods] = useState<string[]>([])
+  const layerActivators = macLayers(rules).slice(1).map(layer => ({ layerName: layer.name!, fromKey: layer.activators.join(', ') || 'no activator' }))
+  const [bindLayerName, setBindLayerName] = useState(selectedLayer ?? layerActivators[0]?.layerName ?? '')
+  const [bindTo, setBindTo] = useState(currentBinding?.toKey ?? macKey.code)
+  const [bindToMods, setBindToMods] = useState<string[]>(currentBinding?.toModifiers ?? [])
 
   // Existing rules for this key
   const existingRules = rules.filter(r => {
+    if (selectedLayer !== null) return r.type === 'layer_binding' && r.layerName === selectedLayer && r.fromKey === macKey.code
     if (r.type === 'simple') return r.fromKey === macKey.code
     if (r.type === 'combo') return r.fromKeys.includes(macKey.code)
     if (r.type === 'layer_activator') return r.fromKey === macKey.code
@@ -184,13 +201,15 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
 
   function handleAddRemap() {
     const rule: SimpleRemapRule = {
+      ...currentRemap,
       type: 'simple',
-      description: `${macKey.code} → ${toKey}`,
+      description: currentRemap?.description ?? `${macKey.code} → ${toKey}`,
       fromKey: macKey.code,
       toKey,
       toModifiers: toMods.length > 0 ? toMods : undefined,
     }
-    addRule(rule)
+    if (currentRemap) updateRule(baseIndex, rule)
+    else addRule(rule)
     onClose()
   }
 
@@ -209,27 +228,25 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
 
   function handleAddLayerActivate() {
     const rule: LayerActivatorRule = {
+      ...editingLayer,
       type: 'layer_activator',
-      description: `${macKey.code} → activate ${layerName}`,
+      description: editingLayer?.description ?? `${macKey.code} → activate ${layerName}`,
       fromKey: macKey.code,
-      layerName: layerName.trim() || `layer_${macKey.code}`,
+      layerName: editingLayer?.layerName ?? (layerName.trim() || `layer_${macKey.code}`),
       tapKey: tapKey || undefined,
+      holdBehavior,
     }
-    addRule(rule)
+    const index = editingLayer ? rules.indexOf(editingLayer) : -1
+    if (index >= 0) updateRule(index, rule)
+    else addRule(rule)
     onClose()
   }
 
   function handleAddLayerBind() {
     if (!bindLayerName) return
-    const rule: LayerBindingRule = {
-      type: 'layer_binding',
-      description: `[${bindLayerName}] ${macKey.code} → ${bindTo}`,
-      layerName: bindLayerName,
-      fromKey: macKey.code,
-      toKey: bindTo,
-      toModifiers: bindToMods.length > 0 ? bindToMods : undefined,
-    }
-    addRule(rule)
+    const edit = macLayerBindingEdit(rules, macKey.code, bindLayerName, bindTo, bindToMods)
+    if (edit.index >= 0) updateRule(edit.index, edit.rule)
+    else addRule(edit.rule)
     onClose()
   }
 
@@ -249,6 +266,15 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
     layer_bind: 'In Layer',
   }
 
+  if (macKey.code === 'power') return (
+    <Popover anchor={{ x: anchorX, y: anchorY, top: anchorTop }} width={290} label="Touch ID" onClose={onClose}>
+      <div style={{ padding: 14, fontSize: 12, lineHeight: 1.6 }}>
+        Touch ID is controlled by macOS. Native key mappings do not change this key.
+        <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={onClose}>Close</button>
+      </div>
+    </Popover>
+  )
+
   return (
     <Popover anchor={{ x: anchorX, y: anchorY, top: anchorTop }} width={290} label={`Configure ${macKey.label}`} onClose={onClose}>
       <div style={{ overflow: 'hidden' }}>
@@ -265,7 +291,7 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
             <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{macKey.code}</span>
           </div>
           <div className="seg-ctrl" style={{ flexWrap: 'wrap' }}>
-            {(Object.keys(MODE_LABELS) as Mode[]).map(m => (
+            {(selectedLayer !== null ? ['layer_bind'] as Mode[] : Object.keys(MODE_LABELS) as Mode[]).map(m => (
               <button
                 key={m}
                 className={`seg-btn${mode === m ? ' active' : ''}`}
@@ -277,6 +303,12 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
           </div>
         </div>
 
+        {selectedLayer !== null && <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--text)', overflowWrap: 'anywhere' }}>
+          Layer: <strong>{selectedLayer}</strong>. {!currentBinding && 'No layer binding yet; this key falls back to Base.'}
+          {macKeyFace(rules, macKey, selectedLayer).shadowedBy !== undefined && <p style={{ color: 'var(--warning)', marginTop: 5 }}>
+            An earlier Base rule takes priority. Review ordered rules if this binding is not used.
+          </p>}
+        </div>}
         {/* Existing rules for this key */}
         {existingRules.length > 0 && (
           <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
@@ -288,7 +320,19 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)', flex: 1, fontFamily: 'var(--font-mono)' }}>
                   {r.description}
                 </span>
-                <DeleteButton label={`Remove rule: ${r.description}`} onClick={() => removeRule(rules.indexOf(r))} />
+                {r.type === 'layer_activator' && <button className="btn btn-secondary btn-sm"
+                  aria-label={`Edit layer ${r.layerName}`}
+                  onClick={() => {
+                    setEditingLayer(r)
+                    setLayerName(r.layerName)
+                    setTapKey(r.tapKey ?? '')
+                    setHoldBehavior(r.holdBehavior ?? 'balanced')
+                    setMode('layer_activate')
+                  }}>Edit</button>}
+                <DeleteButton label={`Remove rule: ${r.description}`} onClick={() => {
+                  if (r === editingLayer) setEditingLayer(null)
+                  removeRule(rules.indexOf(r))
+                }} />
               </div>
             ))}
           </div>
@@ -313,8 +357,11 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
                 Hold <b style={{ color: 'var(--text)' }}>{macKey.label}</b> to activate a layer. Other keys can then bind to this layer.
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 56, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Layer name</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 56, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{editingLayer ? 'Layer (fixed)' : 'Layer name'}</span>
                 <input
+                  aria-label="Layer name"
+                  readOnly={!!editingLayer}
+                  title={editingLayer ? "Layer name stays fixed to preserve existing bindings." : undefined}
                   value={layerName}
                   onChange={e => setLayerName(e.target.value.replace(/\s/g, '_'))}
                   style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'var(--font-mono)' }}
@@ -323,12 +370,43 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 56, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tap key</span>
-                <KeyDropdown value={tapKey || KEY_CODES[0]} onChange={setTapKey} />
+                <KeyDropdown value={tapKey} onChange={setTapKey} emptyLabel="None · immediate" />
                 <button
                   className="btn btn-ghost btn-sm"
+                  aria-label="Remove tap key"
                   onClick={() => setTapKey('')}
                 >none</button>
               </div>
+              {tapKey ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <fieldset aria-describedby={`${timingId}-help`} style={{ border: 0, padding: 0, margin: 0 }}>
+                  <legend style={{ fontSize: 11, color: 'var(--text)', marginBottom: 5 }}>Native layer timing</legend>
+                  {([
+                    ['balanced', 'Balanced', 'another key tapped'],
+                    ['hold_preferred', 'Fast chord', 'another key pressed'],
+                    ['tap_preferred', 'Timed', 'wait hold threshold'],
+                  ] as const).map(([value, label, hint]) => <label key={value} style={{
+                    display: 'flex', alignItems: 'center', gap: 7, minHeight: 27, fontSize: 11,
+                    color: 'var(--text)', cursor: 'pointer',
+                  }}>
+                    <input type="radio" name={timingId} value={value} checked={holdBehavior === value}
+                      aria-label={label} onChange={() => setHoldBehavior(value)}
+                      style={{ width: 14, height: 14, padding: 0, margin: 0, accentColor: 'var(--accent)' }} />
+                    <span><b>{label}</b> · {hint}</span>
+                  </label>)}
+                </fieldset>
+                <p id={`${timingId}-help`} style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--text)' }}>
+                  {holdBehavior === 'balanced'
+                    ? `Resolve as a layer when another key is tapped (pressed and released), or after ${HOMEROW_HOLD_MS} ms. Default for existing rules.`
+                    : holdBehavior === 'hold_preferred'
+                    ? `Activate on another key press, or after ${HOMEROW_HOLD_MS} ms. Rolling taps can be treated as layer chords.`
+                    : `Wait ${HOMEROW_HOLD_MS} ms before activating the layer, even when another key is pressed.`}
+                </p>
+              </div> : <p style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--text)' }}>
+                Native: activates immediately on key press and releases on key up. No tap action or hold delay.
+              </p>}
+              <p style={{ fontSize: 11, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                Native timing only. Optional Karabiner export keeps its legacy hold timing.
+              </p>
             </div>
           ) : mode === 'layer_bind' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -340,13 +418,20 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 10, color: 'var(--text-muted)', width: 44, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Layer</span>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {layerActivators.map(la => (
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', minWidth: 0, flex: 1 }}>
+                      {layerActivators.filter(la => selectedLayer === null || la.layerName === selectedLayer).map(la => (
                         <button
                           key={la.layerName}
-                          onClick={() => setBindLayerName(la.layerName)}
+                          title={la.layerName}
+                          onClick={() => {
+                            setBindLayerName(la.layerName)
+                            const rule = rules[macLayerBindingIndex(rules, macKey.code, la.layerName)] as LayerBindingRule | undefined
+                            setBindTo(rule?.toKey ?? macKey.code)
+                            setBindToMods(rule?.toModifiers ?? [])
+                          }}
                           style={{
                             padding: '3px 8px', borderRadius: 20, fontSize: 10, cursor: 'pointer',
+                            maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             background: bindLayerName === la.layerName ? 'rgba(34,211,238,0.25)' : 'rgba(255,255,255,0.07)',
                             border: bindLayerName === la.layerName ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.1)',
                             color: bindLayerName === la.layerName ? 'var(--accent-2)' : 'var(--text-muted)',
@@ -446,7 +531,7 @@ export default function MacKeyEditor({ macKey, anchorX, anchorY, anchorTop, onCl
             }
           >
             <Plus size={11} />
-            Add {MODE_LABELS[mode]}
+            {mode === 'layer_activate' && editingLayer ? 'Save Layer Key' : mode === 'layer_bind' && macLayerBindingIndex(rules, macKey.code, bindLayerName) >= 0 ? 'Save Layer Binding' : mode === 'remap' && currentRemap ? 'Save Remap' : `Add ${MODE_LABELS[mode]}`}
           </button>
         </div>
       </div>
