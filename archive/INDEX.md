@@ -1,0 +1,38 @@
+# Archive index
+
+| Archived | File | Origin | Reason |
+|---|---|---|---|
+| 2026-10-25 | [2026-10-25/code/MacKeyEditor.tsx.txt](2026-10-25/code/MacKeyEditor.tsx.txt) | `src/components/KarabinerEditor/MacKeyEditor.tsx` | Superseded by shared MacBindingEditor; zero live imports. |
+| 2026-10-25 | [2026-10-25/build-logs/combined-build.log](2026-10-25/build-logs/combined-build.log) | `native/installer/combined-build.log` | Historical development build output. |
+| 2026-10-25 | [2026-10-25/build-logs/packaging-tests.log](2026-10-25/build-logs/packaging-tests.log) | `native/installer/packaging-tests.log` | Historical packaging test output. |
+| 2026-10-25 | [2026-10-25/build-logs/repair-build.log](2026-10-25/build-logs/repair-build.log) | `native/installer/repair-build.log` | Historical development build output. |
+| 2026-10-25 | [2026-10-25/native-remapping-history.json](2026-10-25/native-remapping-history.json) | `docs/plan/2026-10-23-native-remapping.json` | Completed phase history; current path is now a concise active handoff. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.dmg` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.dmg` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.pkg` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.pkg` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.delivery.json` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.delivery.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.manifest.json` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.manifest.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.manifest.json` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.manifest.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.pkg` | `native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.pkg` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.pkg` | `native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.pkg` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.verification.json` | `native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.verification.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/surface.json` | `.qa/surface.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/runid` | `.qa/runid` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/results-cli.json` | `.qa/results-cli.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/report-qa_1783234580-iter2.md` | `.qa/report-qa_1783234580-iter2.md` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/rows-cli.json` | `.qa/rows-cli.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/report-qa_1783234580.md` | `.qa/report-qa_1783234580.md` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/matrix.json` | `.qa/matrix.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/rows-browser.json` | `.qa/rows-browser.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/results-browser.json` | `.qa/results-browser.json` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/corne_tp.keymap.orig2` | `.qa/evidence/corne_tp.keymap.orig2` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/int-02-tsc.log` | `.qa/evidence/int-02-tsc.log` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/kar-keyboard.png` | `.qa/evidence/kar-keyboard.png` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/int-03-console-errors.txt` | `.qa/evidence/int-03-console-errors.txt` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/int-01-roundtrip.txt` | `.qa/evidence/int-01-roundtrip.txt` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/qmk-04-qmk-tab.png` | `.qa/evidence/qmk-04-qmk-tab.png` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/zmk-01.png` | `.qa/evidence/zmk-01.png` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/zmk-03.png` | `.qa/evidence/zmk-03.png` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/qmk-04-reload.txt` | `.qa/evidence/qmk-04-reload.txt` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/int-03-console-all.txt` | `.qa/evidence/int-03-console-all.txt` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/int-02-build.log` | `.qa/evidence/int-02-build.log` | Superseded failed installer or July QA evidence; see dated manifest. |
+| 2026-10-25 | `2026-10-25/artifacts/superseded-local-evidence.tar.gz::.qa/evidence/corne_tp.keymap.orig` | `.qa/evidence/corne_tp.keymap.orig` | Superseded failed installer or July QA evidence; see dated manifest. |

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { MACBOOK_LAYOUT } from '../src/lib/macbookLayout'
-import { macLayers, macKeyFace, macLayerBindingEdit, validMacLayer, macUnplacedKeys, MAC_PHYSICAL_LAYOUT } from '../src/lib/macKeymapView'
+import { macLayers, macKeyFace, validMacLayer, macUnplacedKeys, MAC_PHYSICAL_LAYOUT } from '../src/lib/macKeymapView'
+import { applyNativeBinding, readNativeBinding } from '../src/lib/nativeBinding'
 import type { Rule, LayerBindingRule } from '../src/lib/karabinerGenerator'
 
 const key = (code: string) => MACBOOK_LAYOUT.find(key => key.code === code)!
@@ -48,12 +49,17 @@ describe('Mac Keymap configured preview', () => {
     const saved = { ...binding, editorMetadata: { note: 'keep' } }
     const rules: Rule[] = [activator, saved, { ...binding, toKey: 'right_arrow' }]
     const before = structuredClone(rules)
-    const edit = macLayerBindingEdit(rules, 'h', 'nav', 'up_arrow', ['option'])
-    expect(edit.index).toBe(1)
-    expect(edit.rule).toEqual({ ...saved, toKey: 'up_arrow', toModifiers: ['option'] })
+    const edit = applyNativeBinding(rules, 'h', 'nav', {
+      ...readNativeBinding(rules, 'h', 'nav'), key: 'up_arrow', modifiers: ['option'],
+    })
+    expect(edit).toEqual([activator, { ...saved, toKey: 'up_arrow', toModifiers: ['option'] }, rules[2]])
+    const added = applyNativeBinding(rules, 'j', 'nav', {
+      ...readNativeBinding(rules, 'j', 'nav'), behavior: 'key', key: 'down_arrow',
+    })
+    expect(added.slice(0, rules.length)).toEqual(before)
+    expect(added).toHaveLength(rules.length + 1)
+    expect(added.at(-1)).toEqual({ type: 'layer_binding', description: 'j binding', fromKey: 'j', layerName: 'nav', toKey: 'down_arrow' })
     expect(rules).toEqual(before)
-    expect(macLayerBindingEdit(rules, 'j', 'nav', 'down_arrow', []).index).toBe(-1)
-    expect(rules[0]).toEqual(activator)
   })
   test('missing physical keys are retained as diagnostics; adapter keeps every Mac key coordinate and dimension', () => {
     expect(macUnplacedKeys([{ ...binding, fromKey: 'iso_section' }, binding, { ...binding, fromKey: 'iso_section' }])).toEqual(['iso_section'])

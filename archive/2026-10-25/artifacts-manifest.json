@@ -1,0 +1,154 @@
+{
+  "archive": "archive/2026-10-25/artifacts/superseded-local-evidence.tar.gz",
+  "archiveSha256": "6f88356bb613b58c5ef1bff6e7863f0596e97f630bb39775810fb6e3a1124657",
+  "bytes": 42332820,
+  "files": [
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.dmg",
+      "bytes": 14348472,
+      "sha256": "e2e3bfa282f289cd887a0353b637fa02de0b5263b4889d15a71b2da905103632"
+    },
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.pkg",
+      "bytes": 13436434,
+      "sha256": "dae556e29bb6db54569a116ccfc7cd52fab365339bc3f0df685075fc5cd4f03f"
+    },
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.delivery.json",
+      "bytes": 22231,
+      "sha256": "eb61f2ffef0471550ff2dbd4d8a6cd13b08373df5f6435f46898a61a534b1718"
+    },
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-0.3.0-Trial.manifest.json",
+      "bytes": 19216,
+      "sha256": "3cf35810339543e593c2af50468a1a7c064cb9537ca09dbc5480bbf2fb07f030"
+    },
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.manifest.json",
+      "bytes": 14185,
+      "sha256": "3480f410cf3b196b0b0452c58164ba3febca8005384f2c55e2a4275b43c0a59c"
+    },
+    {
+      "origin": "native/trial/2026-10-25/rejected-html/UltimateKeyboards-Native-Setup.pkg",
+      "bytes": 5079101,
+      "sha256": "828ef17a6cf8e378ca9986c2d56e53e2b025435cff7e3e043c50094d7dbef846"
+    },
+    {
+      "origin": "native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.pkg",
+      "bytes": 8730487,
+      "sha256": "a87fc201496473c7a8bde8a172c43d9c41ec06aeb8807ede34d0a947d85bb719"
+    },
+    {
+      "origin": "native/installer/UltimateKeyboards-0.3.0-rejected-flat-layout.verification.json",
+      "bytes": 799,
+      "sha256": "cba03e0794573db2872e45fb38ad63345b5937244a46ac5619f96fc9fe795317"
+    },
+    {
+      "origin": ".qa/surface.json",
+      "bytes": 11311,
+      "sha256": "f2510a7a6e5eb879376892ca21629f3fc2317c186c64a0c1f8cbf8039675189d"
+    },
+    {
+      "origin": ".qa/runid",
+      "bytes": 21,
+      "sha256": "3a661430ce3abad80e8587be0c79ba5f68d96fd0afb87183f847382a54f0baef"
+    },
+    {
+      "origin": ".qa/results-cli.json",
+      "bytes": 7996,
+      "sha256": "785480ffb8eb97307ab92c3b5faa57a214cbbea983e2986a1d0997aca83c846f"
+    },
+    {
+      "origin": ".qa/report-qa_1783234580-iter2.md",
+      "bytes": 145,
+      "sha256": "cd6dcc9fae8b687005962562751b5fb8676cca0eafdabdd6147f163f94043f17"
+    },
+    {
+      "origin": ".qa/rows-cli.json",
+      "bytes": 6477,
+      "sha256": "9c2da0b0c0f7765ad55e17fc39cdcc4af6195cb617838d5dbf0f071a4e4a35a9"
+    },
+    {
+      "origin": ".qa/report-qa_1783234580.md",
+      "bytes": 2201,
+      "sha256": "212782f5a9453f678aecb6eab339f4da474282ee3bdd80566fb8233b5cadebb5"
+    },
+    {
+      "origin": ".qa/matrix.json",
+      "bytes": 63743,
+      "sha256": "970cd3e7af84e56ef5966d60cb619fe771de5b3e9cc9699024d22e2550e3ff40"
+    },
+    {
+      "origin": ".qa/rows-browser.json",
+      "bytes": 48658,
+      "sha256": "61986d1c5b589fbf6197ba788b29cdb8e349852dccb6c3356658b3f93ea3721d"
+    },
+    {
+      "origin": ".qa/results-browser.json",
+      "bytes": 66451,
+      "sha256": "4d4c365087c84b6d4d705745b7f5b024dc62b7ad6b1a55a8ae6276560894e01d"
+    },
+    {
+      "origin": ".qa/evidence/corne_tp.keymap.orig2",
+      "bytes": 9497,
+      "sha256": "58d4d8f0ec990be639a7e8b24db64b493919b0ad0dcbc6f976ea2ec2a75b71f9"
+    },
+    {
+      "origin": ".qa/evidence/int-02-tsc.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "origin": ".qa/evidence/kar-keyboard.png",
+      "bytes": 109744,
+      "sha256": "2ed7d46ca65f277789ece3e2f97530298aa9eeb1ab049e0daa97746b9d344ca0"
+    },
+    {
+      "origin": ".qa/evidence/int-03-console-errors.txt",
+      "bytes": 125,
+      "sha256": "da307ab1cb92d75b7afd3641abc3b0ce1e1dd083b55be8986aa67397db71cb3b"
+    },
+    {
+      "origin": ".qa/evidence/int-01-roundtrip.txt",
+      "bytes": 2191,
+      "sha256": "6855e6757407f313cfa0cdef1580138f1a67db2c8c47dd2875a9758bb980bb42"
+    },
+    {
+      "origin": ".qa/evidence/qmk-04-qmk-tab.png",
+      "bytes": 225383,
+      "sha256": "a8210a05759e0d40a186af4292ec1b6ad932a153a64ae5cd1892d9216a802c89"
+    },
+    {
+      "origin": ".qa/evidence/zmk-01.png",
+      "bytes": 225176,
+      "sha256": "043611fa83b53d4252ead13647a078fac45e470e7921bf12665f6f4799e7102b"
+    },
+    {
+      "origin": ".qa/evidence/zmk-03.png",
+      "bytes": 208706,
+      "sha256": "1387cea6780aeeaf4d73ec4b7859265301ed84e1a41d97d9613d44c1b9e2ed30"
+    },
+    {
+      "origin": ".qa/evidence/qmk-04-reload.txt",
+      "bytes": 204,
+      "sha256": "a5e9fd6a5941947a567a399f313564184784235c28266dbd81b2d6945695770c"
+    },
+    {
+      "origin": ".qa/evidence/int-03-console-all.txt",
+      "bytes": 135,
+      "sha256": "449446cd2c07eff29618986fa00e260442dbe4a7b18ce7908574c5e97d3c0cba"
+    },
+    {
+      "origin": ".qa/evidence/int-02-build.log",
+      "bytes": 1011,
+      "sha256": "890482fb6b0fea4b0c63529729624b66a100e4c2d09be8db7da75258372e54c5"
+    },
+    {
+      "origin": ".qa/evidence/corne_tp.keymap.orig",
+      "bytes": 9497,
+      "sha256": "58d4d8f0ec990be639a7e8b24db64b493919b0ad0dcbc6f976ea2ec2a75b71f9"
+    }
+  ],
+  "activeTrialTouched": false,
+  "rollbackTouched": false
+}

@@ -3,7 +3,7 @@ import { nativeShiftedSymbol, isShiftModifier } from './nativeSymbols'
 import { keycodeLabel } from './keyLabel'
 import { macLayerNames } from './macLayerEditing'
 import type { PhysicalLayout } from './layout'
-import type { Rule, LayerBindingRule } from './karabinerGenerator'
+import type { Rule } from './karabinerGenerator'
 
 /** Same physical coordinates as the combo picker; PhysicalBoard supplies its normal outer padding. */
 export const MAC_PHYSICAL_LAYOUT: PhysicalLayout = {
@@ -74,13 +74,6 @@ export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | 
   return { label, sub: shadowedBy !== undefined ? 'Order !' : sub,
     detail: shadowedBy !== undefined ? `${detail}. Configured layer binding follows earlier Base rule ${shadowedBy + 1}; inspect rule order.` : detail,
     kind: shadowedBy !== undefined ? 'conflict' : kind, ruleIndex: index, conditional, shadowedBy }
-}
-/** Update the first configured binding in-place, never reorder around earlier rules. */
-export function macLayerBindingEdit(rules: readonly Rule[], code: string, layer: string, toKey: string, toModifiers: string[]): { index: number; rule: LayerBindingRule } {
-  const index = macLayerBindingIndex(rules, code, layer)
-  const existing = index >= 0 ? rules[index] as LayerBindingRule : undefined
-  return { index, rule: { ...existing, type: 'layer_binding', description: existing?.description ?? `[${layer}] ${code} → ${toKey}`,
-    fromKey: code, layerName: layer, toKey, toModifiers: toModifiers.length ? [...toModifiers] : undefined } }
 }
 export function macUnplacedKeys(rules: readonly Rule[]): string[] {
   const physical = new Set(MACBOOK_LAYOUT.map(key => key.code))

@@ -1,0 +1,82 @@
+{
+  "objective": "One installer for Ultimate Keyboards with native home-row mods, combos, layers, and a bundled virtual-HID driver; no separate Karabiner-Elements installation.",
+  "acceptance": [
+    "All five existing rule types execute in a deterministic native engine with tested tap/hold, combo timing, ordering, modifier ownership, and reset behavior.",
+    "Native helper uses IOHID device capture and the standalone signed virtual-HID driver, with no event-tap fallback or dependency on the Karabiner-Elements app.",
+    "Privileged mutations require the active console user and the signed Ultimate Keyboards app. Size limits, timeouts, driver readiness, device exclusion, and fail-open cleanup are enforced.",
+    "The application can report readiness, open the bundled installer, explicitly apply/enable rules, stop remapping, and maintain a bounded heartbeat lease.",
+    "A reproducible installer bundles our application/service and the pinned unmodified standalone driver, preserves licenses, checks signatures and compatibility, and protects existing shared installations.",
+    "Typecheck, frontend tests, native unit tests, service build, application build, packaging checks, and permitted runtime checks pass. Live capture, visual QA, signing, notarization, and external blockers are reported independently."
+  ],
+  "decisions": [
+    "Reuse unmodified signed pqrs standalone DriverKit package v8.6.0, protocol7, driver1.8.0; never require full Karabiner-Elements.",
+    "Default capture scope is the built-in keyboard only. Require output readiness and explicit opt-in before seizure; exclude virtual output and preserve external split keyboards.",
+    "No installation or driver upgrades during implementation without inspecting compatibility and coexistence; no security protections disabled.",
+    "No Developer ID distribution certificate is installed locally. Build all possible artifacts and preserve this as an external distribution requirement.",
+    "Preserve the existing uncommitted recursive folder-permission fix in src/components/Settings.tsx."
+  ],
+  "status": "cleanup_checks_commit_and_push_in_progress",
+  "history": {
+    "path": "archive/2026-10-25/native-remapping-history.json",
+    "checkpointCommit": "385fe64",
+    "archiveCommit": "2f3ed35"
+  },
+  "loadout": {
+    "phase": "Cleanup and commit; native trial remains pending administrator authentication",
+    "skills": [
+      "tidy",
+      "postmortem",
+      "library/dev/workflow/new-code-debt-sweep"
+    ],
+    "sources": [
+      "/Users/tomkwon/.agents/skills/tidy/SKILL.md",
+      "/Users/tomkwon/.agents/skills/postmortem/SKILL.md",
+      "/Users/tomkwon/Documents/af-team/library/dev/workflow/new-code-debt-sweep/skills/new-code-debt-sweep/SKILL.md"
+    ]
+  },
+  "current": {
+    "nativeTrial": {
+      "package": "native/trial/2026-10-25/UltimateKeyboards-0.3.0-Trial.pkg",
+      "packageSha256": "2f941100f23eda0d48d8692ed3b87aead24a06c8f5c2b809fe61a4682e8f3bd8",
+      "dmg": "native/trial/2026-10-25/UltimateKeyboards-0.3.0-Trial.dmg",
+      "dmgSha256": "c2c9743b934736ecea81756329833048f987eb5e2f4f89dc408dda911ed1697e",
+      "repairSha256": "f6d9e39e8e008514cb7f2057dd365894c879b63e17de1659d1e15f6a867ac437",
+      "appExecutableSha256": "e956e0b4fd6cece3f986faac9cae233f3da73dbfb27d89ebdcfd91e8eadc27f9",
+      "helperSourceSha256": "59d6387ea21bbd59590ca72a9bb64b32e8603a79457c673244fcc459a741b9c9",
+      "installed": false,
+      "physicalTests": "Pending; remapping disabled, zero captures, Elements not stopped/uninstalled.",
+      "installFailure": "Administrator installer invocation could not read package on external Work volume; local file exists/hash verified. Privileged read probe is awaiting user authentication; do not repeat failed install unchanged."
+    },
+    "rollback": {
+      "package": "native/installer/UltimateKeyboards-0.3.0.pkg",
+      "sha256": "7e146109f2b243763f126446db08abfd2fa6104bd099ce34b61c54b3f6495e1a",
+      "installedAppExecutableSha256": "0fc4a93405601089aee9900251543a9d98088f4760c1c2af69467e34a979209d"
+    },
+    "commercialRequirements": "docs/release/standalone-macos.md",
+    "remainingReleaseGates": [
+      "Developer ID Application and Installer identities plus notarization profile.",
+      "Clean-Mac downloaded installation and physical capture/output/latency/recovery/update acceptance.",
+      "CLI-free firmware workflows, GUI product removal/shared-driver ownership, complete notices inventory."
+    ],
+    "checks": {
+      "frontend": "172 pass, 988 assertions; typecheck passes after live-code cleanup.",
+      "engine": "44 tests pass.",
+      "service": "13 tests pass.",
+      "tauri": "7 native tests pass.",
+      "packaging": "52 tests pass.",
+      "releaseWrapper": "4 tests pass.",
+      "hook": "Production palette duplicate consolidated; only advisory test duplication and validator complexity remain; no suppressions or guard bypass."
+    },
+    "evidence": [
+      ".qa/standalone-trial/",
+      ".qa/cleanup-baseline-*.log",
+      ".qa/customer-journey-2026-10-24/"
+    ]
+  },
+  "cleanup": {
+    "activeRemoved": "Unused 540-line MacKeyEditor archived; sole helper removed and its regression migrated to the live binding codec. Shared QMK palette consolidated.",
+    "archiveManifest": "archive/2026-10-25/MANIFEST.md",
+    "github": "Only main and v0.2.0; no stale branches, artifacts or caches. Preserve release/tag/assets/runs. Metadata update and source push pending.",
+    "nextAction": "Complete final validation and cache open-file audit, commit cleanup, push main, verify remote. Then finish authorized native installation and physical tests."
+  }
+}
