@@ -64,7 +64,7 @@ export function supportMatrix(): SupportGroup[] {
       rows: [
         { feature: 'GitHub Actions firmware builds', level: 'yes', note: 'Requires a separately installed GitHub CLI (`gh`) and your own GitHub login; this is not a self-contained local build tool.' },
         { feature: 'Flash a UF2 to a half in bootloader', level: 'yes', note: 'Waits for the drive and copies the file.' },
-        { feature: 'Commit / push existing config edits from the app', level: 'no', note: 'Commit in your usual git tool; the Build tab shows uncommitted changes.' },
+        { feature: 'Build the config on screen', level: 'yes', note: 'Build saves, commits and pushes only the keymap and pointing files, waits for that commit\'s GitHub build and downloads it; Flash only offers firmware built from the commit on screen.' },
       ],
     },
     {

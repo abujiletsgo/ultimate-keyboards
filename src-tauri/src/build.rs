@@ -2,7 +2,11 @@
 //! repo, the user's own `gh` CLI (their auth, our allow-list of subcommands),
 //! artifact download into the repo, and an explicit UF2 flash step.
 //!
-//! Nothing here pushes, commits, or stores tokens.
+//! Build commits and pushes only the files the app edits (keymap, combos,
+//! pointing), only when the user clicks Build, with the user's own git
+//! credentials. Firmware is stored per commit in `<repo>/firmware/<sha>/` so a
+//! flash can only ever use the build of the config that is on screen.
+//! No tokens are stored.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -52,6 +56,27 @@ pub struct RepoStatus {
     remote: Option<String>,
     /// owner/name when the remote is on github.com
     github: Option<String>,
+    /// full sha of HEAD
+    head: String,
+}
+
+fn is_sha(s: &str) -> bool {
+    s.len() == 40 && s.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// Turn an absolute (or repo-relative) path into a repo-relative one, refusing
+/// anything outside the repository.
+fn repo_rel(repo: &Path, path: &str) -> Result<String, String> {
+    let pb = Path::new(path);
+    let rel = if pb.is_absolute() {
+        pb.strip_prefix(repo).map_err(|_| format!("{path} is outside the repository"))?.to_path_buf()
+    } else {
+        pb.to_path_buf()
+    };
+    if rel.components().any(|c| matches!(c, std::path::Component::ParentDir)) || rel.as_os_str().is_empty() {
+        return Err(format!("{path} is outside the repository"));
+    }
+    Ok(rel.to_string_lossy().to_string())
 }
 
 #[tauri::command(async)]
@@ -73,7 +98,43 @@ pub fn git_repo_status(repo: String) -> Result<RepoStatus, String> {
         let r = r.trim_end_matches(".git");
         r.split("github.com").nth(1).map(|rest| rest.trim_start_matches([':', '/']).to_string())
     });
-    Ok(RepoStatus { branch, ahead, behind, changes, remote, github })
+    let head = run(git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string();
+    Ok(RepoStatus { branch, ahead, behind, changes, remote, github, head })
+}
+
+/// Commit the named files (when they changed) and push the current branch when
+/// it is ahead of its upstream. Other uncommitted files are left alone.
+/// Returns the sha of HEAD afterwards: the commit GitHub Actions will build.
+#[tauri::command(async)]
+pub fn git_commit_push(repo: String, paths: Vec<String>, message: String) -> Result<String, String> {
+    let p = check_repo(&repo)?;
+    let mut rels = Vec::new();
+    for path in &paths {
+        let rel = repo_rel(&p, path)?;
+        if p.join(&rel).exists() {
+            rels.push(rel);
+        }
+    }
+    if !rels.is_empty() {
+        let mut add = vec!["add", "--"];
+        add.extend(rels.iter().map(|s| s.as_str()));
+        run(git(), &add, Some(&p))?;
+        let mut diff = vec!["diff", "--cached", "--quiet", "--"];
+        diff.extend(rels.iter().map(|s| s.as_str()));
+        if run(git(), &diff, Some(&p)).is_err() {
+            let msg = if message.trim().is_empty() { "Update keymap" } else { message.trim() };
+            let mut commit = vec!["commit", "-m", msg, "--"];
+            commit.extend(rels.iter().map(|s| s.as_str()));
+            run(git(), &commit, Some(&p))?;
+        }
+    }
+    let ahead = run(git(), &["rev-list", "--count", "@{upstream}..HEAD"], Some(&p))
+        .map(|s| s.trim().parse::<u32>().unwrap_or(0))
+        .map_err(|e| format!("branch has no upstream to push to: {e}"))?;
+    if ahead > 0 {
+        run(git(), &["push"], Some(&p)).map_err(|e| format!("push failed: {e}"))?;
+    }
+    Ok(run(git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string())
 }
 
 /// Unified diff of one file inside the repo (working tree vs HEAD).
@@ -111,26 +172,33 @@ pub fn gh_info() -> GhInfo {
 
 /// Recent workflow runs for a branch (JSON from `gh run list`).
 #[tauri::command(async)]
-pub fn gh_run_list(repo: String, branch: String, limit: u32) -> Result<String, String> {
+pub fn gh_run_list(repo: String, branch: String, limit: u32, commit: Option<String>) -> Result<String, String> {
     let gh = find_gh().ok_or("gh CLI not found")?;
     let lim = limit.clamp(1, 20).to_string();
     if !branch.chars().all(|c| c.is_ascii_alphanumeric() || "-_./".contains(c)) {
         return Err("invalid branch name".into());
     }
     let p = check_repo(&repo)?;
-    run(
-        gh.to_str().unwrap(),
-        &["run", "list", "--branch", &branch, "--limit", &lim, "--json", "databaseId,status,conclusion,displayTitle,createdAt,updatedAt,headSha,url"],
-        Some(&p),
-    )
+    let mut args = vec!["run", "list", "--branch", &branch, "--limit", &lim, "--json", "databaseId,status,conclusion,displayTitle,createdAt,updatedAt,headSha,url"];
+    if let Some(c) = commit.as_deref() {
+        if !is_sha(c) {
+            return Err("invalid commit sha".into());
+        }
+        args.extend(["--commit", c]);
+    }
+    run(gh.to_str().unwrap(), &args, Some(&p))
 }
 
-/// Download every artifact of a run into `<repo>/firmware/` and list the uf2 files found.
+/// Download every artifact of a run into `<repo>/firmware/<sha>/` and list the uf2 files found.
 #[tauri::command(async)]
-pub fn gh_run_download(repo: String, run_id: u64) -> Result<Vec<String>, String> {
+pub fn gh_run_download(repo: String, run_id: u64, sha: String) -> Result<Vec<String>, String> {
     let gh = find_gh().ok_or("gh CLI not found")?;
     let p = check_repo(&repo)?;
-    let dest = p.join("firmware");
+    if !is_sha(&sha) {
+        return Err("invalid commit sha".into());
+    }
+    let dest = p.join("firmware").join(&sha);
+    let _ = std::fs::remove_dir_all(&dest);
     std::fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
     let tmp = std::env::temp_dir().join(format!("uk-artifacts-{run_id}"));
     let _ = std::fs::remove_dir_all(&tmp);
@@ -157,11 +225,16 @@ pub fn gh_run_download(repo: String, run_id: u64) -> Result<Vec<String>, String>
     Ok(found)
 }
 
-/// List uf2 files already in `<repo>/firmware/`.
+/// List the uf2 files built from commit `sha` (`<repo>/firmware/<sha>/`).
+/// Loose files elsewhere in `firmware/` are never offered: nothing ties them
+/// to the config on screen.
 #[tauri::command(async)]
-pub fn list_firmware(repo: String) -> Result<Vec<String>, String> {
+pub fn list_firmware(repo: String, sha: String) -> Result<Vec<String>, String> {
     let p = check_repo(&repo)?;
-    let dir = p.join("firmware");
+    if !is_sha(&sha) {
+        return Err("invalid commit sha".into());
+    }
+    let dir = p.join("firmware").join(&sha);
     let mut out = Vec::new();
     if let Ok(rd) = std::fs::read_dir(&dir) {
         for e in rd.flatten() {
@@ -218,4 +291,64 @@ fn find_uf2_volume() -> Option<PathBuf> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repo_rel_rejects_outside_paths() {
+        let repo = Path::new("/r/cfg");
+        assert_eq!(repo_rel(repo, "/r/cfg/config/a.keymap").unwrap(), "config/a.keymap");
+        assert_eq!(repo_rel(repo, "config/a.keymap").unwrap(), "config/a.keymap");
+        assert!(repo_rel(repo, "/r/other/a.keymap").is_err());
+        assert!(repo_rel(repo, "../x").is_err());
+        assert!(repo_rel(repo, "config/../../x").is_err());
+    }
+
+    #[test]
+    fn sha_validation() {
+        assert!(is_sha("caffea1caffea1caffea1caffea1caffea1caffe"));
+        assert!(!is_sha("caffea1"));
+        assert!(!is_sha("--upload-pack=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"));
+    }
+
+    fn sh(dir: &Path, args: &[&str]) {
+        let o = Command::new(git()).args(args).current_dir(dir).output().unwrap();
+        assert!(o.status.success(), "{:?}: {}", args, String::from_utf8_lossy(&o.stderr));
+    }
+
+    /// Commits only the named file and pushes it; unrelated changes stay uncommitted.
+    #[test]
+    fn commit_push_only_named_files() {
+        let base = std::env::temp_dir().join(format!("uk-build-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (remote, work) = (base.join("remote.git"), base.join("work"));
+        std::fs::create_dir_all(&work).unwrap();
+        sh(&base, &["init", "-q", "--bare", "-b", "main", remote.to_str().unwrap()]);
+        sh(&work, &["init", "-q", "-b", "main"]);
+        sh(&work, &["config", "user.email", "t@t"]);
+        sh(&work, &["config", "user.name", "t"]);
+        std::fs::write(work.join("a.keymap"), "one").unwrap();
+        std::fs::write(work.join("notes.md"), "x").unwrap();
+        sh(&work, &["add", "."]);
+        sh(&work, &["commit", "-qm", "init"]);
+        sh(&work, &["remote", "add", "origin", remote.to_str().unwrap()]);
+        sh(&work, &["push", "-qu", "origin", "main"]);
+
+        std::fs::write(work.join("a.keymap"), "two").unwrap();
+        std::fs::write(work.join("notes.md"), "y").unwrap();
+        let repo = work.to_string_lossy().to_string();
+        let keymap = work.join("a.keymap").to_string_lossy().to_string();
+        let sha = git_commit_push(repo.clone(), vec![keymap.clone()], "Update keymap".into()).unwrap();
+        assert!(is_sha(&sha));
+        let remote_head = run(git(), &["rev-parse", "main"], Some(&remote)).unwrap();
+        assert_eq!(remote_head.trim(), sha);
+        let status = run(git(), &["status", "--porcelain"], Some(&work)).unwrap();
+        assert_eq!(status.trim(), "M notes.md");
+        // Nothing changed: no new commit, same sha.
+        assert_eq!(git_commit_push(repo, vec![keymap], "again".into()).unwrap(), sha);
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }

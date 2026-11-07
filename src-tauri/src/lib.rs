@@ -369,6 +369,7 @@ pub fn run() {
             device::fetch_device_metadata,
             build::git_repo_status,
             build::git_diff_file,
+            build::git_commit_push,
             build::gh_info,
             build::gh_run_list,
             build::gh_run_download,
