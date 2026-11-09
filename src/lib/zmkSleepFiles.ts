@@ -11,9 +11,9 @@ import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { readText } from '@/lib/io'
 import type { KeyboardDef } from '@/lib/registry/types'
 import type { ConfFile, Part } from './zmkSleep'
+import { parseBuildTargets, partBase } from '@/lib/registry/parts'
 
 const join = (...p: string[]) => p.join('/').replace(/\/+/g, '/')
-const SUFFIX = /_(left|right|dongle|central|peripheral)$/
 
 async function names(path: string): Promise<{ name: string; dir: boolean }[]> {
   try { return (await readDir(path)).map(e => ({ name: e.name, dir: !!e.isDirectory })) } catch { return [] }
@@ -30,10 +30,11 @@ export async function loadSleepParts(kb: KeyboardDef): Promise<Part[]> {
   const configDir = root.some(e => e.name === 'config' && e.dir) ? join(kb.repoPath, 'config') : kb.repoPath
 
   const buildYaml = await readText(join(kb.repoPath, 'build.yaml')).catch(() => '')
-  const all = [...new Set([...buildYaml.matchAll(/^\s*-?\s*shield:\s*([\w-]+)/gm)].map(m => m[1]))].filter(s => s !== 'settings_reset')
-  const base = kb.shield ?? all[0]?.replace(SUFFIX, '')
+  // shields, or boards with the controller built in (a board's user config is config/<board>.conf the same way)
+  const all = parseBuildTargets(buildYaml).map(t => t.name)
+  const base = kb.shield ?? (all[0] ? partBase(all[0]) : undefined)
   if (!base) return []
-  let shields = all.filter(s => s === base || s.replace(SUFFIX, '') === base)
+  let shields = all.filter(s => s === base || partBase(s) === base)
   if (shields.length === 0) shields = [base]
 
   const shieldsDir = join(configDir, 'boards', 'shields')

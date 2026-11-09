@@ -226,3 +226,190 @@ export function qmkKeycode(code: number): QmkKeycode {
 export function zmkBindingLabels(binding: string): { label: string; sub?: string } {
   return { label: bindingLabel(binding), sub: bindingSubLabel(binding) }
 }
+
+// ── QMK name → 16-bit keycode (inverse of qmkKeycode) ───────────────────────
+
+/** Long / legacy spellings found in keymap.json, mapped to the canonical name qmkKeycode() prints. */
+const QMK_ALIASES: Array<[string, string]> = [
+  ['KC_TRANSPARENT', 'KC_TRNS'], ['KC_ENTER', 'KC_ENT'], ['KC_ESCAPE', 'KC_ESC'], ['KC_BACKSPACE', 'KC_BSPC'],
+  ['KC_SPACE', 'KC_SPC'], ['KC_MINUS', 'KC_MINS'], ['KC_EQUAL', 'KC_EQL'], ['KC_LEFT_BRACKET', 'KC_LBRC'],
+  ['KC_RIGHT_BRACKET', 'KC_RBRC'], ['KC_BACKSLASH', 'KC_BSLS'], ['KC_NONUS_HASH', 'KC_NUHS'],
+  ['KC_SEMICOLON', 'KC_SCLN'], ['KC_QUOTE', 'KC_QUOT'], ['KC_GRAVE', 'KC_GRV'], ['KC_COMMA', 'KC_COMM'],
+  ['KC_SLASH', 'KC_SLSH'], ['KC_CAPS_LOCK', 'KC_CAPS'], ['KC_PRINT_SCREEN', 'KC_PSCR'],
+  ['KC_SCROLL_LOCK', 'KC_SCRL'], ['KC_PAUSE', 'KC_PAUS'], ['KC_INSERT', 'KC_INS'], ['KC_DELETE', 'KC_DEL'],
+  ['KC_PAGE_UP', 'KC_PGUP'], ['KC_PAGE_DOWN', 'KC_PGDN'], ['KC_RIGHT', 'KC_RGHT'], ['KC_NUM_LOCK', 'KC_NUM'],
+  ['KC_KP_SLASH', 'KC_PSLS'], ['KC_KP_ASTERISK', 'KC_PAST'], ['KC_KP_MINUS', 'KC_PMNS'], ['KC_KP_PLUS', 'KC_PPLS'],
+  ['KC_KP_ENTER', 'KC_PENT'], ['KC_KP_0', 'KC_P0'], ['KC_KP_DOT', 'KC_PDOT'], ['KC_KP_EQUAL', 'KC_PEQL'],
+  ['KC_NONUS_BACKSLASH', 'KC_NUBS'], ['KC_APPLICATION', 'KC_APP'],
+  ['KC_LCTRL', 'KC_LCTL'], ['KC_LSHIFT', 'KC_LSFT'], ['KC_LOPT', 'KC_LALT'], ['KC_LCMD', 'KC_LGUI'], ['KC_LWIN', 'KC_LGUI'],
+  ['KC_RCTRL', 'KC_RCTL'], ['KC_RSHIFT', 'KC_RSFT'], ['KC_ROPT', 'KC_RALT'], ['KC_ALGR', 'KC_RALT'],
+  ['KC_RCMD', 'KC_RGUI'], ['KC_RWIN', 'KC_RGUI'],
+  ['KC_LEFT_CTRL', 'KC_LCTL'], ['KC_LEFT_SHIFT', 'KC_LSFT'], ['KC_LEFT_ALT', 'KC_LALT'], ['KC_LEFT_GUI', 'KC_LGUI'],
+  ['KC_RIGHT_CTRL', 'KC_RCTL'], ['KC_RIGHT_SHIFT', 'KC_RSFT'], ['KC_RIGHT_ALT', 'KC_RALT'], ['KC_RIGHT_GUI', 'KC_RGUI'],
+  ['KC_SYSTEM_POWER', 'KC_PWR'], ['KC_SYSTEM_SLEEP', 'KC_SLEP'], ['KC_SYSTEM_WAKE', 'KC_WAKE'],
+  ['KC_AUDIO_MUTE', 'KC_MUTE'], ['KC_AUDIO_VOL_UP', 'KC_VOLU'], ['KC_AUDIO_VOL_DOWN', 'KC_VOLD'],
+  ['KC_MEDIA_NEXT_TRACK', 'KC_MNXT'], ['KC_MEDIA_PREV_TRACK', 'KC_MPRV'], ['KC_MEDIA_STOP', 'KC_MSTP'],
+  ['KC_MEDIA_PLAY_PAUSE', 'KC_MPLY'], ['KC_MEDIA_SELECT', 'KC_MSEL'], ['KC_MEDIA_EJECT', 'KC_EJCT'],
+  ['KC_MY_COMPUTER', 'KC_MYCM'], ['KC_BRIGHTNESS_UP', 'KC_BRIU'], ['KC_BRIGHTNESS_DOWN', 'KC_BRID'],
+  ['KC_MS_U', 'KC_MS_UP'], ['KC_MS_D', 'KC_MS_DOWN'], ['KC_MS_L', 'KC_MS_LEFT'], ['KC_MS_R', 'KC_MS_RGHT'],
+  ['KC_MS_RIGHT', 'KC_MS_RGHT'],
+  ['KC_BTN1', 'KC_MS_BTN1'], ['KC_BTN2', 'KC_MS_BTN2'], ['KC_BTN3', 'KC_MS_BTN3'], ['KC_BTN4', 'KC_MS_BTN4'],
+  ['KC_BTN5', 'KC_MS_BTN5'], ['KC_BTN6', 'KC_MS_BTN6'], ['KC_BTN7', 'KC_MS_BTN7'], ['KC_BTN8', 'KC_MS_BTN8'],
+  ['KC_WH_U', 'KC_MS_WHLU'], ['KC_WH_D', 'KC_MS_WHLD'], ['KC_WH_L', 'KC_MS_WHLL'], ['KC_WH_R', 'KC_MS_WHLR'],
+  ['KC_ACL0', 'KC_MS_ACL0'], ['KC_ACL1', 'KC_MS_ACL1'], ['KC_ACL2', 'KC_MS_ACL2'],
+  ['QK_BOOTLOADER', 'QK_BOOT'], ['QK_GESC', 'QK_GRAVE_ESCAPE'], ['KC_GESC', 'QK_GRAVE_ESCAPE'],
+  ['CW_TOGG', 'QK_CAPS_WORD_TOGGLE'], ['DB_TOGG', 'QK_DEBUG_TOGGLE'], ['EE_CLR', 'QK_CLEAR_EEPROM'],
+]
+
+/** Shifted-symbol keycodes (quantum/quantum_keycodes: KC_TILD = S(KC_GRV) …) → LSFT(basic). */
+const QMK_SHIFTED: Array<[string, string]> = [
+  ['KC_TILD', 'KC_GRV'], ['KC_EXLM', 'KC_1'], ['KC_AT', 'KC_2'], ['KC_HASH', 'KC_3'], ['KC_DLR', 'KC_4'],
+  ['KC_PERC', 'KC_5'], ['KC_CIRC', 'KC_6'], ['KC_AMPR', 'KC_7'], ['KC_ASTR', 'KC_8'], ['KC_LPRN', 'KC_9'],
+  ['KC_RPRN', 'KC_0'], ['KC_UNDS', 'KC_MINS'], ['KC_PLUS', 'KC_EQL'], ['KC_LCBR', 'KC_LBRC'],
+  ['KC_RCBR', 'KC_RBRC'], ['KC_PIPE', 'KC_BSLS'], ['KC_COLN', 'KC_SCLN'], ['KC_DQUO', 'KC_QUOT'],
+  ['KC_DQT', 'KC_QUOT'], ['KC_LABK', 'KC_COMM'], ['KC_LT', 'KC_COMM'], ['KC_RABK', 'KC_DOT'], ['KC_GT', 'KC_DOT'],
+  ['KC_QUES', 'KC_SLSH'],
+]
+
+/** Mod-wrap function names → 5-bit mask (bit 4 = right hand). */
+const QMK_WRAP_MASKS: Record<string, number> = {
+  LCTL: 0x01, LSFT: 0x02, LALT: 0x04, LGUI: 0x08, RCTL: 0x11, RSFT: 0x12, RALT: 0x14, RGUI: 0x18,
+  C: 0x01, S: 0x02, A: 0x04, G: 0x08, LOPT: 0x04, LCMD: 0x08, LWIN: 0x08, ROPT: 0x14, RCMD: 0x18, RWIN: 0x18,
+  ALGR: 0x14, MEH: 0x07, HYPR: 0x0f,
+}
+
+/** Mod-tap shorthand `X_T(kc)` → mask. */
+const QMK_MT_MASKS: Record<string, number> = {
+  LCTL_T: 0x01, LSFT_T: 0x02, LALT_T: 0x04, LGUI_T: 0x08, RCTL_T: 0x11, RSFT_T: 0x12, RALT_T: 0x14, RGUI_T: 0x18,
+  CTL_T: 0x01, SFT_T: 0x02, ALT_T: 0x04, GUI_T: 0x08, LOPT_T: 0x04, LCMD_T: 0x08, LWIN_T: 0x08,
+  OPT_T: 0x04, CMD_T: 0x08, WIN_T: 0x08, ROPT_T: 0x14, RCMD_T: 0x18, RWIN_T: 0x18, ALGR_T: 0x14,
+  C_S_T: 0x03, LCS_T: 0x03, LCA_T: 0x05, LSA_T: 0x06, LCG_T: 0x09, LSG_T: 0x0a, LAG_T: 0x0c, LCAG_T: 0x0d,
+  MEH_T: 0x07, HYPR_T: 0x0f, ALL_T: 0x0f,
+}
+
+/** `MOD_*` operands of MT / LM / OSM, same masks as the decoder prints. */
+const QMK_MOD_BITS: Record<string, number> = {
+  MOD_LCTL: 0x01, MOD_LSFT: 0x02, MOD_LALT: 0x04, MOD_LGUI: 0x08,
+  MOD_RCTL: 0x11, MOD_RSFT: 0x12, MOD_RALT: 0x14, MOD_RGUI: 0x18,
+  MOD_MEH: 0x07, MOD_HYPR: 0x0f,
+}
+
+let nameTable: Map<string, number> | undefined
+
+function qmkNameTable(): Map<string, number> {
+  if (nameTable) return nameTable
+  const t = new Map<string, number>()
+  const add = (name: string, code: number) => { if (!t.has(name)) t.set(name, code) }
+  for (let c = 0; c <= 0xff; c++) { const n = qmkKeycode(c).name; if (!n.startsWith('0x')) add(n, c) }
+  for (const table of [LIGHTING, QUANTUM]) for (const [c, [n]] of Object.entries(table)) add(n, Number(c))
+  for (const [alias, canon] of QMK_ALIASES) { const c = t.get(canon); if (c !== undefined) add(alias, c) }
+  for (let i = 1; i <= 9; i++) add(`KC_KP_${i}`, t.get(`KC_P${i}`)!)
+  for (const [alias, base] of QMK_SHIFTED) add(alias, 0x0200 | t.get(base)!)
+  add('_______', 0x01); add('XXXXXXX', 0x00)
+  nameTable = t
+  return t
+}
+
+/** Split `a,b(c,d),e` at top-level commas; null when parentheses are unbalanced. */
+function splitArgs(s: string): string[] | null {
+  const out: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++
+    else if (s[i] === ')' && --depth < 0) return null
+    else if (s[i] === ',' && depth === 0) { out.push(s.slice(start, i)); start = i + 1 }
+  }
+  if (depth !== 0) return null
+  out.push(s.slice(start))
+  return out
+}
+
+const DEC = /^(0|[1-9][0-9]*)$/
+function dec(s: string, max: number): number | null {
+  if (!DEC.test(s)) return null
+  const n = Number(s)
+  return n <= max ? n : null
+}
+
+/** `MOD_LCTL|MOD_LSFT` / `0` → 5-bit mask; mixed hands are not representable. */
+function modExpr(s: string): number | null {
+  if (s === '0') return 0
+  let lo = 0
+  let hand: number | undefined
+  for (const term of s.split('|')) {
+    const m = QMK_MOD_BITS[term]
+    if (m === undefined) return null
+    if (hand !== undefined && hand !== (m & 0x10)) return null
+    hand = m & 0x10
+    lo |= m & 0x0f
+  }
+  return lo | (hand ?? 0)
+}
+
+function encodeInner(s: string): number | null {
+  const call = /^([A-Za-z_][A-Za-z0-9_]*)\((.*)\)$/.exec(s)
+  if (!call) return qmkNameTable().get(s) ?? null
+  const [, fn, inside] = call
+  const args = splitArgs(inside)
+  if (!args) return null
+  const one = args.length === 1 ? args[0] : null
+  const wrapMask = QMK_WRAP_MASKS[fn]
+  if (wrapMask !== undefined && one !== null) {
+    const k = encodeInner(one)
+    if (k === null || k > 0x1fff) return null
+    const innerMask = k >> 8
+    if (innerMask && (innerMask & 0x10) !== (wrapMask & 0x10)) return null
+    return (k & 0xff) | (((innerMask & 0x0f) | wrapMask) << 8)
+  }
+  const mtMask = QMK_MT_MASKS[fn]
+  if (mtMask !== undefined && one !== null) {
+    const k = encodeInner(one)
+    return k === null || k > 0xff ? null : 0x2000 | (mtMask << 8) | k
+  }
+  if (fn === 'MT' && args.length === 2) {
+    const mask = modExpr(args[0])
+    const k = encodeInner(args[1])
+    return mask === null || k === null || k > 0xff ? null : 0x2000 | (mask << 8) | k
+  }
+  if (fn === 'LT' && args.length === 2) {
+    const layer = dec(args[0], 15)
+    const k = encodeInner(args[1])
+    return layer === null || k === null || k > 0xff ? null : 0x4000 | (layer << 8) | k
+  }
+  if (fn === 'LM' && args.length === 2) {
+    const layer = dec(args[0], 15)
+    const mask = modExpr(args[1])
+    return layer === null || mask === null ? null : 0x5000 | (layer << 5) | mask
+  }
+  if (fn === 'OSM' && one !== null) {
+    const mask = modExpr(one)
+    return mask === null ? null : 0x52a0 | mask
+  }
+  if (one !== null) {
+    const op = LAYER_OPS.find(([, name]) => name === fn)
+    if (op) { const n = dec(one, 31); return n === null ? null : op[0] + n }
+    if (fn === 'TD') { const n = dec(one, 255); return n === null ? null : 0x5700 + n }
+  }
+  return null
+}
+
+/**
+ * Inverse of qmkKeycode(): QMK keycode name (as printed by qmkKeycode or written in
+ * keymap.json / VIA exports) → 16-bit keycode. Returns null for unknown or ambiguous
+ * names; never guesses. `0x....` hex literals parse as-is (top level only).
+ */
+export function encodeQmkKeycode(name: string): number | null {
+  const s = name.replace(/\s+/g, '')
+  if (!s) return null
+  if (/^0x[0-9a-fA-F]{1,4}$/.test(s)) return parseInt(s.slice(2), 16)
+  const m = /^(QK_MACRO_|MC_|QK_KB_|QK_USER_)(.+)$/.exec(s)
+  if (m) {
+    const [, prefix, rest] = m
+    const max = prefix === 'QK_MACRO_' ? 127 : prefix === 'MC_' ? 31 : prefix === 'QK_KB_' ? 63 : 447
+    const n = dec(rest, max)
+    if (n === null) return null
+    return prefix === 'QK_MACRO_' || prefix === 'MC_' ? 0x7700 + n : prefix === 'QK_KB_' ? 0x7e00 + n : 0x7e40 + n
+  }
+  return encodeInner(s)
+}

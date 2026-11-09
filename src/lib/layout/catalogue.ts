@@ -5,6 +5,7 @@
  */
 import raw from './catalogue/zmk-layouts.json'
 import type { PhysicalLayout } from './types'
+import { partBase } from '@/lib/registry/parts'
 
 export interface CatalogueEntry {
   id: string
@@ -35,7 +36,7 @@ export function catalogueLabel(e: CatalogueEntry): string {
  */
 export function findCatalogueLayout(shieldName: string | undefined, keyCount?: number): CatalogueEntry | null {
   if (!shieldName) return null
-  const base = shieldName.toLowerCase().replace(/_(left|right|dongle|central|peripheral)$/, '')
+  const base = partBase(shieldName.toLowerCase())
   const tokens = new Set(base.split(/[_-]/).filter(Boolean))
   tokens.add(base)
   let best: CatalogueEntry | null = null

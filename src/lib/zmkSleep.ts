@@ -125,9 +125,10 @@ export function sleepLabel(s: Sleep): string {
   return `${Math.round(s.ms / 1000)} s`
 }
 
-/** Readable part name: `corne_tp_left` → "Left half". */
+/** Readable part name: `corne_tp_left` → "Left half", `glove80_rh` → "Right half". */
 export function partLabel(name: string, all: string[]): string {
-  const m = /_(left|right|dongle|central|peripheral)$/.exec(name)
+  const m = /_(left|right|lh|rh|dongle|central|peripheral)$/.exec(name)
   if (!m || all.length < 2) return name
-  return m[1] === 'left' || m[1] === 'right' ? `${m[1][0].toUpperCase()}${m[1].slice(1)} half` : `${m[1][0].toUpperCase()}${m[1].slice(1)}`
+  const side = m[1] === 'lh' ? 'left' : m[1] === 'rh' ? 'right' : m[1]
+  return side === 'left' || side === 'right' ? `${side[0].toUpperCase()}${side.slice(1)} half` : `${side[0].toUpperCase()}${side.slice(1)}`
 }
