@@ -1,0 +1,196 @@
+# Verification ledger: one row per thing a person relies on, checked on named
+# targets. Results go to results.jsonl (append-only, keyed by artifact hash).
+# Rules: AF skill `project-verification-ledger`. Every reported break becomes a
+# row before its fix. Keep `checks:` the last key (`af verify add` appends).
+version: 1
+project: ultimate-keyboards
+
+# Optional: a command that prints the current artifact identity (a hash, never
+# a timestamp). Used when --build is omitted.
+build_command: git rev-parse --short=12 HEAD
+
+defaults:
+  timeout: 600        # seconds per auto row (override per row with `timeout`)
+  idle_minutes: 10    # a real device counts as free after this long without input
+
+# kind: android-device | android-emulator | ios-device | ios-simulator | host | browser | other
+# Real devices (android-device needs `serial`) cannot test a build before it is
+# installed: their auto cells are queued after install (never gate-blocking) and
+# `af verify after-install` runs them when the device is plugged in, charging,
+# awake, unlocked and idle.
+# `probe` is an optional command that exits 0 when the target is usable.
+targets:
+  host:
+    kind: host
+    label: This machine (bun tests, frame check, headless Chromium)
+  mac-app:
+    kind: other
+    label: Fresh release build on the Mac (open -n from src-tauri/target/release/bundle/macos), driven through orca computer; Tom's /Applications copy is never touched
+
+# Optional: shared infrastructure whose change selects every row (a list), or
+# every row on the named targets (a mapping). Build scripts, signing, manifests.
+# always_on:
+#   "android/build.gradle.kts": [android-35]
+#   "scripts/sign-*.sh": [host]
+
+# Changed paths that carry no product behaviour select no row. Generated docs
+# (docs/**), prose, media and verify/** are ignored by default
+# (`ignore_defaults: false` turns that off); add the project's own here.
+# ignore: ["tools/**", "**/tests/**"]
+
+# Runs and gates cover only rows linked to what changed since the last build
+# that passed the gate: `affects` globs, then code reachable from `entry`
+# (files or symbols) through imports/references. `af verify plan` shows why.
+# how: "auto: <command using {target} {build} {serial}>"  exit 0 pass, 75 waiting, 77 blocked
+#      "agent: <instructions + the proof expected>"
+#      "person: <one-line steps>"  (real typing or mouse, SIM, folding, listening)
+#      or per target name/kind:  how: {android-device: "person: ...", android-emulator: "auto: ...", default: "agent: ..."}
+# Optional: reach (area-wide globs; a match is "in reach", not direct), ui: true
+# (drives the Mac UI; waits while the Mac session is locked).
+# Bug rows (`added: "YYYY-MM-DD bug: ..."` from `af verify add --from-bug`, or
+# `bug: true` on a hand-written row) block the gate until `af verify why ID`
+# records why the bug was made: why: {cause, made_by, missed_by, class,
+# prevention, sweep}, each non-empty text.
+# Removing or replacing code is a parity change: a row whose affects, entry or
+# via reached a deleted file or a removed top-level function/class/type is on
+# the `removed` tier (old passes never carry; cells read "stale (route
+# removed)") and the gate blocks until verify/parity/<commit-or-range>.yaml says
+# per row `kept: <replacement + new evidence>` or `dropped: <who, date>` with
+# `ui: <where the app says it is gone>`. Optional via: [path, path:Symbol,
+# Symbol] names what the recorded evidence ran on (a removed item there selects
+# the row even when affects did not reach it).
+# Example row:
+#   - id: CORE-1
+#     area: core
+#     check: The app starts and shows its main screen
+#     targets: [host]
+#     how: "auto: ./scripts/smoke.sh --target {target} --build {build}"
+#     proof: smoke.sh prints an EVIDENCE line naming the screen title it saw
+#     affects: ["src/**"]
+#     entry: ["src/main.ts"]          # optional: code the promise starts from
+#     via: ["src/clipboard/reader.ts:readClip"]  # optional: what the evidence ran on
+#     added: "2026-11-01 initial ledger"
+checks:
+
+  - id: FRAME-CHECK
+    area: frames
+    check: Static frame check finds no hidden first keyframe, endless animation, large live blur, refresh cap, after-paint measurement, and the WKWebView 60 fps preference is turned off
+    targets: [host]
+    how: 'auto: bun scripts/check-frames.ts && bun test tests/frames.test.ts'
+    proof: 'check-frames prints ''frames: clean''; frames.test.ts proves the check fails on 6a3e77d'
+    affects: [src/**, src-tauri/src/**, scripts/check-frames.ts]
+    added: 2026-11-09 120 Hz sweep prevention
+
+  - id: FRAME-FIRST
+    area: frames
+    check: With every animation frozen at frame 0, sidebar and section content are fully visible at launch and after each section switch, with no skeleton once section code is loaded (1440 and 800 px)
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)" && (bunx vite --port 5187 --strictPort >/dev/null 2>&1 & echo $! > /tmp/uk-ff-vite.pid) && for i in $(seq 1 40); do curl -s -o /dev/null http://localhost:5187 && break; sleep 0.5; done; PLAYWRIGHT_MODULE=${PLAYWRIGHT_MODULE:-/Volumes/Work/capture-ui-tools/node_modules/playwright/index.mjs} VISUAL_BASE_URL=http://localhost:5187 node tests/visual/first-frame.mjs; r=$?; kill $(cat /tmp/uk-ff-vite.pid); exit $r'''
+    proof: 'first-frame.mjs prints ''first frame: every checked element visible''; on 6a3e77d it lists opacity-0 nav items and section content'
+    affects: [src/**, tests/visual/first-frame.mjs]
+    added: 2026-11-09 120 Hz sweep prevention
+
+  - id: FRAME-TIME
+    area: frames
+    check: 'Real app frame cost: main-thread work per frame p90 <= 3 ms while scrolling, switching sections and tabs, in the keymap editor and the Build tab; WKWebView 60 fps preference reads back false'
+    targets: [mac-app]
+    how: 'agent: launch the fresh build with open -n --env UK_FRAME_PROBE=~/Library/Caches/uk-frame-probe/probe.json, keep the window in front with the screen unlocked, drive scroll / sidebar / tabs / keymap editor / Build through orca computer, read probe.json (pacing.enabled false; frames[*].work_ms.p90 <= 3; clicks[*].ms), quit by pid. GPU p90 <= 2 ms via xctrace Animation Hitches attached to the pid.'
+    proof: probe.json excerpt with per-place work_ms p90 and click latencies, plus the Animation Hitches render times, against the build hash
+    affects: [src/**, src-tauri/src/frames.rs, src-tauri/src/lib.rs]
+    added: 2026-11-09 120 Hz sweep acceptance
+
+  - id: B-1
+    area: frames
+    check: 'Reported break does not recur: Section, sidebar, popover and toast entrances start at opacity 0: content is invisible in its first frame and stays hidden whenever the animation does not run (hidden or tray window, App Nap)'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: Section, sidebar, popover and toast entrances start at opacity 0: content is invisible in its first frame and stays hidden whenever the animation does not run (hidden or tray window, App Nap)'
+    why:
+      cause: fade-up, scale-in and toast-in keyframes began at opacity 0 with fill-mode both, so the element's first frame was invisible and stayed invisible while the animation was paused or not yet ticking
+      made_by: the glass redesign treated entrances as 'appear from nothing' and assumed the animation always runs promptly; the app also launches hidden (--native-background) and lives in the tray, where WebKit pauses rendering
+      missed_by: 'visual tests ran with reducedMotion: reduce and screenshots were taken after things settled; nothing looked at frame zero or a paused animation'
+      class: the resting look depends on an animation that may never run
+      prevention: 'frame/hidden-first-keyframe in scripts/check-frames.ts (bun run check:frames, FRAME-CHECK) and tests/visual/first-frame.mjs freezing every animation at frame 0 (FRAME-FIRST); both fail on 6a3e77d. Proposed for Studio: the same keyframe rule in studio-lint for CSS (its motion/hidden-first-frame only sees React Native).'
+      sweep: 'UK src/: all 4 hidden keyframes fixed (globals.css fade-up/scale-in/toast-in, ui.css toast-in); fade-in and glow-pulse were unused and removed; ui.css and globals.css both defined toast-in (renamed toast-stack-in). Studio packages/web (main and fix/first-frame): k-up/k-grow/k-pop/k-fade/k-sheet (studio.css:890-894), s-rise stagger, s-toast-in and sheet push (interaction.css:144,149,237,267), glass.css:501-502 start at opacity 0 with fill both; Scaffold.tsx:56,101 and ScrollIndicator.tsx:73 measure in useEffect. Reported to Tom, not changed (Studio-owned).'
+
+  - id: B-2
+    area: frames
+    check: 'Reported break does not recur: Background orbs drift forever under a 90px live blur: every frame re-blurs every glass pane even when the app is idle, so cost grows with window size x glass panes'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: Background orbs drift forever under a 90px live blur: every frame re-blurs every glass pane even when the app is idle, so cost grows with window size x glass panes'
+    why:
+      cause: '#root::before/::after were 62vw orbs with filter: blur(90px) and an infinite 26 s / 32 s drift; every frame the backdrop of each backdrop-filter element (sidebar, toolbar, every .glass card, inputs, secondary buttons, segmented controls) changed, so the compositor re-blurred all of them every frame, even with the app idle'
+      made_by: the glassmorphism look was approved on screenshots; the ambient drift was added for liveliness without pricing its per-frame cost against backdrop-filter
+      missed_by: performance was not part of done; no frame or GPU timing was ever recorded, and a still screenshot cannot show a continuous cost
+      class: per-frame cost grows with screen size x number of glass panes; endless motion keeps the renderer busy forever
+      prevention: frame/endless-animation and frame/large-filter-blur in check-frames (FRAME-CHECK); orbs now draw the softness in the gradient (matched within 5/255 at 1200 and 1600 px) and glide one step per section change, then stop
+      sweep: 'UK src/: the orbs were the only endless and large-blur layers; the skeleton shimmer stays endless only while a first load is pending (frames-allow with reason). Studio web: 12 endless animations in studio.css (e.g. k-breathe on the thinking orb) need a per-case call; reported, not changed.'
+
+  - id: B-3
+    area: frames
+    check: 'Reported break does not recur: Skeletons over data the app already has: ZMK keymap after Build/Pointing, Build tab status and runs, sleep setting, keymap.c combos, and a Suspense skeleton on the first visit to each section'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: Skeletons over data the app already has: ZMK keymap after Build/Pointing, Build tab status and runs, sleep setting, keymap.c combos, and a Suspense skeleton on the first visit to each section'
+    why:
+      cause: 'views kept loaded data only in component state, so each remount started empty: ZmkKeymapEditor initialised loading=true even with the keymap in the store; BuildPanel, SleepSetting and QMKComboEditor re-read on every mount; React.lazy suspends one frame even when the chunk is already loaded'
+      made_by: load-on-mount with a skeleton was the default pattern, and tabs unmount when switched; 'skeleton while loading' was taken to be harmless
+      missed_by: logic tests do not render; screenshots waited for settled content; no check looked at the frame right after a tab or section switch
+      class: a blank or skeleton frame on open even though the data is already cached
+      prevention: lib/viewCache (last data draws first, refresh behind), lib/preloadable (lazy renders a loaded chunk synchronously) with preloadSections; FRAME-FIRST fails on any skeleton after a section switch once code is loaded
+      sweep: 'UK src/: every skeleton site listed (App LoadingFallback first launch only, AddKeyboard/FindKeyboard/AddDeviceWizard/QmkPointing/Pointing are first-time device or network reads and stay). voicelog native and hyly fold-android have the same class (recorded in lesson 2026-11-09-why-was-it-made).'
+
+  - id: B-4
+    area: frames
+    check: 'Reported break does not recur: QMK keymap editor draws the previously opened QMK keyboard''s keymap for a frame when switching keyboards'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: QMK keymap editor draws the previously opened QMK keyboard''s keymap for a frame when switching keyboards'
+    why:
+      cause: QmkKeymapEditor read keymap from the shared store without checking filePath, so on keyboard switch it rendered the previous keyboard's layers until load() cleared them
+      made_by: the store was shared across QMK keyboards and the editor trusted whatever it held
+      missed_by: no test switches between two QMK keyboards; the stale frame lasts one render
+      class: first frame shows another object's data from a shared store
+      prevention: the editor now only uses the store keymap when filePath matches this keyboard; ZmkKeymapEditor already checked filePath
+      sweep: 'ZmkKeymapEditor, QMKComboEditor (keyed by path in viewCache) and BuildPanel/SleepSetting (keyed by repo and keyboard id) checked: no other shared-store reads without a key'
+
+  - id: B-5
+    area: frames
+    check: 'Reported break does not recur: WKWebView renders pages near 60 fps on 120 Hz displays: WebKit''s PreferPageRenderingUpdatesNear60FPSEnabled is on by default and the app never turned it off'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: WKWebView renders pages near 60 fps on 120 Hz displays: WebKit''s PreferPageRenderingUpdatesNear60FPSEnabled is on by default and the app never turned it off'
+    why:
+      cause: WebKit ships PreferPageRenderingUpdatesNear60FPSEnabled = true (read on this Mac with WKPreferences _features), so a WKWebView holds rAF and page rendering near 60 fps on a 120 Hz ProMotion display
+      made_by: Tauri/wry use WebKit defaults; nobody knew the preference existed
+      missed_by: development happens on a 60 Hz external monitor, where the cap is invisible; no check looked at refresh pacing
+      class: refresh rate capped below the display by a platform default
+      prevention: src-tauri/src/frames.rs turns the feature off and reads it back (logged, frame_pacing_status); check-frames fails the build if that call disappears (frame/webview-60fps, FRAME-CHECK). Read back false in the fresh build 288088c.
+      sweep: voicelog-desktop (Tauri, src-tauri) has no such call and is capped the same way; hyly Mac apps are SwiftUI (no WKWebView). Reported to Tom; Studio lint perf/refresh-cap does not look for this preference.
+
+  - id: B-6
+    area: frames
+    check: 'Reported break does not recur: Native remapping status heartbeat re-renders its panel every 3 s even when nothing changed'
+    targets: [host, mac-app]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src/**]
+    added: '2026-11-09 bug: Native remapping status heartbeat re-renders its panel every 3 s even when nothing changed'
+    why:
+      cause: nativeRemapping.refresh() replaced the snapshot object on every 3 s heartbeat, so useSyncExternalStore re-rendered NativeRemappingPanel even when the status was identical
+      made_by: the snapshot store always wrote on poll
+      missed_by: re-render counts were never measured
+      class: a periodic tick re-renders UI that did not change
+      prevention: refresh compares the status and only notifies on change; tests/nativeRemapping.test.ts still passes
+      sweep: 'UK src/: no other intervals drive React state (Mouse permission poll runs only while waiting, toasts are one-shot)'
