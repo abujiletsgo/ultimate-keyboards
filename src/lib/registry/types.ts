@@ -53,6 +53,8 @@ export interface KeyboardDef {
   shield?: string
   layout: PhysicalLayout
   pointing: PointingDescriptor[]
+  /** ZMK .conf files the app has written settings into (e.g. deep sleep), committed by Build. */
+  confPaths?: string[]
   createdAt: string
 }
 

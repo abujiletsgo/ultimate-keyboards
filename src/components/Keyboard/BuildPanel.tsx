@@ -13,6 +13,7 @@ import { openGithub } from '@/lib/openUrl'
 import { isAnyDirty, onDirtyChange, saveAllDirty } from '@/lib/dirty'
 import { buildShownConfig, changedEditedFiles, type BuildStep, type Run } from '@/lib/buildFlow'
 import type { KeyboardDef } from '@/lib/registry/types'
+import SleepSetting from './SleepSetting'
 
 interface RepoStatus { branch: string; ahead: number; behind: number; changes: string[]; remote: string | null; github: string | null; head: string }
 interface GhInfo { available: boolean; logged_in: boolean; detail: string }
@@ -40,12 +41,13 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
   const [flashing, setFlashing] = useState<string | null>(null)
   const [step, setStep] = useState<BuildStep | null>(null)
   const [unsaved, setUnsaved] = useState(isAnyDirty())
+  const [reloads, setReloads] = useState(0)
 
   useEffect(() => onDirtyChange(() => setUnsaved(isAnyDirty())), [])
 
   const refresh = useCallback(async () => {
     if (!IS_TAURI || !repo) return
-    setError(null); setBusy(b => b ?? 'refresh')
+    setError(null); setBusy(b => b ?? 'refresh'); setReloads(n => n + 1)
     try {
       const st = await invoke<RepoStatus>('git_repo_status', { repo })
       setStatus(st)
@@ -119,9 +121,9 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
           <div style={{ flex: 1, fontSize: 12 }}>
             {!status ? <div className="skeleton" style={{ height: 16 }} />
               : busy === 'build' && step ? <span role="status">{stepText(step)}</span>
-              : notBuilt ? <span style={{ color: 'var(--warning)' }}>The keymap on screen has changes that are not built yet.</span>
-              : firmware.length > 0 ? <span style={{ color: 'var(--success)' }}>Firmware matches the keymap on screen (commit <span className="mono">{head7}</span>).</span>
-              : <span>No firmware for the keymap on screen yet.</span>}
+              : notBuilt ? <span style={{ color: 'var(--warning)' }}>The config on screen has changes that are not built yet.</span>
+              : firmware.length > 0 ? <span style={{ color: 'var(--success)' }}>Firmware matches the config on screen (commit <span className="mono">{head7}</span>).</span>
+              : <span>No firmware for the config on screen yet.</span>}
           </div>
           <button className="btn btn-primary btn-sm" onClick={build} disabled={!status || !ghReady || busy !== null || flashing !== null}
             title={ghReady ? 'Save, commit and push the keymap, then download its GitHub build' : 'Needs the gh CLI, a gh login and a GitHub origin'}>
@@ -143,6 +145,8 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
         ))}
         {flashing && <div style={{ fontSize: 12, color: 'var(--warning)' }}>Double-tap the reset button on the half to flash. Waiting up to 2 minutes for its bootloader volume.</div>}
       </section>
+
+      {keyboard.firmware === 'zmk' && <SleepSetting keyboard={keyboard} onSaved={refresh} reload={reloads} />}
 
       {/* Repo state */}
       <section className="glass" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>

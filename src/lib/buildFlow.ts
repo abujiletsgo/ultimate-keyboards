@@ -26,9 +26,9 @@ export interface BuildDeps {
   now: () => number
 }
 
-/** Every file the app writes for this keyboard: keymap (+ combos/behaviors), QMK keymap.c, pointing files. */
+/** Every file the app writes for this keyboard: keymap (+ combos/behaviors), QMK keymap.c, pointing files, setting .confs. */
 export function editedPaths(kb: KeyboardDef): string[] {
-  const out = [kb.keymapPath, kb.keymapCPath]
+  const out = [kb.keymapPath, kb.keymapCPath, ...(kb.confPaths ?? [])]
   for (const d of kb.pointing) out.push(d.overlayPath, d.confPath, d.westPath)
   return [...new Set(out.filter((p): p is string => !!p))]
 }
