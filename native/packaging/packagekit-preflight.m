@@ -41,9 +41,12 @@ int main(int argc, const char **argv) {
                 [specifiers addObject:specifier];
                 [components addObject:@{@"component":name, @"identifier":[package packageIdentifier] ?: @"", @"version":[package packageVersion] ?: @""}];
             }
+            // macOS 26 returns nil here even for packages that installed fine; the
+            // components above were still parsed with their exact identities. Report
+            // it instead of failing, and the builder adds the public installer parse.
             id request = [requestClass requestWithPackages:specifiers destination:@"/"];
-            if (!request) { fprintf(stderr, "PackageKit rejected in-memory install request\n"); return 6; }
-            NSDictionary *report = @{@"components":components, @"requestInitialized":@YES,
+            NSDictionary *report = @{@"components":components, @"requestInitialized":@(request != nil),
+                                      @"requestApiReturnedNil":@(request == nil),
                                       @"installationStarted":@NO, @"authorizationRequested":@NO};
             NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil];
             fwrite(json.bytes, 1, json.length, stdout); fputc('\n', stdout);

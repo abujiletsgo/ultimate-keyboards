@@ -464,8 +464,22 @@ def packagekit_admission(package, components, temp):
     run(["/usr/bin/xcrun", "clang", "-fobjc-arc", "-framework", "Foundation",
          PACKAGING / "packagekit-preflight.m", "-o", probe])
     result = json.loads(run([probe, package.resolve(), *components]).stdout)
-    if not result.get("requestInitialized") or result.get("installationStarted") or result.get("authorizationRequested"):
+    if result.get("installationStarted") or result.get("authorizationRequested"):
         raise RuntimeError("PackageKit parser admission did not complete safely")
+    if not result.get("requestInitialized"):
+        # macOS 26: PKInstallRequest requestWithPackages:destination: returns nil even for
+        # products that installed (the 2026-10-24 installer fails it too). Components are
+        # still parsed above with exact identities; the request step is replaced by
+        # Apple's public read-only parse of the whole product, and the report says so.
+        if not result.get("requestApiReturnedNil"):
+            raise RuntimeError("PackageKit parser admission did not complete safely")
+        info = run(["/usr/sbin/installer", "-pkginfo", "-pkg", package.resolve()]).stdout.splitlines()
+        if not info:
+            raise RuntimeError("installer -pkginfo did not parse the product")
+        result["publicInstallerParse"] = info
+        result["admissionMethod"] = "PackageKit component parse + installer -pkginfo (install-request API returns nil on this macOS)"
+    else:
+        result["admissionMethod"] = "PackageKit component parse + in-memory install request"
     expected_ids = {HELPER_PACKAGE: HELPER_ID, DRIVER_NAME: DRIVER_ID, APP_PACKAGE: APP_PACKAGE_ID}
     expected = {name: (expected_ids[name], "8.6.0" if name == DRIVER_NAME else VERSION) for name in components}
     actual = {x["component"]: (x["identifier"], x["version"]) for x in result["components"]}

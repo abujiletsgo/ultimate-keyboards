@@ -330,7 +330,11 @@ files = {[RECEIPT]:true}; assert.strictEqual(checkCompatibility(),false);
                          "--version", builder.VERSION, "--install-location", "/", component])
             canonical = temp / "canonical.pkg"
             builder.run(["/usr/bin/productbuild", "--package", component, canonical])
-            self.assertTrue(builder.packagekit_admission(canonical, [builder.HELPER_PACKAGE], temp)["requestInitialized"])
+            admitted = builder.packagekit_admission(canonical, [builder.HELPER_PACKAGE], temp)
+            # macOS 26 returns nil for the in-memory install request; the builder then
+            # requires Apple's public parse instead and records which method ran.
+            self.assertTrue(admitted["requestInitialized"] or admitted.get("publicInstallerParse"))
+            self.assertIn("admissionMethod", admitted)
             expanded = temp / "expanded"
             expanded.mkdir()
             builder.run(["/usr/bin/xar", "-xf", canonical], cwd=expanded)
