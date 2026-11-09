@@ -1,6 +1,6 @@
 # Any custom keyboard, not only splits: audit and plan
 
-Date: 2026-11-09 · Branch `abujiletsgo/any-custom-keyboard` from `main` at 6a3e77d · Status: **awaiting Tom's approval**
+Date: 2026-11-09 · Branch `abujiletsgo/any-custom-keyboard` from `main` at 6a3e77d · Status: **Phases A and B built** (approved by Tom 2026-11-09; see Outcome)
 
 Goal (Tom, 2026-11-09): Ultimate Keyboards should serve anyone with a custom keyboard
 (single-board ZMK and QMK boards, VIA/Vial boards such as Keychron, GMMK and kits, wired
@@ -77,3 +77,25 @@ KMK and RMK: no detection, catalogue or demand signal in the code or docs. They 
 - Physical acceptance on the board is separate from synthetic tests; until it passes, the UI keeps the "experimental" label.
 
 **Deferred:** local QMK compile and non-UF2 flashing, Vial combos and tap dance, KMK/RMK, the wired-board sleep setting, and recognising duplicates from Plugged in.
+
+## Outcome (2026-11-09)
+
+Built on this branch. Phase A: Find shows single boards by default ("Split" pill, off) and searches QMK's
+full online list (offline message when it cannot load); Add reads `board:` repos (Glove80, nice!60),
+QMK userspace / vendor folders, VIA exports and keymap.json (Single file accepts `.json`), downloads the
+QMK layout when no info.json is present, and explains the `qmk c2json` step for keymap.c-only folders;
+copy is keyed to one part vs halves; QMK keyboards get their own Build tab (exact `qmk compile` /
+`qmk flash` commands, QMK Configurator route, flash any `.uf2`). Board-target deep-sleep chains follow
+ZMK `app/boards/post_boards_shields.cmake`: `config/<board folder>.conf` then `config/<BOARD>.conf`
+(Glove80's BOARD is `glove80_lh`), checked against zmkfirmware/zmk main.
+
+Phase B: `KeyboardDef.device` is set when a VIA / Vial keyboard is saved from Plugged in; its Build tab
+offers **Write to keyboard (experimental)**: check first (lists every key that differs), then backup,
+write only changed keys with read-back, and re-read the whole keymap. Any name the encoder cannot map
+exactly refuses the whole write; a keyboard changed between check and write is refused. Synthetic only
+(fake VIA/Vial raw HID); the label stays until a real board passes.
+
+Evidence: `bun test` 354 pass; `bunx tsc -b` clean; `tests/visual/any-keyboard.mjs` renders Find, Find
+offline, Add (QMK userspace, downloaded layout, keymap.c error), QMK Build and VIA write at 390 / 820 /
+1280 px, at rest, hovered and keyboard-focused, with no horizontal overflow; run it against
+`TAURI_ENV_PLATFORM=darwin vite` (real Tauri plugins over mocked IPC).

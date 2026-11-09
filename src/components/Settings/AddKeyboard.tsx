@@ -132,7 +132,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
       for (const e of catalogueByKeyCount(keyCount)) {
         if (!list.some(c => c.layout.origin === e.id)) list.push({ label: `Catalogue · ${catalogueLabel(e)}`, layout: e.layout })
       }
-      list.push({ label: `Plain grid (${keyCount} keys)`, layout: fallbackGrid(keyCount, name || 'grid') })
+      list.push({ label: 'Plain grid', layout: fallbackGrid(keyCount, name || 'grid') })
     }
     return list
   }, [candidates, keyCount, name])
@@ -158,7 +158,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
   if (error) {
     return (
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div className="panel-inset" role="alert" style={{ padding: '8px 12px', fontSize: 12, color: 'var(--danger)' }}>{error}</div>
+        <div className="panel-inset" role="alert" style={{ padding: '8px 12px', fontSize: 12, color: 'var(--danger)', overflowWrap: 'anywhere' }}>{error}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-primary btn-sm" onClick={pick}>Choose again</button>
           <button className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>

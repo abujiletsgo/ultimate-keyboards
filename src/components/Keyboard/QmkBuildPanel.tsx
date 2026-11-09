@@ -192,10 +192,10 @@ function WriteToKeyboard({ keyboard, link }: { keyboard: KeyboardDef; link: Devi
 
   return (
     <section className="glass" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={sectionLabel}>Write to keyboard</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ ...sectionLabel, whiteSpace: 'nowrap' }}>Write to keyboard</div>
         <span className="tag" style={{ color: 'var(--warning)' }}>Experimental</span>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>{link.protocol === 'vial' ? 'Vial' : 'VIA'} · {via.hexId(link.vid, link.pid)}</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{link.protocol === 'vial' ? 'Vial' : 'VIA'} · {via.hexId(link.vid, link.pid)}</span>
       </div>
       <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
         Not yet tested on a real VIA or Vial keyboard. The app first saves a backup of what is on the keyboard, then writes only the keys

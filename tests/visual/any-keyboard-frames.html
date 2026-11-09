@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>Any keyboard widths</title>
+<style>body{margin:0;background:#888;font:12px system-ui}.row{display:flex;gap:12px;padding:12px;align-items:flex-start}iframe{border:0;background:#000;height:1100px}h2{margin:0 0 4px;font-size:12px;color:#fff}</style></head>
+<body><div class="row" id="row"></div>
+<script>
+const q = location.search
+for (const w of [390, 820, 1280]) {
+  const d = document.createElement('div')
+  d.innerHTML = `<h2>${w}px</h2><iframe title="${w}" style="width:${w}px" src="/tests/visual/any-keyboard-fixture.html${q}"></iframe>`
+  document.getElementById('row').appendChild(d)
+}
+</script></body></html>

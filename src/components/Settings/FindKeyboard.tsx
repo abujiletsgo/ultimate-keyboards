@@ -70,7 +70,7 @@ export default function FindKeyboard({ onAdd }: Props) {
         <button className="pill-btn" aria-pressed={filter.split} onClick={() => setFilter(f => ({ ...f, split: !f.split }))}>Split</button>
         {TAGS.map(t => <button key={t} className="pill-btn" aria-pressed={filter.tags.includes(t)} onClick={() => toggleTag(t)}>{TAG_LABEL[t]}</button>)}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{results.length} keyboard{results.length === 1 ? '' : 's'}</div>
+      {(results.length > 0 || !online) && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{results.length} keyboard{results.length === 1 ? '' : 's'}</div>}
       <ResultGrid items={results} onPick={setPicked} />
       {online && (
         <>
