@@ -1,12 +1,15 @@
 /**
- * Add-keyboard flow: pick a config folder (or a single .keymap), detect what
- * it contains, let the user confirm name / keymap / layout, then register.
+ * Add-keyboard flow: pick a config folder (or a single .keymap / keymap JSON),
+ * detect what it contains, let the user confirm name / keymap / layout, then
+ * register. ZMK, single boards and splits alike; QMK keymap.json or a VIA
+ * export, with the layout from a local info.json or downloaded from QMK.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { readText } from '@/lib/io'
 import { parseKeymapText, isDevicetreeReady } from '@/lib/zmkParser'
-import { detectKeyboard, type DetectedKeyboard, type LayoutCandidate } from '@/lib/registry/detect'
+import { detectKeyboard, qmkKeymapFacts, DetectError, type DetectedKeyboard, type LayoutCandidate } from '@/lib/registry/detect'
+import { qmkKeyboardDetails } from '@/lib/catalogue/qmk'
 import { CATALOGUE, catalogueLabel, catalogueByKeyCount, findCatalogueLayout } from '@/lib/layout/catalogue'
 import { gridLayoutFromTransform, type PhysicalLayout } from '@/lib/layout'
 import type { KeyboardDef } from '@/lib/registry/types'
@@ -50,28 +53,40 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
         const dir = await open({ directory: true, recursive: true, multiple: false, title: 'Choose a keyboard config folder' })
         if (!dir || Array.isArray(dir)) { onCancel(); return }
         const d = await detectKeyboard(dir)
-        if (!d) { setError('No keymap found in that folder. Expected a ZMK config repo (with config/*.keymap) or a QMK keymap folder with a VIA layout JSON.'); return }
+        if (!d) { setError('No keymap found in that folder. Choose a ZMK config folder (with a .keymap file) or a QMK folder with a keymap.json or a VIA export (.json).'); return }
         setDetected(d)
         setName(d.suggestedName)
         setKeymapPath(d.keymapCandidates[0] ?? '')
         setCandidates(d.layoutCandidates)
       } else {
-        const file = await open({ multiple: false, filters: [{ name: 'ZMK keymap', extensions: ['keymap'] }], title: 'Choose a .keymap file' })
+        const file = await open({ multiple: false, filters: [{ name: 'Keymap', extensions: ['keymap', 'json'] }], title: 'Choose a ZMK .keymap or a QMK keymap JSON' })
         if (!file || Array.isArray(file)) { onCancel(); return }
-        const base = file.split('/').pop()!.replace(/\.keymap$/, '')
-        const d: DetectedKeyboard = {
-          firmware: 'zmk', repoPath: repoOfKeymap(file), suggestedName: base.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-          shield: base, keymapCandidates: [file], layoutCandidates: [], pointing: [], notes: [],
+        const fileName = file.split('/').pop()!
+        const pretty = (s: string) => s.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        let d: DetectedKeyboard
+        if (fileName.endsWith('.json')) {
+          const facts = qmkKeymapFacts(await readText(file), file)
+          if (!facts) { setError(`${fileName} is not a QMK keymap: a keymap.json from QMK Configurator or a VIA export has a "layers" list.`); return }
+          d = {
+            firmware: 'qmk', suggestedName: pretty(facts.keyboard?.split('/')[0] ?? fileName.replace(/\.json$/, '')),
+            shield: facts.keyboard, keymapCandidates: [file], layoutCandidates: [], pointing: [], notes: [], qmk: facts,
+          }
+        } else {
+          const base = fileName.replace(/\.keymap$/, '')
+          d = {
+            firmware: 'zmk', repoPath: repoOfKeymap(file), suggestedName: pretty(base),
+            shield: base, keymapCandidates: [file], layoutCandidates: [], pointing: [], notes: [],
+          }
+          const cat = findCatalogueLayout(base)
+          if (cat) d.layoutCandidates.push({ label: `Catalogue · ${cat.board} ${cat.displayName}`, layout: cat.layout })
         }
-        const cat = findCatalogueLayout(base)
-        if (cat) d.layoutCandidates.push({ label: `Catalogue · ${cat.board} ${cat.displayName}`, layout: cat.layout })
         setDetected(d)
         setName(d.suggestedName)
         setKeymapPath(file)
         setCandidates(d.layoutCandidates)
       }
     } catch (err) {
-      setError(String(err))
+      setError(err instanceof DetectError ? err.message : String(err))
     } finally {
       setBusy(false)
     }
@@ -79,7 +94,26 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
 
   useEffect(() => { pick() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [])
 
-  // Key count from the chosen keymap → catalogue suggestions + grid fallback.
+  // QMK: the keymap file states its own key count; with no local info.json, download the layouts from QMK.
+  const [qmkNote, setQmkNote] = useState<string | null>(null)
+  useEffect(() => {
+    const facts = detected?.qmk
+    if (!facts) return
+    setKeyCount(facts.keyCount)
+    if (detected.layoutCandidates.length > 0 || !facts.keyboard) return
+    let alive = true
+    setQmkNote(null)
+    qmkKeyboardDetails(facts.keyboard).then(info => {
+      if (!alive) return
+      const list = info.layouts.map(l => ({ label: `QMK · ${l.id}`, layout: l.layout }))
+      if (facts.layout) list.sort((a, b) => Number(b.layout.name === facts.layout) - Number(a.layout.name === facts.layout))
+      setCandidates(list)
+      setQmkNote(list.length ? null : `QMK lists no layouts for ${facts.keyboard}; use the grid.`)
+    }).catch(e => { if (alive) setQmkNote(`${e instanceof Error ? e.message : e} Without it, use the grid.`) })
+    return () => { alive = false }
+  }, [detected])
+
+  // ZMK: key count from the chosen keymap → catalogue suggestions + grid fallback.
   useEffect(() => {
     if (!detected || detected.firmware !== 'zmk' || !keymapPath) return
     let alive = true
@@ -103,16 +137,21 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
     return list
   }, [candidates, keyCount, name])
 
-  // Prefer a candidate whose key count matches the keymap.
+  // A keymap.json has one entry per layout key, so its count must match the layout;
+  // a VIA export is in matrix order (rows × columns), which no layout matches.
+  const countsMustMatch = detected?.firmware === 'zmk' || detected?.qmk?.perLayoutKey === true
+
+  // Prefer a candidate whose key count matches the keymap (and, for QMK, the keymap's own layout macro).
   useEffect(() => {
-    if (!keyCount) return
+    if (!keyCount || !countsMustMatch) return
+    if (detected?.qmk?.layout && allCandidates[0]?.layout.name === detected.qmk.layout && allCandidates[0].layout.keys.length === keyCount) { setLayoutIdx(0); return }
     const i = allCandidates.findIndex(c => c.layout.keys.length === keyCount)
     if (i >= 0) setLayoutIdx(i)
-  }, [allCandidates, keyCount])
+  }, [allCandidates, keyCount, countsMustMatch, detected])
 
   const layout = allCandidates[layoutIdx]?.layout
   const nameTaken = existingNames.some(n => n.toLowerCase() === name.trim().toLowerCase())
-  const countMismatch = !!(layout && keyCount && layout.keys.length !== keyCount)
+  const countMismatch = countsMustMatch && !!(layout && keyCount && layout.keys.length !== keyCount)
   const canAdd = !!detected && !!layout && !!keymapPath && name.trim().length > 0 && !nameTaken && !countMismatch
 
   if (busy && !detected) return <div className="skeleton" style={{ height: 80 }} />
@@ -150,7 +189,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
       )}
 
       <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-        <span style={{ color: 'var(--text-secondary)' }}>Physical layout{keyCount ? ` · keymap has ${keyCount} keys per layer` : ''}</span>
+        <span style={{ color: 'var(--text-secondary)' }}>Physical layout{keyCount ? ` · keymap has ${keyCount} ${countsMustMatch ? 'keys' : 'matrix positions'} per layer` : ''}</span>
         <select value={layoutIdx} onChange={e => setLayoutIdx(Number(e.target.value))} style={{ height: 30 }}>
           {allCandidates.map((c, i) => <option key={i} value={i}>{c.label} ({c.layout.keys.length} keys)</option>)}
           {allCandidates.length === 0 && <option value={0}>No layout available</option>}
@@ -174,6 +213,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
           Pointing devices found: {detected.pointing.map(p => `${p.name} (${p.chip})`).join(', ')}
         </div>
       )}
+      {qmkNote && <div role="status" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{qmkNote}</div>}
       {detected.notes.map((n, i) => (
         <div key={i} style={{ fontSize: 11, color: 'var(--text-muted)' }}>{n}</div>
       ))}

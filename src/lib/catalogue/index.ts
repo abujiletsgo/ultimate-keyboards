@@ -2,8 +2,9 @@
  * One searchable list of keyboards a new owner can start from:
  * - ZMK: bundled from zmkfirmware/zmk (MIT) by scripts/build-keyboards.ts —
  *   layout, features and default keymap, offline.
- * - QMK: popular split keyboards by name; layout and default keymap are
- *   downloaded when opened (see ./qmk.ts).
+ * - QMK: popular split keyboards by name, bundled; any other QMK keyboard is
+ *   searched in QMK's online list. Layout and default keymap are downloaded
+ *   when opened (see ./qmk.ts).
  */
 import raw from './zmk-keyboards.json'
 import type { PhysicalLayout } from '@/lib/layout'
@@ -33,7 +34,8 @@ export interface CatalogueItem {
   key: string
   name: string
   firmware: 'zmk' | 'qmk'
-  split: boolean
+  /** null when unknown (a QMK keyboard from the online list, until opened) */
+  split: boolean | null
   /** unknown for QMK until details are downloaded */
   keyCount: number | null
   tags: Tag[]
@@ -88,17 +90,18 @@ export const CATALOGUE_ITEMS: CatalogueItem[] = [
 export interface CatalogueFilter {
   query: string
   firmware: 'any' | 'zmk' | 'qmk'
-  splitOnly: boolean
+  /** only keyboards known to be split */
+  split: boolean
   tags: Tag[]
 }
 
-export const EMPTY_FILTER: CatalogueFilter = { query: '', firmware: 'any', splitOnly: true, tags: [] }
+export const EMPTY_FILTER: CatalogueFilter = { query: '', firmware: 'any', split: false, tags: [] }
 
 export function filterCatalogue(items: CatalogueItem[], f: CatalogueFilter): CatalogueItem[] {
   const words = f.query.toLowerCase().split(/\s+/).filter(Boolean)
   return items.filter(i =>
     (f.firmware === 'any' || i.firmware === f.firmware) &&
-    (!f.splitOnly || i.split) &&
+    (!f.split || i.split === true) &&
     f.tags.every(t => i.tags.includes(t)) &&
     words.every(w => i.haystack.includes(w) || (/^\d+$/.test(w) && i.keyCount === Number(w))),
   ).sort((a, b) => a.name.localeCompare(b.name) || a.firmware.localeCompare(b.firmware))
@@ -108,4 +111,38 @@ export const RELIABILITY_LABEL: Record<Reliability, { label: string; hint: strin
   official: { label: 'Official ZMK default', hint: 'Layout and keymap come from the ZMK project itself.' },
   approximate: { label: 'Approximate layout', hint: 'ZMK has no physical layout for this keyboard, so keys are drawn on a grid. The keymap itself is official.' },
   online: { label: 'From QMK (online)', hint: 'Layout and default keymap are downloaded from QMK when you open it.' },
+}
+
+/** Whether a filter can match keyboards from QMK's online list: those carry no tags and no split flag until opened. */
+export function wantsQmkOnline(f: CatalogueFilter): boolean {
+  return f.query.trim().length >= 2 && f.firmware !== 'zmk' && !f.split && f.tags.length === 0
+}
+
+/** `keychron/q1v2/ansi_encoder` → `Keychron Q1v2 Ansi Encoder`; revision folders dropped. */
+export function qmkPathName(path: string): string {
+  return path.split('/').filter(s => !/^rev\w*$|^v\d+$/i.test(s)).join(' ')
+    .replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+/**
+ * QMK keyboards from the online list (`qmkKeyboardList()`) that match the
+ * query and are not already in the bundled list. Every query word must
+ * appear in the path or its readable name. At most `limit` items.
+ */
+export function qmkOnlineMatches(list: string[], f: CatalogueFilter, bundled: CatalogueItem[], limit = 60): { items: CatalogueItem[]; total: number } {
+  if (!wantsQmkOnline(f)) return { items: [], total: 0 }
+  const words = f.query.toLowerCase().split(/\s+/).filter(Boolean)
+  const have = new Set(bundled.filter(i => i.qmkPath).map(i => i.qmkPath))
+  const hits = list.filter(p => {
+    if (have.has(p)) return false
+    const hay = `${p} ${qmkPathName(p)}`.toLowerCase()
+    return words.every(w => hay.includes(w))
+  }).sort((a, b) => a.localeCompare(b))
+  return {
+    total: hits.length,
+    items: hits.slice(0, limit).map((p): CatalogueItem => ({
+      key: `qmk:${p}`, name: qmkPathName(p), firmware: 'qmk', split: null, keyCount: null, tags: [],
+      reliability: 'online', qmkPath: p, haystack: `${p} qmk`.toLowerCase(),
+    })),
+  }
 }

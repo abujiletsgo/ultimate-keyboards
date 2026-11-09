@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { CATALOGUE_ITEMS, EMPTY_FILTER, ZMK_KEYBOARDS, filterCatalogue } from '../src/lib/catalogue'
+import { CATALOGUE_ITEMS, EMPTY_FILTER, ZMK_KEYBOARDS, filterCatalogue, qmkOnlineMatches, qmkPathName, wantsQmkOnline } from '../src/lib/catalogue'
 import { buildYaml, controllersFor, keymapFileName, pinWestToMain } from '../src/lib/catalogue/newZmkConfig'
 import { parseKeymapText } from '../src/lib/zmkParser'
 
@@ -19,12 +19,44 @@ describe('bundled ZMK catalogue', () => {
     expect(corne.some(i => i.firmware === 'zmk')).toBe(true)
     expect(corne.some(i => i.firmware === 'qmk')).toBe(true)
     const zmkOnly = filterCatalogue(CATALOGUE_ITEMS, { ...EMPTY_FILTER, firmware: 'zmk' })
-    expect(zmkOnly.every(i => i.firmware === 'zmk' && i.split)).toBe(true)
+    expect(zmkOnly.every(i => i.firmware === 'zmk')).toBe(true)
+    const splits = filterCatalogue(CATALOGUE_ITEMS, { ...EMPTY_FILTER, split: true })
+    expect(splits.length).toBeGreaterThan(0)
+    expect(splits.every(i => i.split === true)).toBe(true)
     const byCount = filterCatalogue(CATALOGUE_ITEMS, { ...EMPTY_FILTER, query: '42' })
     expect(byCount.every(i => i.keyCount === 42 || i.haystack.includes('42'))).toBe(true)
     const tb = filterCatalogue(CATALOGUE_ITEMS, { ...EMPTY_FILTER, tags: ['trackball'] })
     expect(tb.length).toBeGreaterThan(0)
     expect(tb.every(i => i.tags.includes('trackball'))).toBe(true)
+  })
+})
+
+describe('single boards are found, not only splits', () => {
+  test('the default filter shows single boards (nice!60, Planck, BT60)', () => {
+    expect(EMPTY_FILTER.split).toBe(false)
+    const all = filterCatalogue(CATALOGUE_ITEMS, EMPTY_FILTER)
+    for (const id of ['nice60//zmk', 'planck//zmk', 'bt60//zmk']) expect(all.some(i => i.zmk?.id === id)).toBe(true)
+    expect(all.filter(i => i.split === false).length).toBeGreaterThanOrEqual(30)
+    expect(filterCatalogue(CATALOGUE_ITEMS, { ...EMPTY_FILTER, query: 'planck' }).length).toBeGreaterThan(0)
+  })
+
+  test('QMK online search: any keyboard by path or name, bundled ones excluded, capped', () => {
+    const list = ['keychron/q1v2/ansi_encoder', 'keychron/q1v2/iso_encoder', 'gmmk/pro/rev1/ansi', 'planck/rev6', 'crkbd/rev1', 'splitkb/aurora/corne/rev1']
+    const q = (query: string, extra = {}) => qmkOnlineMatches(list, { ...EMPTY_FILTER, query, ...extra }, CATALOGUE_ITEMS)
+    expect(q('keychron q1').items.map(i => i.qmkPath)).toEqual(['keychron/q1v2/ansi_encoder', 'keychron/q1v2/iso_encoder'])
+    expect(q('gmmk pro').items[0]).toMatchObject({ name: 'Gmmk Pro Ansi', firmware: 'qmk', split: null, reliability: 'online' })
+    // bundled QMK splits are not listed twice
+    expect(q('aurora corne').items).toEqual([])
+    // the online list carries no tags, split flag or ZMK keyboards
+    expect(q('planck', { firmware: 'zmk' }).items).toEqual([])
+    expect(q('planck', { split: true }).items).toEqual([])
+    expect(q('planck', { tags: ['rgb'] }).items).toEqual([])
+    expect(q('p').items).toEqual([])
+    const capped = qmkOnlineMatches(Array.from({ length: 100 }, (_, i) => `kb${i}/x`), { ...EMPTY_FILTER, query: 'kb' }, [], 10)
+    expect(capped).toMatchObject({ total: 100 })
+    expect(capped.items.length).toBe(10)
+    expect(wantsQmkOnline({ ...EMPTY_FILTER, query: 'q1' })).toBe(true)
+    expect(qmkPathName('planck/rev6')).toBe('Planck')
   })
 })
 

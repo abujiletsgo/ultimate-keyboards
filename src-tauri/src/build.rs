@@ -262,7 +262,7 @@ pub fn flash_uf2(path: String, timeout_secs: u64) -> Result<String, String> {
             break v;
         }
         if Instant::now() > deadline {
-            return Err("no UF2 bootloader volume appeared (double-tap reset on the half you want to flash)".into());
+            return Err("no UF2 bootloader volume appeared (double-tap reset on the keyboard, or on the half you want to flash)".into());
         }
         std::thread::sleep(Duration::from_millis(500));
     };

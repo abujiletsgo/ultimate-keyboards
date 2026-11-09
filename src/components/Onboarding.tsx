@@ -8,7 +8,7 @@ interface Props {
 }
 
 const CHOICES: { tab: HubTab; icon: typeof Usb; title: string; text: string; primary?: boolean }[] = [
-  { tab: 'find', icon: Search, title: 'I just got a keyboard', text: 'Find it in the list of popular split keyboards and start from its default keymap.' },
+  { tab: 'find', icon: Search, title: 'I just got a keyboard', text: 'Find it among ZMK and QMK keyboards, single boards and splits, and start from its default keymap.' },
   { tab: 'usb', icon: Usb, title: 'It is plugged in', text: 'Read the keymap that is on the keyboard now (ZMK Studio, Vial or VIA firmware).' },
   { tab: 'folder', icon: FolderOpen, title: 'I have a config folder', text: 'Open your zmk-config repo or QMK keymap folder.' },
 ]

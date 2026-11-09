@@ -75,7 +75,8 @@ export function parseBuildTargets(yaml: string): BuildTarget[] {
   for (const block of blocks) {
     const shields = values(block, 'shield')
     if (shields.length) {
-      for (const s of shields) add({ name: s, kind: 'shield' })
+      // `shield: corne_left nice_view_adapter nice_view` stacks shields; the first is the keyboard
+      for (const s of shields) add({ name: s.split(/\s+/)[0], kind: 'shield' })
     } else {
       for (const b of values(block, 'board')) add({ name: boardName(b), kind: 'board' })
     }

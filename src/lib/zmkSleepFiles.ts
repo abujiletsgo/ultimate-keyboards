@@ -5,13 +5,15 @@
  * For each build.yaml shield `S` of this keyboard, Zephyr merges
  * `boards/shields/<dir>/S.conf`, then ZMK merges the user config
  * `config/<base>.conf` (shared by every part) and `config/S.conf`. Nothing
- * else: a `<base>.conf` inside the shield folder is never read.
+ * else: a `<base>.conf` inside the shield folder is never read. Boards with
+ * the controller built in (Glove80, nice!60) merge `config/<base>.conf` and
+ * `config/<board>.conf` the same way, without a shield folder.
  */
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { readText } from '@/lib/io'
 import type { KeyboardDef } from '@/lib/registry/types'
 import type { ConfFile, Part } from './zmkSleep'
-import { parseBuildTargets, partBase } from '@/lib/registry/parts'
+import { parseBuildTargets, partBase, type BuildTarget } from '@/lib/registry/parts'
 
 const join = (...p: string[]) => p.join('/').replace(/\/+/g, '/')
 
@@ -30,24 +32,33 @@ export async function loadSleepParts(kb: KeyboardDef): Promise<Part[]> {
   const configDir = root.some(e => e.name === 'config' && e.dir) ? join(kb.repoPath, 'config') : kb.repoPath
 
   const buildYaml = await readText(join(kb.repoPath, 'build.yaml')).catch(() => '')
-  // shields, or boards with the controller built in (a board's user config is config/<board>.conf the same way)
-  const all = parseBuildTargets(buildYaml).map(t => t.name)
-  const base = kb.shield ?? (all[0] ? partBase(all[0]) : undefined)
-  if (!base) return []
-  let shields = all.filter(s => s === base || partBase(s) === base)
-  if (shields.length === 0) shields = [base]
-
   const shieldsDir = join(configDir, 'boards', 'shields')
   const dirs = (await names(shieldsDir)).filter(e => e.dir).map(e => e.name)
-  const dir = dirs.find(d => d === base) ?? dirs.find(d => shields.some(s => s.startsWith(d)))
+  const plan = sleepConfChains(parseBuildTargets(buildYaml), kb.shield, configDir, dirs)
+  return Promise.all(plan.map(async p => ({ name: p.name, chain: await Promise.all(p.chain.map(conf)) })))
+}
 
-  const parts: Part[] = []
-  for (const s of shields) {
+/**
+ * The .conf chain for each part, in merge order (pure; see the header).
+ * Boards with the controller built in follow ZMK's post_boards_shields.cmake:
+ * `config/<board folder>.conf` then `config/<BOARD>.conf`, e.g.
+ * `config/glove80.conf` then `config/glove80_lh.conf`. A board has no
+ * shield folder, so none is read for it.
+ */
+export function sleepConfChains(targets: BuildTarget[], shield: string | undefined, configDir: string, shieldDirs: string[]): { name: string; chain: string[] }[] {
+  const base = shield ?? (targets[0] ? partBase(targets[0].name) : undefined)
+  if (!base) return []
+  let mine = targets.filter(t => t.name === base || partBase(t.name) === base)
+  if (mine.length === 0) mine = [{ name: base, kind: 'shield' }]
+
+  const shieldsDir = join(configDir, 'boards', 'shields')
+  const dir = shieldDirs.find(d => d === base) ?? shieldDirs.find(d => mine.some(s => s.name.startsWith(d)))
+
+  return mine.map(t => {
     const chain: string[] = []
-    if (dir) chain.push(join(shieldsDir, dir, `${s}.conf`))
-    if (base !== s) chain.push(join(configDir, `${base}.conf`))
-    chain.push(join(configDir, `${s}.conf`))
-    parts.push({ name: s, chain: await Promise.all(chain.map(conf)) })
-  }
-  return parts
+    if (dir && t.kind === 'shield') chain.push(join(shieldsDir, dir, `${t.name}.conf`))
+    if (base !== t.name) chain.push(join(configDir, `${base}.conf`))
+    chain.push(join(configDir, `${t.name}.conf`))
+    return { name: t.name, chain }
+  })
 }

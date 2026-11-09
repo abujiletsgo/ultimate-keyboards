@@ -67,7 +67,7 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
   useEffect(() => { refresh() }, [refresh])
 
   if (!IS_TAURI) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>Building and flashing need the desktop app.</div>
-  if (!repo) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>This keyboard has no config folder. Open Settings › Keyboards › Edit › Files and choose its config folder.</div>
+  if (!repo) return <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>This ZMK keyboard has no config folder, so there is nothing to build. Open Settings › Keyboards › Edit › Files and choose its zmk-config folder.</div>
 
   const pending = status ? changedEditedFiles(repo, keyboard, status.changes) : []
   const notBuilt = unsaved || pending.length > 0 || (status?.ahead ?? 0) > 0
@@ -138,12 +138,12 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
         {!notBuilt && firmware.map(f => (
           <div key={f} className="panel-inset" style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
             <span className="mono" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f}>{f.split('/').pop()}</span>
-            <button className="btn btn-primary btn-sm" disabled={flashing !== null || busy !== null} onClick={() => flash(f)} title="Double-tap reset on that half, then click">
+            <button className="btn btn-primary btn-sm" disabled={flashing !== null || busy !== null} onClick={() => flash(f)} title={firmware.length > 1 ? `Double-tap reset on the half ${f.split('/').pop()} is for, then click` : 'Double-tap reset on the keyboard, then click'}>
               <Zap size={12} /> {flashing === f ? 'Waiting for bootloader…' : 'Flash'}
             </button>
           </div>
         ))}
-        {flashing && <div style={{ fontSize: 12, color: 'var(--warning)' }}>Double-tap the reset button on the half to flash. Waiting up to 2 minutes for its bootloader volume.</div>}
+        {flashing && <div style={{ fontSize: 12, color: 'var(--warning)' }}>Double-tap the reset button {firmware.length > 1 ? 'on the half this file is for' : 'on the keyboard'}. Waiting up to 2 minutes for its bootloader volume.</div>}
       </section>
 
       {keyboard.firmware === 'zmk' && <SleepSetting keyboard={keyboard} onSaved={refresh} reload={reloads} />}

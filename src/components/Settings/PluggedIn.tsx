@@ -3,8 +3,10 @@
  * do with that firmware and why. Reading a keymap first saves a full backup
  * of what is on the keyboard (Documents/Ultimate Keyboards/device-backups),
  * then shows it on the keyboard's own layout. "Save as keymap file" makes an
- * editable file copy; the keyboard itself is never changed from here except
- * by the explicitly experimental lighting controls (VIA / Vial).
+ * editable file copy; for VIA / Vial it also links the keyboard, so its Build
+ * tab can write edits back (experimental, lib/device/writeBack). The keyboard
+ * itself is never changed from here except by the experimental lighting
+ * controls.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs'
@@ -15,9 +17,11 @@ import { ErrorPanel, Switch, useToast } from '@/components/ui'
 import { IS_TAURI } from '@/lib/io'
 import {
   detectKeyboards, openHid, snapshotDevice, studio, via, vial,
-  type HidHandle, type Identification, type UsbKeyboard, type DeviceSnapshot,
+  type HidHandle, type Identification, type UsbKeyboard,
 } from '@/lib/device'
 import type { KeyboardDef } from '@/lib/registry/types'
+import type { DeviceLink } from '@/lib/device/writeBack'
+import { saveDeviceBackup } from '@/lib/device/backup'
 import type { PhysicalLayout } from '@/lib/layout'
 
 interface Props { onAdd: (def: Omit<KeyboardDef, 'id' | 'createdAt'>) => void }
@@ -36,16 +40,11 @@ interface ReadResult {
   /** open handle for lighting (VIA / Vial) */
   hid?: HidHandle
   lighting?: 'vialrgb' | 'rgb_matrix' | 'rgblight' | 'backlight' | 'led_matrix' | 'none'
+  /** VIA / Vial: how to reach this keyboard again for Write to keyboard */
+  link?: DeviceLink
 }
 
-async function saveBackup(name: string, snap: DeviceSnapshot): Promise<string> {
-  const dir = await join(await documentDir(), 'Ultimate Keyboards', 'device-backups')
-  await mkdir(dir, { recursive: true })
-  const safe = name.replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 60) || 'keyboard'
-  const path = await join(dir, `${safe}-${snap.takenAt.replace(/[:.]/g, '-')}.json`)
-  await writeTextFile(path, JSON.stringify(snap, null, 2) + '\n')
-  return path
-}
+const saveBackup = saveDeviceBackup
 
 export default function PluggedIn({ onAdd }: Props) {
   const [devices, setDevices] = useState<Array<{ device: UsbKeyboard; id: Identification }> | null>(null)
@@ -64,7 +63,7 @@ export default function PluggedIn({ onAdd }: Props) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button className="btn btn-secondary btn-sm" onClick={scan} disabled={scanning}><RefreshCw size={13} /> {scanning ? 'Looking…' : 'Look again'}</button>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Plug in one half (usually the left) with a data USB cable. Bluetooth connections cannot be read.</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Plug the keyboard in with a data USB cable (a split: usually its left half). Bluetooth connections cannot be read.</span>
       </div>
       {error && <ErrorPanel onRetry={scan}>{error}</ErrorPanel>}
       {devices && devices.length === 0 && (
@@ -115,6 +114,7 @@ function DeviceCard({ device, id, onAdd }: { device: UsbKeyboard; id: Identifica
             const backupPath = await saveBackup(r.name, snap)
             setRead({
               name: r.name, firmware: 'qmk', backupPath, hid: h, lighting: r.lighting, qmkKeyboard: id.qmkKeyboards?.[0],
+              link: { protocol: 'vial', vid: device.vid, pid: device.pid, serial: device.serial ?? undefined, definition: r.definition },
               layout: r.keymap.definitionLayout.layout,
               layers: r.keymap.labels.map((l, i) => ({ name: `Layer ${i}`, keys: l.map(k => ({ label: k.label, title: k.name, qmk: k.name })) })),
             })
@@ -126,6 +126,7 @@ function DeviceCard({ device, id, onAdd }: { device: UsbKeyboard; id: Identifica
             const menus = JSON.stringify(id.viaDefinition.menus ?? [])
             setRead({
               name: id.name, firmware: 'qmk', backupPath, hid: h, qmkKeyboard: id.qmkKeyboards?.[0],
+              link: { protocol: 'via', vid: device.vid, pid: device.pid, serial: device.serial ?? undefined, definition: id.viaDefinition },
               lighting: menus.includes('rgb_matrix') ? 'rgb_matrix' : menus.includes('rgblight') ? 'rgblight' : menus.includes('backlight') ? 'backlight' : 'none',
               layout: r.definitionLayout.layout,
               layers: r.labels.map((l, i) => ({ name: `Layer ${i}`, keys: l.map(k => ({ label: k.label, title: k.name, qmk: k.name })) })),
@@ -148,7 +149,7 @@ function DeviceCard({ device, id, onAdd }: { device: UsbKeyboard; id: Identifica
         const path = await join(dir, 'keymap.json')
         const body = { keyboard: read.qmkKeyboard ?? read.name, keymap: 'from-device', layout: read.layout.name, layers: read.layers.map(l => l.keys.map(k => k.qmk ?? 'KC_NO')) }
         await writeTextFile(path, JSON.stringify(body, null, 2) + '\n')
-        onAdd({ name: read.name, firmware: 'qmk', keymapPath: path, shield: read.qmkKeyboard, layout: read.layout, pointing: [] })
+        onAdd({ name: read.name, firmware: 'qmk', keymapPath: path, shield: read.qmkKeyboard, layout: read.layout, pointing: [], device: read.link })
       } else {
         const path = await join(dir, `${read.name.replace(/[^A-Za-z0-9_]+/g, '_').toLowerCase()}.keymap`)
         const unknown = read.layers.flatMap(l => l.keys).filter(k => !k.zmk).length
@@ -200,7 +201,11 @@ function DeviceCard({ device, id, onAdd }: { device: UsbKeyboard; id: Identifica
             keyAt={pos => { const k = shown.keys[pos]; return k ? { label: k.label, sub: k.sub, title: k.title } : null }} />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <button className="btn btn-primary btn-sm" onClick={saveAsFile}>Save as keymap file and open it</button>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Makes an editable copy in Documents. The keyboard itself is not changed.</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {read.link
+                ? 'Makes an editable copy in Documents and leaves the keyboard as it is. Its Build tab can then write your edits to the keyboard (experimental).'
+                : 'Makes an editable copy in Documents. The keyboard itself is not changed.'}
+            </span>
           </div>
           {read.hid && read.lighting && read.lighting !== 'none' && <LightingPanel handle={read.hid} kind={read.lighting} />}
         </>

@@ -12,10 +12,10 @@ import MiniLayout from '@/components/board/MiniLayout'
 import PhysicalBoard from '@/components/board/PhysicalBoard'
 import { ErrorPanel, Switch } from '@/components/ui'
 import {
-  CATALOGUE_ITEMS, EMPTY_FILTER, RELIABILITY_LABEL, TAG_LABEL, filterCatalogue,
+  CATALOGUE_ITEMS, EMPTY_FILTER, RELIABILITY_LABEL, TAG_LABEL, filterCatalogue, qmkOnlineMatches, wantsQmkOnline,
   type CatalogueFilter, type CatalogueItem, type Tag,
 } from '@/lib/catalogue'
-import { qmkDefaultKeymap, qmkKeyboardDetails, type QmkKeyboardDetails, type QmkConfiguratorKeymap } from '@/lib/catalogue/qmk'
+import { qmkDefaultKeymap, qmkKeyboardDetails, qmkKeyboardList, type QmkKeyboardDetails, type QmkConfiguratorKeymap } from '@/lib/catalogue/qmk'
 import { buildYaml, confText, controllersFor, keymapFileName, needsUnlockOff, pinWestToMain } from '@/lib/catalogue/newZmkConfig'
 import { parseKeymapText } from '@/lib/zmkParser'
 import { bindingLabel, bindingSubLabel } from '@/lib/keyLabel'
@@ -34,6 +34,17 @@ export default function FindKeyboard({ onAdd }: Props) {
   const [filter, setFilter] = useState<CatalogueFilter>(EMPTY_FILTER)
   const [picked, setPicked] = useState<CatalogueItem | null>(null)
   const results = useMemo(() => filterCatalogue(CATALOGUE_ITEMS, filter), [filter])
+  // every other QMK keyboard comes from QMK's online list, loaded on the first search
+  const online = wantsQmkOnline(filter)
+  const [qmkList, setQmkList] = useState<string[] | null>(null)
+  const [qmkListError, setQmkListError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!online || qmkList || qmkListError) return
+    let alive = true
+    qmkKeyboardList().then(l => { if (alive) setQmkList(l) }).catch(() => { if (alive) setQmkListError('offline') })
+    return () => { alive = false }
+  }, [online, qmkList, qmkListError])
+  const more = useMemo(() => qmkOnlineMatches(qmkList ?? [], filter, CATALOGUE_ITEMS), [qmkList, filter])
   const toggleTag = (t: Tag) => setFilter(f => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter(x => x !== t) : [...f.tags, t] }))
 
   if (picked) return <Detail item={picked} onBack={() => setPicked(null)} onAdd={onAdd} />
@@ -44,7 +55,7 @@ export default function FindKeyboard({ onAdd }: Props) {
         <Search size={14} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--text-muted)' }} />
         <input
           autoFocus value={filter.query} onChange={e => setFilter(f => ({ ...f, query: e.target.value }))}
-          placeholder="Search: corne, sofle, 42, charybdis…" aria-label="Search keyboards"
+          placeholder="Search by name or key count: planck, keychron q1, 60…" aria-label="Search keyboards"
           style={{ width: '100%', paddingLeft: 30 }}
         />
       </div>
@@ -56,31 +67,51 @@ export default function FindKeyboard({ onAdd }: Props) {
             </button>
           ))}
         </div>
-        <button className="pill-btn" aria-pressed={filter.splitOnly} onClick={() => setFilter(f => ({ ...f, splitOnly: !f.splitOnly }))}>Split only</button>
+        <button className="pill-btn" aria-pressed={filter.split} onClick={() => setFilter(f => ({ ...f, split: !f.split }))}>Split</button>
         {TAGS.map(t => <button key={t} className="pill-btn" aria-pressed={filter.tags.includes(t)} onClick={() => toggleTag(t)}>{TAG_LABEL[t]}</button>)}
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{results.length} keyboard{results.length === 1 ? '' : 's'}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
-        {results.map(i => (
-          <button key={i.key} className="card-btn" onClick={() => setPicked(i)}>
-            <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {i.zmk ? <MiniLayout layout={i.zmk.layout} width={170} /> : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Layout loads from QMK</span>}
-            </div>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{i.name}</span>
-              <span className={`fw-badge fw-${i.firmware}`}>{i.firmware.toUpperCase()}</span>
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              {i.keyCount ? `${i.keyCount} keys` : 'keys: see details'}{i.split ? ' · split' : ''}{i.tags.length ? ` · ${i.tags.map(t => TAG_LABEL[t]).join(', ')}` : ''}
-            </span>
-          </button>
-        ))}
-      </div>
-      {results.length === 0 && (
+      <ResultGrid items={results} onPick={setPicked} />
+      {online && (
+        <>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }} role="status">
+            {qmkListError
+              ? 'More QMK keyboards: QMK’s full list needs an internet connection, so only the bundled keyboards are searched.'
+              : !qmkList
+                ? 'Searching QMK’s full list…'
+                : more.total === 0
+                  ? 'No other QMK keyboards match.'
+                  : `${more.total} more from QMK${more.total > more.items.length ? `, first ${more.items.length} shown; add words to narrow` : ''}`}
+          </div>
+          {more.items.length > 0 && <ResultGrid items={more.items} onPick={setPicked} />}
+        </>
+      )}
+      {results.length === 0 && more.items.length === 0 && (
         <div className="panel-inset" style={{ padding: 14, fontSize: 12, color: 'var(--text-secondary)' }}>
           Nothing matches. Try fewer filters, or add your keyboard from its config folder if you already have one.
         </div>
       )}
+    </div>
+  )
+}
+
+function ResultGrid({ items, onPick }: { items: CatalogueItem[]; onPick: (i: CatalogueItem) => void }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+      {items.map(i => (
+        <button key={i.key} className="card-btn" onClick={() => onPick(i)}>
+          <div style={{ height: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {i.zmk ? <MiniLayout layout={i.zmk.layout} width={170} /> : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Layout loads from QMK</span>}
+          </div>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{i.name}</span>
+            <span className={`fw-badge fw-${i.firmware}`}>{i.firmware.toUpperCase()}</span>
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {i.keyCount ? `${i.keyCount} keys` : i.qmkPath && !i.split ? <span className="mono">{i.qmkPath}</span> : 'keys: see details'}{i.split ? ' · split' : ''}{i.tags.length ? ` · ${i.tags.map(t => TAG_LABEL[t]).join(', ')}` : ''}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }
@@ -192,6 +223,7 @@ function qmkTags(d: QmkKeyboardDetails): string[] {
 function CreateZmkConfig({ item, onAdd }: { item: CatalogueItem; onAdd: Props['onAdd'] }) {
   const kb = item.zmk!
   const controllers = controllersFor(kb)
+  const split = kb.siblings.length > 0
   const [name, setName] = useState(`zmk-config-${kb.id.replace(/\/\/.*$/, '').replace(/_/g, '-')}`)
   const [priv, setPriv] = useState(false)
   const [controller, setController] = useState(controllers[0]?.id ?? '')
@@ -241,7 +273,7 @@ function CreateZmkConfig({ item, onAdd }: { item: CatalogueItem; onAdd: Props['o
         </label>
         {controllers.length > 0 && (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Controller on each half</span>
+            <span style={{ color: 'var(--text-secondary)' }}>{split ? 'Controller on each half' : 'Controller'}</span>
             <select value={controller} onChange={e => setController(e.target.value)}>
               {controllers.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
@@ -253,8 +285,8 @@ function CreateZmkConfig({ item, onAdd }: { item: CatalogueItem; onAdd: Props['o
         <Switch
           checked={studio} onChange={setStudio} label="Enable live editing (ZMK Studio)"
           description={needsUnlockOff(kb)
-            ? 'Adds Studio to the left half so this app can read and change the keymap over USB without rebuilding. This keymap has no Studio unlock key, so the Studio lock is turned off: any app on a computer you plug into can change the keymap.'
-            : 'Adds Studio to the left half so this app can read and change the keymap over USB without rebuilding. Press the keymap’s Studio unlock key before editing.'}
+            ? `Adds Studio to ${split ? 'the left half' : 'the keyboard'} so this app can read and change the keymap over USB without rebuilding. This keymap has no Studio unlock key, so the Studio lock is turned off: any app on a computer you plug into can change the keymap.`
+            : `Adds Studio to ${split ? 'the left half' : 'the keyboard'} so this app can read and change the keymap over USB without rebuilding. Press the keymap’s Studio unlock key before editing.`}
         />
       )}
       {error && <ErrorPanel onRetry={create}>{error}</ErrorPanel>}

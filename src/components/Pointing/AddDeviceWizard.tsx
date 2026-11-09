@@ -153,7 +153,7 @@ export default function AddDeviceWizard({ keyboard, onDone }: Props) {
           ) : targets.overlays.length === 0 ? (
             <ErrorPanel>No shield overlay found under config/boards/shields. This wizard writes to a shield overlay; add the shield folder to the repo first.</ErrorPanel>
           ) : (
-            <Field label="Overlay (the half wired to the sensor)" hint={`conf: ${short(confForOverlay(overlayPath))}`}>
+            <Field label="Overlay (on a split, the half wired to the sensor)" hint={`conf: ${short(confForOverlay(overlayPath))}`}>
               <select className="input" value={overlayPath} onChange={e => setOverlayPath(e.target.value)} aria-label="Overlay file">
                 {targets.overlays.map(p => <option key={p} value={p}>{short(p)}</option>)}
               </select>

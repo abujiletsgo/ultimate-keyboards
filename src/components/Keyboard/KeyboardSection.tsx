@@ -8,6 +8,7 @@ import type { KeyboardDef } from '@/lib/registry/types'
 import ZmkKeymapEditor from './ZmkKeymapEditor'
 import QmkKeymapEditor from './QmkKeymapEditor'
 import BuildPanel from './BuildPanel'
+import QmkBuildPanel from './QmkBuildPanel'
 import { saveZmkKeymap } from './ZmkKeymapEditor'
 import { registerDirtySource } from '@/lib/dirty'
 import { readText } from '@/lib/io'
@@ -86,7 +87,7 @@ export default function KeyboardSection({ keyboard, onEditInSettings }: Props) {
 
       <div style={{ padding: 24, flex: 1 }}>
         {tab === 'build' ? (
-          <BuildPanel key={keyboard.id} keyboard={keyboard} />
+          isZmk ? <BuildPanel key={keyboard.id} keyboard={keyboard} /> : <QmkBuildPanel key={keyboard.id} keyboard={keyboard} />
         ) : tab === 'behaviors' && isZmk ? (
           <ZmkKeymapEditor key={keyboard.id} keyboard={keyboard} view="behaviors" />
         ) : tab === 'pointing' && hasPointing ? (

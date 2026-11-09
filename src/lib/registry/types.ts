@@ -4,6 +4,7 @@
  * per install (tauri-plugin-store on desktop, localStorage on the web).
  */
 import type { PhysicalLayout } from '@/lib/layout'
+import type { DeviceLink } from '@/lib/device/writeBack'
 
 export type Firmware = 'zmk' | 'qmk'
 
@@ -53,6 +54,8 @@ export interface KeyboardDef {
   shield?: string
   layout: PhysicalLayout
   pointing: PointingDescriptor[]
+  /** VIA / Vial keyboard this keymap was read from (Plugged in); enables the experimental Write to keyboard. */
+  device?: DeviceLink
   /** ZMK .conf files the app has written settings into (e.g. deep sleep), committed by Build. */
   confPaths?: string[]
   createdAt: string

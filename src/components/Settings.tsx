@@ -299,7 +299,7 @@ function BuiltInKeyboardField() {
         busy={busy}
         onChange={toggle}
         label="Turn off the MacBook keyboard"
-        description="Stops stray key presses while a split keyboard rests on top of it. It turns back on when you quit the app, or on the next launch after a crash. Also in the menu-bar icon."
+        description="Stops stray key presses while another keyboard rests on top of it. It turns back on when you quit the app, or on the next launch after a crash. Also in the menu-bar icon."
       />
       {error && <div className="panel-inset" role="alert" style={{ marginTop: 8, padding: "8px 12px", fontSize: 12, color: "var(--danger)" }}>{error}</div>}
     </>
