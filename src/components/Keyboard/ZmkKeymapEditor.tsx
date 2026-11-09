@@ -60,9 +60,12 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  // A keymap already in the store draws in the first frame (switching back
+  // from Build or Pointing must not flash a skeleton over cached data).
+  const cached = !!keymap && filePath === keyboard.keymapPath
+  const [loading, setLoading] = useState(!cached)
   const [hasBackup, setHasBackup] = useState(false)
-  const [compat, setCompat] = useState<CompatReport | null>(null)
+  const [compat, setCompat] = useState<CompatReport | null>(() => (cached && keymap ? checkZmkCompatibility(keymap.rawSource, keymap.syntaxErrors) : null))
 
   const flash = (msg: string, ok = true) => {
     if (ok) toast.success(msg); else toast.error(msg)
@@ -88,7 +91,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   // (Re)load whenever this keyboard's file is not the one in the store.
   useEffect(() => {
     if (keymap && filePath === keyboard.keymapPath) {
-      setCompat(checkZmkCompatibility(keymap.rawSource, keymap.syntaxErrors))
+      if (!compat) setCompat(checkZmkCompatibility(keymap.rawSource, keymap.syntaxErrors))
       setLoading(false); return
     }
     load()

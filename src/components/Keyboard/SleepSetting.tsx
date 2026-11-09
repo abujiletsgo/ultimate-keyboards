@@ -10,6 +10,7 @@ import { useRegistryStore } from '@/stores/registryStore'
 import { loadSleepParts } from '@/lib/zmkSleepFiles'
 import { partLabel, partSleep, planSleep, sameSleep, sleepLabel, DEFAULT_TIMEOUT_MS, type Part, type Sleep } from '@/lib/zmkSleep'
 import type { KeyboardDef } from '@/lib/registry/types'
+import { viewCache } from '@/lib/viewCache'
 
 const MIN = 60_000
 const CHOICES: Sleep[] = [
@@ -26,13 +27,15 @@ const fromKey = (k: string): Sleep => (k === 'never' ? { kind: 'never' } : { kin
 export default function SleepSetting({ keyboard, onSaved, reload }: { keyboard: KeyboardDef; onSaved: () => void; reload: number }) {
   const toast = useToast()
   const update = useRegistryStore(s => s.update)
-  const [parts, setParts] = useState<Part[] | null>(null)
+  // The last read draws in the first frame when the Build tab reopens; the load below refreshes it.
+  const cacheKey = `sleep:${keyboard.id}:${keyboard.repoPath ?? ''}`
+  const [parts, setParts] = useState<Part[] | null>(() => viewCache.get<Part[]>(cacheKey) ?? null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
-    try { setParts(await loadSleepParts(keyboard)); setError(null) } catch (e) { setError(String(e)); setParts([]) }
-  }, [keyboard])
+    try { setParts(viewCache.set(cacheKey, await loadSleepParts(keyboard))); setError(null) } catch (e) { setError(String(e)); setParts([]) }
+  }, [keyboard, cacheKey])
   useEffect(() => { load() }, [load, reload])
 
   if (parts && parts.length === 0 && !error) return null

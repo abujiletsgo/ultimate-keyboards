@@ -107,7 +107,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Ambient scene: drifting light orbs behind all glass ───────────────── */
+/* ── Ambient scene: light orbs behind all glass ────────────────────────────
+   Cheap to draw (Studio Decisions #77): the softness is in the gradient, not a
+   live filter: blur(90px) (the old blurred orb, matched within 5/255 per
+   channel at 1200 and 1600 px wide). The orbs glide along their old drift path
+   only when the section changes (App sets #root[data-orbs]) and then hold
+   still. An endless drift made every glass pane re-blur its backdrop on every
+   frame, even with the app idle. */
 #root { position: relative; isolation: isolate; }
 
 #root::before,
@@ -116,40 +122,46 @@ body {
   position: fixed;
   z-index: -1;
   border-radius: 50%;
-  filter: blur(90px);
   pointer-events: none;
-  will-change: transform;
+  transition: transform 1.8s ease-in-out;
 }
 
 #root::before {
-  width: 62vw; height: 62vw;
-  left: -18vw; top: -26vw;
+  width: 80.6vw; height: 80.6vw;
+  left: -27.3vw; top: -35.3vw;
   background: radial-gradient(circle at center,
-    rgba(14, 165, 233, 0.20) 0%,
-    rgba(56, 189, 248, 0.12) 45%,
-    transparent 70%);
-  animation: orb-drift-a 26s ease-in-out infinite alternate;
+    rgba(14, 165, 233, 0.16) 0%,
+    rgba(14, 165, 233, 0.144) 19.2%,
+    rgba(56, 189, 248, 0.116) 30.8%,
+    rgba(56, 189, 248, 0.08) 42.3%,
+    rgba(56, 189, 248, 0.044) 52.3%,
+    rgba(56, 189, 248, 0.018) 61.5%,
+    rgba(56, 189, 248, 0.004) 70.8%,
+    transparent 76.9%);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 #root::after {
-  width: 55vw; height: 55vw;
-  right: -20vw; bottom: -24vw;
+  width: 71.5vw; height: 71.5vw;
+  right: -28.25vw; bottom: -32.25vw;
   background: radial-gradient(circle at center,
-    rgba(94, 166, 255, 0.14) 0%,
-    rgba(56, 189, 248, 0.08) 45%,
-    transparent 70%);
-  animation: orb-drift-b 32s ease-in-out infinite alternate;
+    rgba(94, 166, 255, 0.112) 0%,
+    rgba(94, 166, 255, 0.1008) 19.2%,
+    rgba(56, 189, 248, 0.0812) 30.8%,
+    rgba(56, 189, 248, 0.056) 42.3%,
+    rgba(56, 189, 248, 0.0308) 52.3%,
+    rgba(56, 189, 248, 0.0126) 61.5%,
+    rgba(56, 189, 248, 0.0028) 70.8%,
+    transparent 76.9%);
+  transform: translate3d(0, 0, 0) scale(1.08);
 }
 
-@keyframes orb-drift-a {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to   { transform: translate3d(9vw, 7vh, 0) scale(1.12); }
-}
-
-@keyframes orb-drift-b {
-  from { transform: translate3d(0, 0, 0) scale(1.08); }
-  to   { transform: translate3d(-8vw, -6vh, 0) scale(0.96); }
-}
+#root[data-orbs="1"]::before { transform: translate3d(3vw, 2.33vh, 0) scale(1.04); }
+#root[data-orbs="2"]::before { transform: translate3d(6vw, 4.67vh, 0) scale(1.08); }
+#root[data-orbs="3"]::before { transform: translate3d(9vw, 7vh, 0) scale(1.12); }
+#root[data-orbs="1"]::after  { transform: translate3d(-2.67vw, -2vh, 0) scale(1.04); }
+#root[data-orbs="2"]::after  { transform: translate3d(-5.33vw, -4vh, 0) scale(1); }
+#root[data-orbs="3"]::after  { transform: translate3d(-8vw, -6vh, 0) scale(0.96); }
 
 /* ── Scrollbars — slim glass ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -592,33 +604,27 @@ select {
 }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.94); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from { transform: translateX(-50%) translateY(10px) scale(0.94); }
+  to   { transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
    Motion & animation utilities
+   First frame at rest (Studio Decisions #77): an entrance only moves
+   content that is already fully drawn. No keyframe starts from opacity 0
+   or scale 0, so an entrance that never runs (window hidden, tray window,
+   dropped frames) still shows the content. `npm run check:frames` fails
+   on a hidden first keyframe.
    ═══════════════════════════════════════════════════════════════════════ */
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { transform: translateY(10px); }
+  to   { transform: translateY(0); }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96) translateY(6px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(45, 212, 191, 0.25); }
-  50%      { box-shadow: 0 0 26px rgba(45, 212, 191, 0.50); }
+  from { transform: scale(0.96) translateY(6px); }
+  to   { transform: scale(1) translateY(0); }
 }
 
 @keyframes shimmer {
@@ -626,12 +632,12 @@ select {
   to   { background-position: 200% 0; }
 }
 
-.anim-fade-up  { animation: fade-up var(--dur-3) var(--ease-out) both; }
-.anim-scale-in { animation: scale-in var(--dur-2) var(--ease-spring) both; }
+.anim-fade-up  { animation: fade-up var(--dur-3) var(--ease-out); }
+.anim-scale-in { animation: scale-in var(--dur-2) var(--ease-spring); }
 
 /* Staggered entrance: set style={{ '--i': n }} on children */
 .anim-stagger > * {
-  animation: fade-up var(--dur-3) var(--ease-out) both;
+  animation: fade-up var(--dur-3) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 40ms);
 }
 
@@ -642,6 +648,7 @@ select {
     rgba(255, 255, 255, 0.09) 50%,
     rgba(255, 255, 255, 0.04) 75%);
   background-size: 200% 100%;
+  /* frames-allow[frame/endless-animation]: shown only while a first load is pending; views draw cached data instead (lib/viewCache) */
   animation: shimmer 1.6s linear infinite;
   border-radius: var(--r-md);
 }

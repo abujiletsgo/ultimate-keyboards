@@ -17,7 +17,10 @@ interface Props {
 }
 
 const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
-  const { keymap, filePath, isDirty, loadError, load, updateLayerKey, save } = useQMKStore()
+  const { keymap: storeKeymap, filePath, isDirty, loadError, load, updateLayerKey, save } = useQMKStore()
+  // Only this keyboard's keymap is drawn; another keyboard's keymap left in the
+  // store would show for a frame before the load below replaces it.
+  const keymap = filePath === keyboard.keymapPath ? storeKeymap : null
   const [selectedLayer, setSelectedLayer] = useState(0)
   const toast = useToast()
   const [confirmReload, setConfirmReload] = useState(false)

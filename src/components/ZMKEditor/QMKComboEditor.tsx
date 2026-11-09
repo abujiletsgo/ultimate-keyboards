@@ -5,6 +5,7 @@ import { useQMKStore } from '../../stores/qmkStore'
 import QMKKeyboard from './QMKKeyboard'
 import type { PhysicalLayout } from '@/lib/layout'
 import { ConfirmBanner } from '@/components/ui'
+import { viewCache } from '@/lib/viewCache'
 
 const COMMON_TO_KEYS = [
   'KC_ENT', 'KC_ESC', 'KC_BSPC', 'KC_DEL', 'KC_TAB', 'KC_SPC',
@@ -154,9 +155,11 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
   const { keymap } = useQMKStore()
   const layerKeys = keymap?.layers[0]?.keys ?? []
 
-  const [combos, setCombos] = useState<QMKCombo[]>([])
-  const [source, setSource] = useState('')
-  const [loading, setLoading] = useState(true)
+  // keymap.c read earlier draws in the first frame; loadSource refreshes it.
+  const cacheKey = `keymap.c:${KEYMAP_C_PATH}`
+  const [source, setSource] = useState(() => viewCache.get<string>(cacheKey) ?? '')
+  const [combos, setCombos] = useState<QMKCombo[]>(() => parseQMKCombos(viewCache.get<string>(cacheKey) ?? ''))
+  const [loading, setLoading] = useState(() => viewCache.get<string>(cacheKey) === undefined)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -164,10 +167,10 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
   const [hoveredCombo, setHoveredCombo] = useState<string | null>(null)
 
   const loadSource = useCallback(async () => {
-    setLoading(true)
+    if (viewCache.get<string>(cacheKey) === undefined) setLoading(true)
     setLoadError(null)
     try {
-      const text = await readText(KEYMAP_C_PATH)
+      const text = viewCache.set(cacheKey, await readText(KEYMAP_C_PATH))
       setSource(text)
       setCombos(parseQMKCombos(text))
     } catch (err) {
@@ -175,7 +178,7 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
     } finally {
       setLoading(false)
     }
-  }, [KEYMAP_C_PATH])
+  }, [KEYMAP_C_PATH, cacheKey])
 
   useEffect(() => { loadSource() }, [loadSource])
 
@@ -188,7 +191,7 @@ const QMKComboEditor: React.FC<{ keymapCPath: string; layout?: PhysicalLayout }>
           return n === newCombos.length ? null : `combo count would be ${n}, expected ${newCombos.length}`
         },
       })
-      setSource(newSource)
+      setSource(viewCache.set(cacheKey, newSource))
       setCombos(newCombos)
       setStatus({ msg: 'Saved to keymap.c', ok: true })
       setTimeout(() => setStatus(null), 2500)

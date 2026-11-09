@@ -4,6 +4,9 @@ import App from "./App";
 import "./styles/globals.css";
 import "./styles/ui.css";
 import { ToastProvider } from "./components/ui/Toast";
+import { startFrameProbeIfRequested } from "./lib/frameProbe";
+
+void startFrameProbeIfRequested();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

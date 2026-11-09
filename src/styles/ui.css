@@ -56,11 +56,12 @@
 .toast-stack .toast {
   position: static; transform: none; pointer-events: auto;
   display: flex; align-items: center; gap: 10px; min-width: 220px; max-width: 520px;
-  animation: toast-in var(--dur-2) var(--ease-out) both;
+  animation: toast-stack-in var(--dur-2) var(--ease-out);
 }
 .toast-success { border-color: rgba(74, 222, 128, 0.35); }
 .toast-error   { border-color: rgba(251, 113, 133, 0.45); color: var(--danger); }
-@keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+/* Visible from its first frame: the entrance only moves the toast. */
+@keyframes toast-stack-in { from { transform: translateY(10px) scale(0.96); } to { transform: none; } }
 
 /* ── Switch ──────────────────────────────────────────────────────────────── */
 .switch { display: flex; align-items: flex-start; gap: 12px; position: relative; }

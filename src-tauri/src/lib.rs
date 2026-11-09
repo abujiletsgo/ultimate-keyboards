@@ -7,6 +7,7 @@ mod build;
 mod newconfig;
 mod mouse_engine;
 mod native_remapping;
+mod frames;
 
 use tauri::{
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
@@ -400,6 +401,9 @@ pub fn run() {
             set_dirty,
             install_karabiner_rules,
             native_remapping::native_remapping_status,
+            frames::frame_pacing_status,
+            frames::frame_probe_target,
+            frames::frame_probe_write,
             native_remapping::native_remapping_refresh_permissions,
             native_remapping::native_remapping_apply,
             native_remapping::native_remapping_disable,
@@ -552,6 +556,11 @@ pub fn run() {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
+            }
+
+            // 120 Hz displays get 120 Hz rendering (frames.rs).
+            if let Some(window) = app.get_webview_window("main") {
+                frames::uncap(&window);
             }
 
             #[cfg(debug_assertions)]

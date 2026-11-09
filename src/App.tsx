@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense, lazy, Component, type ReactNode } from "react";
+import { useState, useEffect, useRef, Suspense, Component, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
@@ -11,6 +11,7 @@ import { nativeRemapping } from "@/lib/nativeRemapping";
 import { useToast } from "@/components/ui";
 import { loadSection, saveSection, sameSection, type Section } from "@/lib/nav";
 import { initDevicetree } from "@/lib/zmkParser";
+import * as sections from "@/components/lazySections";
 import treeSitterWasm from "web-tree-sitter/web-tree-sitter.wasm?url";
 import devicetreeWasm from "tree-sitter-devicetree/tree-sitter-devicetree.wasm?url";
 
@@ -18,11 +19,11 @@ import devicetreeWasm from "tree-sitter-devicetree/tree-sitter-devicetree.wasm?u
 // registry read; keyboard sections wait on it.
 const parserReady = initDevicetree({ runtime: treeSitterWasm, grammar: devicetreeWasm });
 
-const KeyboardSection = lazy(() => import("@/components/Keyboard/KeyboardSection"));
-const KarabinerEditor = lazy(() => import("@/components/KarabinerEditor"));
-const Mouse = lazy(() => import("@/components/Mouse"));
-const Settings = lazy(() => import("@/components/Settings"));
-const Onboarding = lazy(() => import("@/components/Onboarding"));
+const KeyboardSection = sections.KeyboardSection.Component;
+const KarabinerEditor = sections.KarabinerEditor.Component;
+const Mouse = sections.Mouse.Component;
+const Settings = sections.Settings.Component;
+const Onboarding = sections.Onboarding.Component;
 
 useZMKStore.subscribe(syncDirty);
 useQMKStore.subscribe(syncDirty);
@@ -89,6 +90,13 @@ export default function App() {
   }, []);
 
   useEffect(() => onDirtyChange(() => setDirtyNames(dirtySources())), []);
+
+  const shown = section !== null;
+  useEffect(() => {
+    if (!shown) return;
+    const t = setTimeout(sections.preloadSections, 400);
+    return () => clearTimeout(t);
+  }, [shown]);
 
   // A removed keyboard or an emptied registry moves the user somewhere valid.
   useEffect(() => {
@@ -171,6 +179,20 @@ export default function App() {
 
   const key = section ? (section.kind === 'keyboard' ? `keyboard:${section.id}` : section.kind) : 'loading';
   const activeKeyboard = section?.kind === 'keyboard' ? registry.keyboards.find(k => k.id === section.id) ?? null : null;
+
+  // The background orbs take one step along their drift path (0→3→0) per
+  // section change, then hold still (globals.css "Ambient scene").
+  const orbStep = useRef({ n: 0, dir: 1, key: '' });
+  useEffect(() => {
+    const s = orbStep.current;
+    if (!section || s.key === key) return;
+    if (s.key) {
+      if (s.n + s.dir < 0 || s.n + s.dir > 3) s.dir = -s.dir;
+      s.n += s.dir;
+    }
+    s.key = key;
+    document.getElementById("root")?.setAttribute("data-orbs", String(s.n));
+  }, [key, section]);
 
   return (
     <div className="app-layout">

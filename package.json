@@ -8,7 +8,8 @@
     "build": "tauri build",
     "preview": "vite preview",
     "test": "bun test",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "check:frames": "bun scripts/check-frames.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

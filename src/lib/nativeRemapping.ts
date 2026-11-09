@@ -108,7 +108,11 @@ export function createNativeRemappingController(deps: Dependencies) {
     polling = enqueue(async () => {
       try {
         const status = checkedStatus(await deps.invoke<NativeStatus>('native_remapping_status'))
-        update({ status, ...(lastPollError !== null && snapshot.error === lastPollError ? { error: null } : {}) })
+        const clearError = lastPollError !== null && snapshot.error === lastPollError
+        // The 3 s heartbeat re-renders subscribers only when something changed.
+        if (clearError || JSON.stringify(status) !== JSON.stringify(snapshot.status)) {
+          update({ status, ...(clearError ? { error: null } : {}) })
+        }
         lastPollError = null
       } catch (error) {
         // An old running state is not evidence that the helper is still reachable.

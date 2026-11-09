@@ -14,9 +14,13 @@ import { isAnyDirty, onDirtyChange, saveAllDirty } from '@/lib/dirty'
 import { buildShownConfig, changedEditedFiles, type BuildStep, type Run } from '@/lib/buildFlow'
 import type { KeyboardDef } from '@/lib/registry/types'
 import SleepSetting from './SleepSetting'
+import { viewCache } from '@/lib/viewCache'
 
 interface RepoStatus { branch: string; ahead: number; behind: number; changes: string[]; remote: string | null; github: string | null; head: string }
 interface GhInfo { available: boolean; logged_in: boolean; detail: string }
+/** What the tab last read for a repo; reopening the tab draws it at once and refreshes behind it. */
+interface Snapshot { status: RepoStatus; diff: string | null; firmware: string[]; gh: GhInfo | null; runs: Run[] }
+const snapshotKey = (repo: string) => `build:${repo}`
 
 function stepText(s: BuildStep): string {
   switch (s.kind) {
@@ -31,11 +35,12 @@ function stepText(s: BuildStep): string {
 export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
   const toast = useToast()
   const repo = keyboard.repoPath
-  const [status, setStatus] = useState<RepoStatus | null>(null)
-  const [diff, setDiff] = useState<string | null>(null)
-  const [gh, setGh] = useState<GhInfo | null>(null)
-  const [runs, setRuns] = useState<Run[]>([])
-  const [firmware, setFirmware] = useState<string[]>([])
+  const [last] = useState(() => (repo ? viewCache.get<Snapshot>(snapshotKey(repo)) : undefined))
+  const [status, setStatus] = useState<RepoStatus | null>(last?.status ?? null)
+  const [diff, setDiff] = useState<string | null>(last?.diff ?? null)
+  const [gh, setGh] = useState<GhInfo | null>(last?.gh ?? null)
+  const [runs, setRuns] = useState<Run[]>(last?.runs ?? [])
+  const [firmware, setFirmware] = useState<string[]>(last?.firmware ?? [])
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [flashing, setFlashing] = useState<string | null>(null)
@@ -51,14 +56,19 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
     try {
       const st = await invoke<RepoStatus>('git_repo_status', { repo })
       setStatus(st)
-      setDiff(await invoke<string>('git_diff_file', { repo, path: keyboard.keymapPath }).catch(e => `Could not read the diff: ${e}`))
-      setFirmware(await invoke<string[]>('list_firmware', { repo, sha: st.head }))
+      const d = await invoke<string>('git_diff_file', { repo, path: keyboard.keymapPath }).catch(e => `Could not read the diff: ${e}`)
+      setDiff(d)
+      const fw = await invoke<string[]>('list_firmware', { repo, sha: st.head })
+      setFirmware(fw)
       const info = await invoke<GhInfo>('gh_info')
       setGh(info)
+      let rs: Run[] = []
       if (info.available && info.logged_in && st.github) {
         const json = await invoke<string>('gh_run_list', { repo, branch: st.branch, limit: 5, commit: null })
-        setRuns(JSON.parse(json) as Run[])
-      } else setRuns([])
+        rs = JSON.parse(json) as Run[]
+      }
+      setRuns(rs)
+      viewCache.set<Snapshot>(snapshotKey(repo), { status: st, diff: d, firmware: fw, gh: info, runs: rs })
     } catch (e) {
       setError(String(e)); setRuns([])
     } finally { setBusy(b => (b === 'refresh' ? null : b)) }

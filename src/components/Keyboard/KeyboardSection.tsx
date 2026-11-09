@@ -3,7 +3,7 @@
  * its registry descriptor. Pointing appears when the keyboard has a pointing
  * device, or when one could be added (ZMK config repo).
  */
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import type { KeyboardDef } from '@/lib/registry/types'
 import ZmkKeymapEditor from './ZmkKeymapEditor'
 import QmkKeymapEditor from './QmkKeymapEditor'
@@ -16,7 +16,9 @@ import { parseKeymapText } from '@/lib/zmkParser'
 import { useZMKStore } from '@/stores/zmkStore'
 import { useQMKStore } from '@/stores/qmkStore'
 
-const Pointing = lazy(() => import('@/components/Pointing'))
+import { Pointing as PointingSection } from '@/components/lazySections'
+
+const Pointing = PointingSection.Component
 
 type Tab = 'keymap' | 'combos' | 'behaviors' | 'pointing' | 'build'
 
