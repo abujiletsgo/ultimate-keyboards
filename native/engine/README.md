@@ -55,6 +55,12 @@ Timing fields default to 150/50 ms. Valid ranges are 50–1000 ms for hold and
 keys, and layer names 1–64 bytes with non-whitespace content. `version` and
 `rules` are required. `title` defaults to an empty string.
 
+`homerow_mod` also accepts `"modKey": "hyper"`: hold presses Control, Shift,
+Option and Command together. Hyper defaults to `hold_preferred` (any other key
+joins the hold at once) and ignores the typing-streak guard, so
+`{"type": "homerow_mod", "fromKey": "caps_lock", "tapKey": "escape", "modKey": "hyper"}`
+makes Caps Lock Escape on a tap and Hyper on a hold.
+
 ## Runtime contract
 
 Create one engine per physical keyboard. Supply monotonic milliseconds from the

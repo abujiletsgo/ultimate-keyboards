@@ -239,6 +239,9 @@ pub fn key_name_to_usage(name: &str) -> Option<u16> {
     })
 }
 
+/// Left Control, Shift, Option, Command.
+const HYPER: [u16; 4] = [224, 225, 226, 227];
+
 fn key(s: &str) -> Result<u16, ProfileError> {
     key_name_to_usage(s).ok_or_else(|| {
         ProfileError(format!(
@@ -288,7 +291,8 @@ fn layer(s: &str) -> Result<String, ProfileError> {
 
 #[derive(Clone, Debug)]
 enum Hold {
-    Modifier(u16),
+    /// One modifier key, or all four for Hyper.
+    Modifiers(Vec<u16>),
     Layer(String),
 }
 #[derive(Clone, Debug)]
@@ -431,19 +435,32 @@ impl Engine {
                     if !(50..=1000).contains(&hold_ms) {
                         return Err(ProfileError("holdThresholdMs must be 50..1000".into()));
                     }
-                    let m = key(&mod_key)?;
-                    if !(224..=231).contains(&m) {
-                        return Err(ProfileError(
-                            "modKey must be a left/right modifier key".into(),
-                        ));
-                    }
+                    // "hyper" = Control+Option+Shift+Command held together, for Caps Lock.
+                    let hyper = mod_key == "hyper";
+                    let mods = if hyper {
+                        HYPER.to_vec()
+                    } else {
+                        let m = key(&mod_key)?;
+                        if !(224..=231).contains(&m) {
+                            return Err(ProfileError(
+                                "modKey must be a left/right modifier key or hyper".into(),
+                            ));
+                        }
+                        vec![m]
+                    };
                     Compiled::Dual {
                         from: key(&from_key)?,
                         tap: Some(key(&tap_key)?),
-                        hold: Hold::Modifier(m),
-                        behavior: hold_behavior.unwrap_or(HoldBehavior::TapPreferred),
+                        hold: Hold::Modifiers(mods),
+                        // Hyper is for shortcuts: any other key pressed while held makes it hold.
+                        behavior: hold_behavior.unwrap_or(if hyper {
+                            HoldBehavior::HoldPreferred
+                        } else {
+                            HoldBehavior::TapPreferred
+                        }),
                         hold_ms,
-                        streak_guard: true,
+                        // Caps Lock is not a letter: a streak of typing must not turn it into a tap.
+                        streak_guard: !hyper,
                     }
                 }
                 Rule::LayerBinding {
@@ -548,7 +565,7 @@ impl Engine {
     }
     fn start_hold(&mut self, key: u16, hold: Hold, out: &mut Vec<OutputEvent>) {
         match &hold {
-            Hold::Modifier(m) => self.press(&[*m], out),
+            Hold::Modifiers(m) => self.press(m, out),
             Hold::Layer(l) => *self.layers.entry(l.clone()).or_default() += 1,
         }
         self.active.insert(key, Active::Hold(hold));
@@ -556,7 +573,7 @@ impl Engine {
     fn up(&mut self, usage: u16, out: &mut Vec<OutputEvent>) {
         match self.active.remove(&usage) {
             Some(Active::Output(usages)) => self.release(&usages, out),
-            Some(Active::Hold(Hold::Modifier(m))) => self.release(&[m], out),
+            Some(Active::Hold(Hold::Modifiers(m))) => self.release(&m, out),
             Some(Active::Hold(Hold::Layer(l))) => {
                 if let Some(n) = self.layers.get_mut(&l) {
                     *n -= 1;

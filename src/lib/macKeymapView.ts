@@ -35,7 +35,7 @@ export function macBaseRuleIndex(rules: readonly Rule[], code: string): number {
 const MODS: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
 export const macModifierLabel = (mods?: readonly string[]) => (mods ?? []).map(mod => MODS[mod.replace(/^(left|right)_/, '')] ?? mod).join('')
 /** Modifier symbols for home-row sub-labels: "hold ⌘" fits a 1u key where "hold CMD" is cut off. */
-const MOD_GLYPH: Record<string, string> = { control: '⌃', option: '⌥', shift: '⇧', command: '⌘' }
+const MOD_GLYPH: Record<string, string> = { control: '⌃', option: '⌥', shift: '⇧', command: '⌘', hyper: '⌃⌥⇧⌘' }
 export function macKeyLabel(code: string): string {
   const aliases: Record<string, string> = { spacebar: 'SPACE', return_or_enter: 'ENTER', delete_or_backspace: 'BSPC', delete_forward: 'DELETE', grave_accent_and_tilde: 'GRAVE', open_bracket: 'LBKT', close_bracket: 'RBKT', quote: 'SQT', period: 'DOT', left_option: 'LALT', right_option: 'RALT' }
   return keycodeLabel(aliases[code] ?? code.toUpperCase())

@@ -63,3 +63,22 @@ export const DEFAULT_COMBOS: ComboRule[] = [
  * Only a starting point in the editor: nothing remaps until the person chooses Apply and Enable.
  */
 export const DEFAULT_RULES: Rule[] = [...homerowRules(HOMEROW_PRESETS[0]), ...DEFAULT_COMBOS]
+
+/**
+ * Caps Lock: hold = Hyper (⌃⌥⇧⌘ together, for shortcuts nothing else uses), tap = Escape.
+ * The engine understands modKey "hyper" and presses Hyper the moment another key joins the hold.
+ */
+export const HYPER_CAPS_RULE: HomerowModRule = {
+  type: 'homerow_mod', description: 'Caps Lock: hold → Hyper (⌃⌥⇧⌘), tap → Escape',
+  fromKey: 'caps_lock', tapKey: 'escape', modKey: 'hyper', holdBehavior: 'hold_preferred', holdThresholdMs: 200,
+}
+export const hasHyperCaps = (rules: readonly Rule[]): boolean =>
+  rules.some(rule => rule.type === 'homerow_mod' && rule.fromKey === HYPER_CAPS_RULE.fromKey && rule.modKey === 'hyper')
+/** Turn the Caps Lock Hyper rule on or off; every other rule keeps its place. Never mutates the input. */
+export function withHyperCaps(rules: readonly Rule[], on: boolean): Rule[] {
+  const rest = rules.filter(rule => !(rule.type === 'homerow_mod' && rule.fromKey === HYPER_CAPS_RULE.fromKey && rule.modKey === 'hyper'))
+  return on ? [...rest, { ...HYPER_CAPS_RULE }] : rest
+}
+/** The default profile, optionally with Caps Lock as Hyper/Escape. Off unless asked: nothing changes silently. */
+export const macDefaultRules = (opts: { hyperCaps?: boolean } = {}): Rule[] =>
+  withHyperCaps(structuredClone(DEFAULT_RULES), !!opts.hyperCaps)
