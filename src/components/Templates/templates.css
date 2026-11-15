@@ -120,7 +120,7 @@
 .tpl-swatch--combo { background: #a48cf5; border-color: #6d4fd6; }
 
 /* ── Sheet ───────────────────────────────────────────────────────────── */
-.tpl-dim { position: fixed; inset: 0; z-index: 900; background: var(--t-dim); display: flex; align-items: center; justify-content: center; animation: tpl-fade 200ms var(--ease-out) both; }
+.tpl-dim { position: fixed; inset: 0; z-index: 900; background: var(--t-dim); display: flex; align-items: center; justify-content: center; }
 .tpl-sheet {
   position: relative; display: flex; flex-direction: column; width: 680px; max-width: calc(100vw - 32px); max-height: calc(100vh - 56px);
   background: var(--t-float); border: 1px solid var(--t-float-rim); border-radius: 24px; color: var(--t-text);
@@ -196,14 +196,14 @@
 }
 .tpl-toast > span { flex: 1 1 220px; min-width: 0; }
 
-@keyframes tpl-fade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes tpl-rise { from { opacity: 0; transform: translateY(16px) scale(0.98) } to { opacity: 1; transform: none } }
-@keyframes tpl-toast-in { from { opacity: 0; transform: translateX(-50%) translateY(10px) } to { opacity: 1; transform: translateX(-50%) } }
+/* Entrances move only: the first frame already shows the sheet and toast (FRAME-CHECK). */
+@keyframes tpl-rise { from { transform: translateY(16px) scale(0.98) } to { transform: none } }
+@keyframes tpl-toast-in { from { transform: translateX(-50%) translateY(10px) } to { transform: translateX(-50%) } }
 .tpl-dim--bottom .tpl-sheet { animation-name: tpl-rise-bottom; }
 @keyframes tpl-rise-bottom { from { transform: translateY(40%); opacity: 0.6 } to { transform: none; opacity: 1 } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tpl-sheet, .tpl-dim--bottom .tpl-sheet { animation: tpl-fade 160ms linear both; transition: none; }
-  .tpl-toast { animation: tpl-fade 160ms linear both; transform: translateX(-50%); }
+  .tpl-sheet, .tpl-dim--bottom .tpl-sheet { animation: none; transition: none; }
+  .tpl-toast { animation: none; transform: translateX(-50%); }
   .tpl-card:active { transform: none; }
 }
