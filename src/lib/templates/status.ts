@@ -101,9 +101,11 @@ export function removeTemplate(store: TemplateStore, template: KeyTemplate): voi
   store.replaceRules(removeTemplateRules(template, store.rules))
 }
 
-/** Try it works only when the rules are in the working profile and in what remapping last applied. */
+/** Try it works when the rules are in the working profile and, if this session applied one, in what it applied. */
 export function templateIsLive(template: KeyTemplate, rules: readonly Rule[], applied: readonly Rule[] | null | undefined, running: boolean): boolean {
-  return running && !!applied && templateStatus(template, rules).status === 'in' && templateStatus(template, applied).status === 'in'
+  if (!running || templateStatus(template, rules).status !== 'in') return false
+  // After a relaunch the app has no record of what was applied (only that remapping runs), so trust the saved keys.
+  return !applied || templateStatus(template, applied).status === 'in'
 }
 
 export const DIFFICULTY_WORD: Record<TemplateDifficulty, string> = { easy: 'Easy', medium: 'Takes practice', tricky: 'Tricky' }
@@ -126,7 +128,7 @@ export function templateSections(templates: readonly KeyTemplate[]): { category:
 export function cardTag(s: TemplateStatus): { kind: 'in' | 'replaces' | 'swaps'; text: string } | null {
   if (s.status === 'in') return { kind: 'in', text: 'In your keys' }
   if (s.status === 'clash') return s.replacesOnlyStarting
-    ? { kind: 'swaps', text: `Swaps ${s.replacedCount} starting keys` }
-    : { kind: 'replaces', text: `Replaces ${s.replacedCount} of your rules` }
+    ? { kind: 'swaps', text: s.replacedCount === 1 ? 'Swaps 1 starting key' : `Swaps ${s.replacedCount} starting keys` }
+    : { kind: 'replaces', text: s.replacedCount === 1 ? 'Replaces 1 of your rules' : `Replaces ${s.replacedCount} of your rules` }
   return null
 }

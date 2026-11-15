@@ -45,9 +45,9 @@ export default function Templates({ onTurnOn }: { onTurnOn: () => void }) {
     close()
     say(`Removed “${t.shortName}” from your keys.`, [{ label: 'Undo', run: undo }])
   }
-  const openLink = async (link: { url: string; startSeconds?: number }) => {
+  const openLink = async (link: { url: string; startSeconds?: number }, kind: 'video' | 'source') => {
     try { await openTemplateLink(link) } catch {
-      say('Couldn’t open the video. Copy the link instead.', [{ label: 'Copy Link', run: () => { void navigator.clipboard?.writeText(link.url).catch(() => {}) } }])
+      say(kind === 'video' ? 'Couldn’t open the video. Copy the link instead.' : 'Couldn’t open the page. Copy the link instead.', [{ label: 'Copy Link', run: () => { void navigator.clipboard?.writeText(link.url).catch(() => {}) } }])
     }
   }
   const tryState = (t: KeyTemplate, rulesNow: Rule[]): TryState => {
@@ -78,7 +78,7 @@ export default function Templates({ onTurnOn }: { onTurnOn: () => void }) {
       {open && (
         <TemplateSheet key={open.id} template={open} rules={rules} status={statuses.get(open.id)!} tryState={tryState(open, rules)}
           onClose={close} onAdd={() => add(open)} onRemove={() => remove(open)}
-          onTurnOn={() => { setOpenId(null); onTurnOn() }} onOpenLink={link => { void openLink(link) }} />
+          onTurnOn={() => { setOpenId(null); onTurnOn() }} onOpenLink={(link, kind) => { void openLink(link, kind) }} />
       )}
       {toast && <TemplateToast toast={toast} onClose={closeToast} />}
     </div>

@@ -3,6 +3,12 @@ import { IS_TAURI } from '../io'
 import { KEY_TEMPLATES } from './index'
 import { videoHref } from './video'
 
+/** Same query string once the start-time `t` is set aside, so a video id or page id must match too. */
+function sameQuery(a: URL, b: URL): boolean {
+  const strip = (u: URL) => { const p = new URLSearchParams(u.search); p.delete('t'); p.sort(); return p.toString() }
+  return strip(a) === strip(b)
+}
+
 /** The only links a template screen opens: each template's video and source page, as the catalog lists them. */
 export function isCatalogLink(url: string): boolean {
   try {
@@ -10,7 +16,7 @@ export function isCatalogLink(url: string): boolean {
     if (target.protocol !== 'https:') return false
     return KEY_TEMPLATES.some(t => [t.video.url, t.source.url].some(known => {
       const k = new URL(known)
-      return k.hostname === target.hostname && k.pathname === target.pathname
+      return k.hostname === target.hostname && k.pathname === target.pathname && sameQuery(k, target)
     }))
   } catch { return false }
 }

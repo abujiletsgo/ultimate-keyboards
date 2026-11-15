@@ -19,7 +19,7 @@ interface Props {
   onAdd: () => void
   onRemove: () => void
   onTurnOn: () => void
-  onOpenLink: (link: { url: string; startSeconds?: number }) => void
+  onOpenLink: (link: { url: string; startSeconds?: number }, kind: 'video' | 'source') => void
 }
 
 const NARROW = '(max-width: 640px)'
@@ -113,8 +113,8 @@ export default function TemplateSheet({ template, rules, status, tryState, onClo
               <strong>{startingKeys ? 'This swaps your starting keys' : 'This changes keys you already set up'}</strong>
               <span style={{ fontSize: 14, lineHeight: '20px' }}>
                 {startingKeys
-                  ? `Adding it swaps ${status.replacedCount} of the keys the app started you with. Everything else stays.`
-                  : `Adding it replaces ${status.replacedCount} of your rules. Everything else stays.`}
+                  ? `Adding it swaps ${status.replacedCount === 1 ? '1 of the keys' : `${status.replacedCount} of the keys`} the app started you with. Everything else stays.`
+                  : `Adding it replaces ${status.replacedCount === 1 ? '1 of your rules' : `${status.replacedCount} of your rules`}. Everything else stays.`}
               </span>
               <ul>{status.replaced.map((rule, i) => <li key={i}>{rule.description}</li>)}</ul>
             </div>
@@ -148,14 +148,14 @@ export default function TemplateSheet({ template, rules, status, tryState, onClo
             <p className="tpl-try-line">
               {tryState === 'live' && template.changes.slice(0, 2).join('. ')}
               {tryState === 'not-on' && <>Added, but not turned on yet. <button type="button" className="tpl-link" onClick={onTurnOn}>Turn On Remapping</button></>}
-              {tryState === 'not-added' && <>Turns on after you add this and turn on remapping. {action && <button type="button" className="tpl-link" onClick={() => run(onAdd)}>Add to My Keys</button>}</>}
+              {tryState === 'not-added' && <>Turns on after you add this and turn on remapping. {action && <button type="button" className="tpl-link" onClick={() => run(onAdd)}>{action}</button>}</>}
             </p>
           </section>
 
           <section>
             <h3>Learn more</h3>
             <div className="tpl-rows">
-              <button type="button" className="tpl-row" onClick={() => onOpenLink({ url: video.url, startSeconds: video.startSeconds })}>
+              <button type="button" className="tpl-row" onClick={() => onOpenLink({ url: video.url, startSeconds: video.startSeconds }, 'video')}>
                 <span className="tpl-row-main">
                   <span className="tpl-row-title">{video.title}</span>
                   <span className="tpl-row-sub">{videoMeta(video)}</span>
@@ -164,7 +164,7 @@ export default function TemplateSheet({ template, rules, status, tryState, onClo
               </button>
               {video.note && <span className="tpl-note">{video.note}</span>}
               {!sourceIsVideo && (
-                <button type="button" className="tpl-row" onClick={() => onOpenLink({ url: template.source.url })}>
+                <button type="button" className="tpl-row" onClick={() => onOpenLink({ url: template.source.url }, 'source')}>
                   <span className="tpl-row-main">
                     <span className="tpl-row-title">{template.source.title}</span>
                     <span className="tpl-row-sub">{new URL(template.source.url).hostname}</span>

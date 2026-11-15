@@ -33,6 +33,9 @@ describe('templateStatus on the default profile (first run)', () => {
   test('card tags read as designed', () => {
     expect(cardTag(statusOf('combos-easy-reach', DEFAULT_RULES))?.text).toBe('In your keys')
     expect(cardTag(statusOf('home-row-gacs', DEFAULT_RULES))?.text).toBe('Swaps 6 starting keys')
+    const one = { ...statusOf('home-row-gacs', DEFAULT_RULES), replacedCount: 1 }
+    expect(cardTag(one)?.text).toBe('Swaps 1 starting key')
+    expect(cardTag({ ...one, replacesOnlyStarting: false })?.text).toBe('Replaces 1 of your rules')
     expect(cardTag(statusOf('space-arrows', DEFAULT_RULES))).toBeNull()
   })
   test('covers every template', () => expect(Object.keys(expected).sort()).toEqual([...ids].sort()))
@@ -156,7 +159,8 @@ describe('Try it and gallery order', () => {
     expect(templateIsLive(t, t.rules, t.rules, false)).toBe(false)
     expect(templateIsLive(t, t.rules, DEFAULT_RULES, true)).toBe(false)
     expect(templateIsLive(t, DEFAULT_RULES, t.rules, true)).toBe(false)
-    expect(templateIsLive(t, t.rules, null, true)).toBe(false)
+    expect(templateIsLive(t, t.rules, null, true)).toBe(true) // after a relaunch nothing is recorded as applied
+    expect(templateIsLive(t, DEFAULT_RULES, null, true)).toBe(false)
   })
   test('sections are in the designed order, easy first, catalog order on ties', () => {
     const sections = templateSections(KEY_TEMPLATES)

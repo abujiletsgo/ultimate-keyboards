@@ -66,6 +66,8 @@ describe('video rows', () => {
     expect(isCatalogLink('https://evil.example/x')).toBe(false)
     expect(isCatalogLink('http://www.youtube.com/watch?v=XuQVbZ0wENE')).toBe(false)
     expect(isCatalogLink('javascript:alert(1)')).toBe(false)
+    expect(isCatalogLink('https://www.youtube.com/watch?v=notInTheCatalog')).toBe(false)
+    expect(isCatalogLink('https://www.youtube.com/watch')).toBe(false)
   })
 })
 
