@@ -1,0 +1,45 @@
+name: UKSpike
+options:
+  bundleIdPrefix: world.hyly.keyboards
+  deploymentTarget: {iOS: "17.0"}
+settings:
+  base:
+    DEVELOPMENT_TEAM: D4H83LGM8K
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  UKSpike:
+    type: application
+    platform: iOS
+    sources: [App]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: UK Spike
+        UILaunchScreen: {}
+        NSLocalNetworkUsageDescription: Spike - find your Mac to type on this phone.
+        NSBonjourServices: [_ukeys._tcp]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: world.hyly.keyboards.spike
+    dependencies:
+      - target: UKSpikeKeyboard
+  UKSpikeKeyboard:
+    type: app-extension
+    platform: iOS
+    sources: [Keyboard]
+    info:
+      path: Keyboard/Info.plist
+      properties:
+        CFBundleDisplayName: UK Spike Keyboard
+        NSLocalNetworkUsageDescription: Spike - find your Mac to type on this phone.
+        NSBonjourServices: [_ukeys._tcp]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: en-US
+            RequestsOpenAccess: true
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: world.hyly.keyboards.spike.keyboard

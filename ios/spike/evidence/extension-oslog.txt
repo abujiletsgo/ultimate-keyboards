@@ -1,0 +1,22 @@
+getpwuid_r did not find a match for uid 501
+Filtering the log data using "subsystem == "world.hyly.keyboards.spike""
+Timestamp                       Thread     Type        Activity             PID    TTL  
+2026-11-15 00:42:45.953724-0500 0xef5a93a  Default     0x1418ec30           14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] viewDidLoad hasFullAccess=false
+2026-11-15 00:42:45.985333-0500 0xef5a93a  Default     0x1418ec30           14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] viewWillAppear fullAccess=false conn=nil
+2026-11-15 00:42:46.165010-0500 0xef5a93a  Default     0x1418ec30           14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browser state ready
+2026-11-15 00:42:46.166563-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 1
+2026-11-15 00:42:46.174740-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state preparing
+2026-11-15 00:42:46.397766-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state ready
+2026-11-15 00:43:19.469404-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] recv end Optional(POSIXErrorCode(rawValue: 54): Connection reset by peer)
+2026-11-15 00:43:19.470627-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state failed(POSIXErrorCode(rawValue: 54): Connection reset by peer)
+2026-11-15 00:43:20.636173-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 0
+2026-11-15 00:43:21.430278-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 1
+2026-11-15 00:43:21.432142-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state preparing
+2026-11-15 00:43:21.490274-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 1
+2026-11-15 00:43:21.544481-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state ready
+2026-11-15 00:43:47.760616-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] recv end Optional(POSIXErrorCode(rawValue: 54): Connection reset by peer)
+2026-11-15 00:43:47.761273-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state failed(POSIXErrorCode(rawValue: 54): Connection reset by peer)
+2026-11-15 00:43:48.962991-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 0
+2026-11-15 00:43:49.961787-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] browse results 1
+2026-11-15 00:43:49.963102-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state preparing
+2026-11-15 00:43:50.122145-0500 0xef5a93a  Default     0x0                  14023  0    UKSpikeKeyboard: (UKSpikeKeyboard.debug.dylib) [world.hyly.keyboards.spike:kb] [FE55] conn state ready
