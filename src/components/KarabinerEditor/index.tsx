@@ -1,7 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
-import { Download, Copy } from 'lucide-react'
-import { invoke } from '@tauri-apps/api/core'
-import { IS_TAURI } from '@/lib/io'
+import { useState, useEffect } from 'react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { RuleList } from './RuleList'
 import MacbookKeyboard from './MacbookKeyboard'
@@ -23,7 +20,7 @@ const TABS: [Tab, string][] = [['templates', 'Templates'], ['keys', 'Keymap'], [
 
 export default function KarabinerEditor() {
   const [tab, setTab] = useState<Tab>(() => initialEditorTab<Tab>('keys'))
-  const { profileTitle, exportJSON, rules, layerNames, isDirty, past, future, saveProfile, revertProfile, undo, redo, addLayer, renameLayer, deleteLayer } = useKarabinerStore()
+  const { profileTitle, rules, layerNames, isDirty, past, future, saveProfile, revertProfile, undo, redo, addLayer, renameLayer, deleteLayer } = useKarabinerStore()
   const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   useEffect(() => {
@@ -33,9 +30,6 @@ export default function KarabinerEditor() {
     return () => { unsubscribe(); unregister() }
   }, [])
   const saveLocal = () => { try { saveProfile(); toast.success('Profile saved locally') } catch (error) { toast.error(`Not saved: ${error}`) } }
-  const [compatibilityMessage, setCompatibilityMessage] = useState('')
-  const [compatibilityError, setCompatibilityError] = useState('')
-  const [exporting, setExporting] = useState(false)
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null)
   const layers = macLayers(rules, layerNames)
   const layer = validMacLayer(rules, selectedLayer, layerNames)
@@ -44,41 +38,6 @@ export default function KarabinerEditor() {
   const conflicts = layer === null ? [] : MACBOOK_LAYOUT.filter(key => macKeyFace(rules, key, layer).shadowedBy !== undefined)
   const unplaced = macUnplacedKeys(rules)
   useEffect(() => { if (selectedLayer !== layer) setSelectedLayer(layer) }, [selectedLayer, layer])
-
-  const handleExportAndInstall = useCallback(async () => {
-    setExporting(true)
-    setCompatibilityError('')
-    setCompatibilityMessage('')
-    try {
-      const json = exportJSON()
-      if (IS_TAURI) {
-        await invoke<string>('install_karabiner_rules', { title: profileTitle || 'Ultimate Keyboards', json })
-        setCompatibilityMessage(`Exported. In Karabiner-Elements, open Complex Modifications → Add rule and enable “${profileTitle || 'Ultimate Keyboards'}”. Export again after editing.`)
-      } else {
-        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-        const anchor = document.createElement('a')
-        anchor.href = url
-        anchor.download = 'ultimate-keyboards.json'
-        anchor.click()
-        URL.revokeObjectURL(url)
-        setCompatibilityMessage('Downloaded Karabiner JSON. Import it into Karabiner-Elements to use this compatibility export.')
-      }
-    } catch (error) {
-      setCompatibilityError(`Karabiner export failed: ${error}`)
-    } finally {
-      setExporting(false)
-    }
-  }, [exportJSON, profileTitle])
-
-  const handleCopyJSON = useCallback(async () => {
-    setCompatibilityError('')
-    try {
-      await navigator.clipboard.writeText(exportJSON())
-      setCompatibilityMessage('Karabiner JSON copied.')
-    } catch (error) {
-      setCompatibilityError(`Could not copy Karabiner JSON: ${error}`)
-    }
-  }, [exportJSON])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
@@ -158,22 +117,6 @@ export default function KarabinerEditor() {
           {tab === 'homerow' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><HomerowModEditor /></div>}
           {tab === 'combos' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><MacComboEditor /></div>}
         </div>
-        <details className="panel-inset" style={{ padding: '12px 16px', flexShrink: 0 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Optional: Karabiner-Elements compatibility export</summary>
-          <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--text-muted)' }}>
-            For an existing Karabiner-Elements setup. Stop native remapping before enabling the same rules there.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button className="btn btn-secondary btn-sm" onClick={handleCopyJSON} disabled={exporting}>
-              <Copy size={13} aria-hidden="true" />Copy Karabiner JSON
-            </button>
-            <button className="btn btn-secondary btn-sm" onClick={handleExportAndInstall} disabled={rules.length === 0 || exporting}>
-              <Download size={13} aria-hidden="true" />{exporting ? 'Exporting…' : IS_TAURI ? 'Export to Karabiner-Elements' : 'Download Karabiner JSON'}
-            </button>
-          </div>
-          <div role="status" style={{ fontSize: 12, lineHeight: 1.6, marginTop: compatibilityMessage ? 10 : 0 }}>{compatibilityMessage}</div>
-          <div role="alert" style={{ fontSize: 12, color: 'var(--danger)', marginTop: compatibilityError ? 10 : 0 }}>{compatibilityError}</div>
-        </details>
       </div>
     </div>
   )

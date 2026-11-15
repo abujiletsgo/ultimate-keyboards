@@ -74,8 +74,7 @@ export function supportMatrix(): SupportGroup[] {
     {
       title: 'This Mac',
       rows: [
-        { feature: 'Native MacBook remapping', level: 'partial', note: 'Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no Karabiner-Elements app required. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending.' },
-        { feature: 'Karabiner-Elements compatibility export', level: 'yes', note: 'Optional JSON export for an existing Karabiner-Elements setup. Saved rules are preserved; the native flow does not require that app.' },
+        { feature: 'Native MacBook remapping', level: 'partial', note: 'Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no other key app needed. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending.' },
         { feature: 'Scroll engine for wheel mice', level: 'yes', note: 'Reverse direction and speed. Needs Accessibility permission.' },
         { feature: 'Turn off the built-in keyboard', level: 'yes', note: 'Restored when the app quits normally, or on its next launch after a crash.' },
       ],

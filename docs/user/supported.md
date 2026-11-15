@@ -52,8 +52,7 @@
 
 | Feature | Supported | Notes |
 |---|---|---|
-| Native MacBook remapping | Partly | Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no Karabiner-Elements app required. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending. |
-| Karabiner-Elements compatibility export | Yes | Optional JSON export for an existing Karabiner-Elements setup. Saved rules are preserved; the native flow does not require that app. |
+| Native MacBook remapping | Partly | Built-in keyboard remaps, combos, layers and homerow mods through the bundled driver and service; no other key app needed. macOS 13+ on Apple silicon, administrator/driver and Input Monitoring approvals required. Live hardware acceptance remains pending. |
 | Scroll engine for wheel mice | Yes | Reverse direction and speed. Needs Accessibility permission. |
 | Turn off the built-in keyboard | Yes | Restored when the app quits normally, or on its next launch after a crash. |
 

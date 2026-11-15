@@ -111,7 +111,7 @@ export default function NativeRemappingPanel() {
         style={{ padding: needsSetup ? '8px 12px' : 0, fontSize: 11 }}>
         <summary style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>Native setup and profile</summary>
         <p style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
-          Native remapping supports the built-in MacBook keyboard on macOS 13 or later (Apple silicon). The installer includes the keyboard service and standalone virtual keyboard driver; no separate Karabiner-Elements app or Terminal commands are needed for setup.
+          Native remapping supports the built-in MacBook keyboard on macOS 13 or later (Apple silicon). The installer includes the keyboard service and standalone virtual keyboard driver; no other key app or Terminal commands are needed for setup.
         </p>
         <p style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
           macOS may ask you to allow the bundled driver from Fumihiko Takayama (pqrs.org), then Input Monitoring for Ultimate Keyboards Remapper. Complete those approvals yourself, return here and choose Check status. Remapping starts only when you choose Apply and enable.

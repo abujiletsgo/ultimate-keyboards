@@ -34,7 +34,7 @@ export default function Onboarding({ onStart, onMacBook }: Props) {
               style={{ justifyContent: 'flex-start', padding: 14, height: 'auto', alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
               <Laptop size={18} />
               <span style={{ textAlign: 'left' }}><div style={{ fontWeight: 600 }}>Remap this MacBook</div>
-                <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400, whiteSpace: 'normal' }}>Open MacBook, then the Remapping tab to set up the bundled keyboard service. No separate Karabiner-Elements app needed.</div></span>
+                <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400, whiteSpace: 'normal' }}>Open MacBook, then the Remapping tab to set up the bundled keyboard service. No other key app needed.</div></span>
             </button>
             {CHOICES.map(c => (
               <button key={c.tab} className={`btn ${c.primary ? 'btn-primary' : 'btn-secondary'}`} onClick={() => onStart(c.tab)}
