@@ -11,10 +11,10 @@ Stage: **pre-launch**. The 0.3 build exists but is not notarized; the site is a 
 |---|---|---|---|
 | 1 | Deploy the corrected copy: the live page still says J+K = Esc and mentions "Karabiner export"; the WIP source (keyboards-site, uncommitted) has Tom's combos | keyboards-site | next: owned by the site session (edits 2026-11-14 23:54) |
 | 2 | llms.txt still says "press J and K together for Escape" and "Free" | keyboards-site public/llms.txt | next, with #1 |
-| 3 | Price consistency: JSON-LD `price: 0` and llms.txt "Free" vs FAQ "we'll say on launch day" | keyboards-site | blocked: Tom picks the price story |
+| 3 | Price consistency: say "free to start, with paid features" in the FAQ, llms.txt and JSON-LD (Offer price 0 = the free tier); no tiers or prices until decided | keyboards-site | next: freemium (Tom, 2026-11-15) |
 | 4 | Add `https://hyly.world/keyboards/` to the hub sitemap, or add `Sitemap: https://hyly.world/keyboards/sitemap.xml` to hub robots.txt | hyly-world (dirty checkout, owned by another session) | next: hub owner |
 | 5 | JSON-LD: add `sameAs` (GitHub) to Organization, `softwareRequirements`, `isAccessibleForFree`/price only after #3, `downloadUrl` at launch | keyboards-site | next, with #1 |
-| 6 | IndexNow submit https://hyly.world/keyboards/ (key file is live on hyly.world) | after #1–#2 deploy | not yet: don't index stale facts |
+| 6 | IndexNow submit https://hyly.world/keyboards/ | hyly.world | done 2026-11-15 (HTTP 200, Tom chose to submit before the copy fix); resubmit after #1–#3 deploy |
 | 7 | Search Console + Bing Webmaster Tools: confirm hyly.world Domain property covers /keyboards/; submit /keyboards/sitemap.xml | Tom's accounts | not yet: check whether Unisinc's setup already verified the domain |
 
 ## Stage 0/1 checklist
@@ -28,7 +28,7 @@ Stage: **pre-launch**. The 0.3 build exists but is not notarized; the site is a 
 - [ ] Guide: "Home row mods on a MacBook keyboard" (P01/P02), real screenshots
 - [ ] Guide: "Arrow keys on the home row with a Space layer" (P03)
 - [ ] Guide: "Edit and build ZMK firmware from a Mac" (P06/P07)
-- [ ] Comparison page vs Karabiner-Elements / Kanata: blocked until Tom decides whether naming Karabiner on a comparison page is OK (site copy rule: never mention it)
+- [ ] Comparison page vs Karabiner-Elements / Kanata: approved by Tom 2026-11-15 (named only on this page); competitor research in marketing/competitors.md
 - [ ] Privacy/permissions page (what the driver and Input Monitoring see), uninstall page
 - [ ] Changelog page on the site (CHANGELOG.md exists in the repo)
 
@@ -39,7 +39,7 @@ Stage: **pre-launch**. The 0.3 build exists but is not notarized; the site is a 
 | Home-row mods guide | /keyboards/guides/home-row-mods-macbook/ | problem | not yet |
 | Layers guide | /keyboards/guides/layers-macbook/ | problem | not yet |
 | ZMK on Mac guide | /keyboards/guides/zmk-firmware-mac/ | problem | not yet |
-| vs Karabiner / Kanata | /keyboards/vs-karabiner/ | comparison | blocked: Tom |
+| vs Karabiner / Kanata / KeyPath | /keyboards/vs-karabiner/ | comparison | brief: briefs/vs-karabiner.md; needs our misfire test first |
 | Privacy & permissions | /keyboards/privacy/ | branded ("is it safe") | not yet |
 | Changelog | /keyboards/changelog/ | freshness | not yet |
 
@@ -52,6 +52,9 @@ Stage: **pre-launch**. The 0.3 build exists but is not notarized; the site is a 
 | Show HN | Open source (MIT) Mac app; launch day | launch-and-community-posts | launch week |
 | YouTube | Demo + "home row mods on a MacBook" how-to | youtube-packaging | not yet |
 | AlternativeTo | Listed as an alternative to Karabiner-Elements and Kanata | — | launch week |
+| TextExpander "Karabiner-Elements alternatives" (Josh Centers, updated 2026-10-21) | Factual pitch once notarized | — | after launch |
+| XDA (Kanata piece, 2025-11-12) | GUI angle pitch | — | after launch |
+| Reddit query research | Real thread titles to replace seed queries (subagent could not reach Reddit) | — | next: af-browse |
 | GitHub README | Lead with the same category phrase as facts.md; link to the site | — | next |
 | "Best Mac keyboard remapper" roundups | Factual pitch to authors once a notarized build exists | — | after launch |
 

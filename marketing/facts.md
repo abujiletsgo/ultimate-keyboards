@@ -25,7 +25,7 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 ## Price
 | Plan | Price | Source, date |
 |---|---|---|
-| App | `[NEED FACT: launch price. The site FAQ (WIP) says "we'll say on launch day"; the live JSON-LD says price 0 and the live llms.txt says "Free". Tom decides; then make all three match]` | 2026-11-15 |
+| App | **Freemium** (Tom, 2026-11-15): free to start, with paid features. `[NEED FACT: which features are paid, and the prices]` | Tom, 2026-11-15 |
 | Source code | MIT licensed | LICENSE |
 
 ## What it does (each provable)
@@ -45,13 +45,15 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 - Changes only the MacBook's built-in keyboard; other keyboards are left alone unless edited as ZMK/QMK firmware.
 - VIA/Vial writes are experimental.
 
-## Competitors and alternatives (check before any comparison page)
-| Product | Where they are stronger | Where we differ | Checked |
-|---|---|---|---|
-| Karabiner-Elements | Mature, free, huge rule library | Visual editor for home-row mods/layers/combos; no JSON rules. (Never named in site copy per Tom; fine in comparison pages only if Tom agrees) | `[NEED CHECK]` |
-| Kanata / KMonad | Cross-platform, powerful config | No config language; visual | `[NEED CHECK]` |
-| ZMK Studio / nickcoutsos keymap-editor | Live keymap edit on the device (ZMK Studio) | Mac app; also remaps the built-in keyboard | `[NEED CHECK]` |
-| QMK Configurator / VIA / Vial | Established for QMK | One app for ZMK and QMK plus MacBook | `[NEED CHECK]` |
+## Competitors and alternatives (full table with sources: `marketing/competitors.md`, 2026-11-15)
+| Product | Where they are stronger | Where we differ |
+|---|---|---|
+| KeyPath (closest rival) | Free, MIT, ready-made home-row-mods pack on Kanata | We run on macOS 13+ (KeyPath needs 15+), and also edit ZMK/QMK |
+| Karabiner-Elements | Mature, free, big rule library | Home-row mods built in (Karabiner's request closed "not planned" 2026-02-14); visual setup |
+| Kanata / KMonad | Most tap-hold variants, cross-platform | No config language |
+| nickcoutsos keymap-editor, ZMK Studio | Free; ZMK Studio edits live on the device | One Mac app that also builds firmware via the user's GitHub Actions; ZMK Studio lacks combos (planned) |
+| VIA / Vial / QMK Configurator | Free, established for QMK | Same app as the MacBook remapper |
+| Homerow (homerow.app) | n/a: different product (mouse-free clicking) | Name overlap only; avoid confusion |
 
 ## Official profiles (Organization `sameAs`)
 - Website: https://hyly.world/keyboards/
@@ -60,3 +62,5 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 
 ## Change log
 - 2026-11-15: first version (SEO/AEO/GEO workflow run).
+- 2026-11-15: competitor research added (Reddit not reachable; re-check prices by eye before public copy).
+- 2026-11-15: price model set to freemium (Tom); split and prices still open.
