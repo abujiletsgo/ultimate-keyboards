@@ -43,22 +43,18 @@ test('new native policies default Balanced; unsupported key/actions cannot be si
   expect(() => applyNativeBinding(imported, 'j', null, readNativeBinding([], 'j', null))).toThrow('unsupported imported action')
 })
 test('shared behavior visual is exact for Split and Mac; short keys can omit the secondary line', () => {
-  expect(semanticKeyVisual('mod-tap', 'A', 'hold CTL')).toMatchObject({ label: 'A', sub: 'hold CTL', text: '#fdba74', fontSize: 10 })
+  expect(semanticKeyVisual('mod-tap', 'A', 'hold CTL')).toMatchObject({ label: 'A', sub: 'hold CTL', border: '#f2a35e', accent: '#f2a35e', fontSize: 10 })
   expect(semanticKeyVisual('normal', 'ESC')).toMatchObject({ fontSize: 11 })
 })
 
-test('shared palette retains all existing QMK colors, including its distinct shifted green', () => {
-  const palette: [KeyBehavior, string | undefined, string | undefined, string | undefined, boolean?][] = [
-    ['trans', 'rgba(255,255,255,0.025)', 'rgba(255,255,255,0.10)', 'rgba(226,230,255,0.25)', true],
-    ['none', 'rgba(251,113,133,0.05)', 'rgba(251,113,133,0.16)', 'rgba(251,113,133,0.40)', true],
-    ['layer', 'linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.16))', 'rgba(96,165,250,0.50)', '#bfdbfe'],
-    ['toggle', 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', 'rgba(245,158,11,0.45)', '#fcd34d'],
-    ['layer-tap', 'linear-gradient(180deg, rgba(96,165,250,0.18), rgba(96,165,250,0.08))', 'rgba(96,165,250,0.35)', '#93c5fd'],
-    ['mod-tap', 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', 'rgba(251,146,60,0.40)', '#fdba74'],
-    ['shifted', 'linear-gradient(180deg, rgba(52,211,153,0.20), rgba(52,211,153,0.09))', 'rgba(52,211,153,0.40)', '#6ee7b7'],
-  ]
-  for (const [behavior, bg, border, text, dashed] of palette) {
-    expect(keyBehaviorVars(behavior)).toEqual({ bg, border, text, ...(dashed ? { dashed } : {}) })
-  }
+test('shared palette: dark caps, each role its own rim colour (website look, 2026-11-14)', () => {
+  // A role shows as rim + sub-label colour, never as a tinted fill (layers keep a faint blue cap so held layers read).
+  const roles: KeyBehavior[] = ['layer-tap', 'toggle', 'mod-tap', 'combo', 'shifted', 'sticky', 'bluetooth', 'mouse', 'caps']
+  for (const r of roles) { const v = keyBehaviorVars(r); expect(v.bg).toBeUndefined(); expect(v.border).toBe(v.accent) }
+  expect(new Set(roles.map(r => keyBehaviorVars(r).accent)).size).toBe(roles.length)
+  expect(keyBehaviorVars('mod-tap').accent).toBe('#f2a35e')
+  expect(keyBehaviorVars('layer').accent).toBe('#5fc8ec')
+  expect(keyBehaviorVars('trans')).toMatchObject({ dashed: true })
+  expect(keyBehaviorVars('none')).toMatchObject({ dashed: true })
   expect(keyBehaviorVars('normal')).toEqual({})
 })

@@ -4,18 +4,7 @@ import { HOMEROW_HOLD_MS } from '@/lib/karabinerGenerator'
 import React, { useMemo } from 'react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import type { HomerowModRule } from '@/lib/karabinerGenerator'
-
-// Standard homerow positions: left hand = A S D F, right hand = J K L ;
-const HOMEROW_KEYS: { key: string; label: string; hand: 'left' | 'right' }[] = [
-  { key: 'a', label: 'A', hand: 'left' },
-  { key: 's', label: 'S', hand: 'left' },
-  { key: 'd', label: 'D', hand: 'left' },
-  { key: 'f', label: 'F', hand: 'left' },
-  { key: 'j', label: 'J', hand: 'right' },
-  { key: 'k', label: 'K', hand: 'right' },
-  { key: 'l', label: 'L', hand: 'right' },
-  { key: 'semicolon', label: ';', hand: 'right' },
-]
+import { HOMEROW_KEYS, HOMEROW_PRESETS, homerowRules } from '@/lib/macDefaults'
 
 // Mod key options shown in the picker
 const MOD_OPTIONS: { modKey: string; label: string; sym: string }[] = [
@@ -29,33 +18,7 @@ const MOD_OPTIONS: { modKey: string; label: string; sym: string }[] = [
   { modKey: 'right_command', label: 'Command', sym: '⌘' },
 ]
 
-// Preset layouts
-const PRESETS: { label: string; desc: string; mods: Record<string, string> }[] = [
-  {
-    label: 'GACS / SCAG',
-    desc: 'A=⌃ S=⌥ D=⇧ F=⌘  •  J=⌘ K=⇧ L=⌥ ;=⌃',
-    mods: {
-      a: 'left_control', s: 'left_option', d: 'left_shift', f: 'left_command',
-      j: 'right_command', k: 'right_shift', l: 'right_option', semicolon: 'right_control',
-    },
-  },
-  {
-    label: 'CAGS / SGAC',
-    desc: 'A=⌘ S=⌥ D=⇧ F=⌃  •  J=⌃ K=⇧ L=⌥ ;=⌘',
-    mods: {
-      a: 'left_command', s: 'left_option', d: 'left_shift', f: 'left_control',
-      j: 'right_control', k: 'right_shift', l: 'right_option', semicolon: 'right_command',
-    },
-  },
-  {
-    label: 'Miryoku',
-    desc: 'A=⌘ S=⌥ D=⌃ F=⇧  •  J=⇧ K=⌃ L=⌥ ;=⌘',
-    mods: {
-      a: 'left_command', s: 'left_option', d: 'left_control', f: 'left_shift',
-      j: 'right_shift', k: 'right_control', l: 'right_option', semicolon: 'right_command',
-    },
-  },
-]
+const PRESETS = HOMEROW_PRESETS
 
 export const HomerowModEditor: React.FC = () => {
   const { rules, addRule, removeRule, updateRule } = useKarabinerStore()
@@ -111,18 +74,7 @@ export const HomerowModEditor: React.FC = () => {
     const toRemove = [...modsByKey.values()].map(e => e.idx).sort((a, b) => b - a)
     toRemove.forEach(idx => removeRule(idx))
     // Add new ones from preset
-    HOMEROW_KEYS.forEach(hk => {
-      const modKey = preset.mods[hk.key]
-      if (!modKey) return
-      const sym = MOD_OPTIONS.find(m => m.modKey === modKey)?.sym ?? modKey
-      addRule({
-        type: 'homerow_mod',
-        description: `${hk.label}: hold → ${sym}, tap → ${hk.label.toLowerCase()}`,
-        fromKey: hk.key,
-        tapKey: hk.key === 'semicolon' ? 'semicolon' : hk.key,
-        modKey,
-      })
-    })
+    homerowRules(preset).forEach(rule => addRule(rule))
   }
 
   function clearAll() {

@@ -3,9 +3,9 @@
   opacity: 1;
   cursor: default;
   transform: none;
-  color: var(--key-text);
-  border-color: var(--key-border);
-  box-shadow: var(--shadow-key), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: var(--key-text, #d8d8dc);
+  border-color: var(--key-border, rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.6);
 }
 
 .macbook-keyboard .keycap[data-combo-trigger] {

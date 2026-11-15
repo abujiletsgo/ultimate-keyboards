@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { Rule, generateComplexModification } from '../lib/karabinerGenerator';
 
+import { DEFAULT_RULES } from '../lib/macDefaults';
 import { cloneMacProfile, sameMacProfile, macLayerNames, layerNameError, renameMacLayer, deleteMacLayer, MAC_HISTORY_LIMIT, type MacProfileSnapshot } from '../lib/macLayerEditing';
 
 export interface KarabinerState {
@@ -80,7 +81,8 @@ export const EXAMPLE_RULES: Rule[] = [
   { type: 'combo', description: 'k+l → Enter', fromKeys: ['k', 'l'], toKey: 'return_or_enter' },
 ];
 
-const EMPTY_PROFILE: MacProfileSnapshot = { rules: [], profileTitle: 'Ultimate Keyboards', layerNames: [] };
+/** A new profile starts from the default home-row mods and combos (src/lib/macDefaults.ts); saved profiles are kept as they are. */
+const DEFAULT_PROFILE: MacProfileSnapshot = { rules: DEFAULT_RULES, profileTitle: 'Ultimate Keyboards', layerNames: [] };
 
 /** A separate store factory keeps persistence/migration tests isolated from user data. */
 export function createKarabinerStore(storage?: StateStorage) {
@@ -96,7 +98,7 @@ export function createKarabinerStore(storage?: StateStorage) {
       try { edit(action()); return null; } catch (error) { return error instanceof Error ? error.message : String(error); }
     };
     return {
-      ...cloneMacProfile(EMPTY_PROFILE), savedSnapshot: cloneMacProfile(EMPTY_PROFILE), isDirty: false, past: [], future: [],
+      ...cloneMacProfile(DEFAULT_PROFILE), savedSnapshot: cloneMacProfile(DEFAULT_PROFILE), isDirty: false, past: [], future: [],
       replaceRules: rules => edit({ ...snapshot(), rules: structuredClone(rules) }),
       addRule: r => edit({ ...snapshot(), rules: [...get().rules, structuredClone(r)] }),
       removeRule: idx => edit({ ...snapshot(), rules: get().rules.filter((_, i) => i !== idx) }),

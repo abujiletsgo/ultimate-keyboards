@@ -1,4 +1,4 @@
-export type KeyBehavior = 'trans' | 'none' | 'layer' | 'toggle' | 'layer-tap' | 'mod-tap' | 'sticky' | 'bluetooth' | 'mouse' | 'caps' | 'shifted' | 'normal'
+export type KeyBehavior = 'trans' | 'none' | 'layer' | 'toggle' | 'layer-tap' | 'mod-tap' | 'combo' | 'sticky' | 'bluetooth' | 'mouse' | 'caps' | 'shifted' | 'normal'
 
 export function getZMKBehavior(binding: string): KeyBehavior {
   if (binding === '&trans') return 'trans'
@@ -14,20 +14,24 @@ export function getZMKBehavior(binding: string): KeyBehavior {
   return 'normal'
 }
 
-/** Per-behavior key colors, injected into .keycap via CSS custom props */
-export function keyBehaviorVars(b: KeyBehavior): { bg?: string; border?: string; text?: string; dashed?: boolean } {
+/** Per-behavior key colours, injected into .keycap via CSS custom props.
+ *  The same look as the website (hyly.world/keyboards, Tom 2026-11-14): every key is a dark cap; a role shows as a
+ *  coloured rim and a coloured sub-label (orange mod-tap, blue layer, purple combo), never as a tinted fill. */
+export function keyBehaviorVars(b: KeyBehavior): { bg?: string; border?: string; text?: string; accent?: string; dashed?: boolean } {
+  const role = (c: string) => ({ border: c, accent: c })
   switch (b) {
-    case 'trans':     return { bg: 'rgba(255,255,255,0.025)', border: 'rgba(255,255,255,0.10)', text: 'rgba(226,230,255,0.25)', dashed: true }
-    case 'none':      return { bg: 'rgba(251,113,133,0.05)', border: 'rgba(251,113,133,0.16)', text: 'rgba(251,113,133,0.40)', dashed: true }
-    case 'layer':     return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.16))', border: 'rgba(96,165,250,0.50)', text: '#bfdbfe' }
-    case 'toggle':    return { bg: 'linear-gradient(180deg, rgba(245,158,11,0.26), rgba(245,158,11,0.13))', border: 'rgba(245,158,11,0.45)', text: '#fcd34d' }
-    case 'layer-tap': return { bg: 'linear-gradient(180deg, rgba(96,165,250,0.18), rgba(96,165,250,0.08))', border: 'rgba(96,165,250,0.35)', text: '#93c5fd' }
-    case 'mod-tap':   return { bg: 'linear-gradient(180deg, rgba(251,146,60,0.20), rgba(251,146,60,0.09))', border: 'rgba(251,146,60,0.40)', text: '#fdba74' }
-    case 'shifted':   return { bg: 'linear-gradient(180deg, rgba(52,211,153,0.20), rgba(52,211,153,0.09))', border: 'rgba(52,211,153,0.40)', text: '#6ee7b7' }
-    case 'sticky':    return { bg: 'linear-gradient(180deg, rgba(251,191,36,0.20), rgba(251,191,36,0.09))', border: 'rgba(251,191,36,0.40)', text: '#fde68a' }
-    case 'bluetooth': return { bg: 'linear-gradient(180deg, rgba(34,211,238,0.22), rgba(34,211,238,0.10))', border: 'rgba(34,211,238,0.42)', text: '#a5f3fc' }
-    case 'mouse':     return { bg: 'linear-gradient(180deg, rgba(244,114,182,0.20), rgba(244,114,182,0.09))', border: 'rgba(244,114,182,0.40)', text: '#f9a8d4' }
-    case 'caps':      return { bg: 'linear-gradient(180deg, rgba(74,222,128,0.20), rgba(74,222,128,0.09))', border: 'rgba(74,222,128,0.40)', text: '#86efac' }
+    case 'trans':     return { bg: 'transparent', border: 'rgba(255,255,255,0.12)', text: 'rgba(216,216,220,0.32)', dashed: true }
+    case 'none':      return { bg: 'transparent', border: 'rgba(251,113,133,0.28)', text: 'rgba(251,113,133,0.55)', dashed: true }
+    case 'layer':     return { ...role('#5fc8ec'), bg: 'linear-gradient(180deg, #1c2a33, #142028)', text: '#bfe9f7' }
+    case 'layer-tap': return role('#5fc8ec')
+    case 'toggle':    return role('#f5b942')
+    case 'mod-tap':   return role('#f2a35e')
+    case 'combo':     return role('#a48cf5')
+    case 'shifted':   return role('#4fd1a5')
+    case 'sticky':    return role('#f5d061')
+    case 'bluetooth': return role('#3fc9e4')
+    case 'mouse':     return role('#f08ac2')
+    case 'caps':      return role('#6ee7a0')
     default:          return {}
   }
 }

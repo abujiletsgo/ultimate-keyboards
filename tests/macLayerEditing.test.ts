@@ -3,6 +3,7 @@ import { createKarabinerStore } from '../src/stores/karabinerStore'
 import { createNativeProfile } from '../src/lib/nativeRemapping'
 import { macLayerNames, MAC_HISTORY_LIMIT } from '../src/lib/macLayerEditing'
 import type { Rule } from '../src/lib/karabinerGenerator'
+import { DEFAULT_RULES } from '../src/lib/macDefaults'
 const simple: Rule = { type: 'simple', description: 'A B', fromKey: 'a', toKey: 'b' }
 const binding = { type: 'layer_binding' as const, description: 'Nav H', layerName: 'nav', fromKey: 'h', toKey: 'left_arrow', editorMetadata: { note: 'keep', nested: [1, 2] } }
 const activator: Rule = { type: 'layer_activator', description: 'Space nav', fromKey: 'spacebar', layerName: 'nav', tapKey: 'spacebar' }
@@ -12,9 +13,21 @@ function memory(seed?: object) {
   const storage = { getItem: () => value, setItem: (_key: string, next: string) => { if (fail) throw new Error('Storage full'); value = next }, removeItem: () => { value = null } }
   return { storage, read: () => value && JSON.parse(value).state, fail: () => { fail = true } }
 }
+const blank = { rules: [], profileTitle: 'Ultimate Keyboards' }
 const setup = (seed?: object) => { const mem = memory(seed); const store = createKarabinerStore(mem.storage); return { mem, store, state: store.getState } }
 
 describe('Mac keymap local editing and retained drafts', () => {
+  test('a new profile starts with home-row mods and the K+L, I+O, W+E combos, saved and not dirty', () => {
+    const { state } = setup()
+    expect(state().rules).toEqual(DEFAULT_RULES)
+    expect(state().rules.filter(r => r.type === 'homerow_mod').map(r => r.fromKey)).toEqual(['a', 's', 'd', 'f', 'j', 'k', 'l', 'semicolon'])
+    expect(state().rules.filter(r => r.type === 'combo').map(r => r.type === 'combo' && [r.fromKeys.join('+'), r.toKey])).toEqual([['k+l', 'return_or_enter'], ['i+o', 'delete_or_backspace'], ['w+e', 'escape']])
+    expect(state().isDirty).toBe(false)
+  })
+  test('a saved profile keeps its own rules instead of the defaults', () => {
+    const { state } = setup({ rules: [simple], profileTitle: 'Mine' })
+    expect(state().rules).toEqual([simple])
+  })
   test('legacy profile migrates as saved without changing unknown rule fields or order', () => {
     const { state } = setup({ rules: [simple, binding, activator], profileTitle: 'My legacy profile' })
     expect(state().rules).toEqual([simple, binding, activator])
@@ -54,7 +67,7 @@ describe('Mac keymap local editing and retained drafts', () => {
     state().undo(); expect(state().rules).toEqual([simple,binding]); expect(state().isDirty).toBe(false)
   })
   test('Save commits a cloned snapshot; Revert restores rules/title/empty layers and clears history', () => {
-    const { state, mem } = setup()
+    const { state, mem } = setup(blank)
     state().addRule(binding); state().addLayer('empty'); state().setTitle('Saved title'); state().saveProfile()
     expect(state().isDirty).toBe(false); expect(state().past).toHaveLength(0)
     state().updateRule(0, { ...binding, toKey: 'up_arrow' }); state().setTitle('Draft'); state().addLayer('draft')
@@ -71,7 +84,7 @@ describe('Mac keymap local editing and retained drafts', () => {
     state().undo(); state().setTitle('New branch'); expect(state().future).toEqual([])
   })
   test('history is bounded and inputs are deep-cloned', () => {
-    const { state } = setup()
+    const { state } = setup(blank)
     const input=structuredClone(binding); state().addRule(input); input.editorMetadata.nested.push(9)
     expect((state().rules[0] as typeof binding).editorMetadata.nested).toEqual([1,2])
     for(let i=0;i<80;i++) state().setTitle(`Title ${i}`)
@@ -90,7 +103,7 @@ describe('Mac keymap local editing and retained drafts', () => {
     expect(state().isDirty).toBe(true);expect(state().savedSnapshot).toEqual(before);expect(state().past).toHaveLength(1)
   })
   test('empty layer metadata and history never enter the native profile payload', () => {
-    const { state }=setup();state().addLayer('empty');state().addRule(simple)
+    const { state }=setup(blank);state().addLayer('empty');state().addRule(simple)
     const profile=createNativeProfile(state().profileTitle,state().rules)
     expect(Object.keys(profile).sort()).toEqual(['comboWindowMs','holdThresholdMs','rules','title','version'])
     expect(profile.rules).toEqual([simple]);expect(JSON.stringify(profile)).not.toContain('empty')

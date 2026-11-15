@@ -25,6 +25,8 @@ export interface KeyVisual {
   bg?: string
   border?: string
   text?: string
+  /** Role colour for the sub-label and the hover rim (mod-tap orange, layer blue, …) */
+  accent?: string
   dashed?: boolean
   /** Font size override in px */
   fontSize?: number
@@ -132,6 +134,7 @@ export default function PhysicalBoard({ layout, keyAt, selected, editable = true
               '--key-bg': v?.bg,
               '--key-border': v?.border,
               '--key-text': v?.text,
+              '--key-accent': v?.accent,
             } as CSSProperties),
           }
           const name = k.encoder ? `Encoder ${pos}` : `Key ${pos}: ${v?.title ?? ''}${v?.sub ? ` (${v.sub})` : ''}`

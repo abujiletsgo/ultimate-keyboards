@@ -55,15 +55,15 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
       ]).join(', ')})`
       return { bg: fill, border: highlighted ? '#ffffff' : colors[0], text: '#101827' }
     }
-    if (!selectorMode && changed.has(key.code)) return { bg: '#173f40', border: '#2dd4bf', text: '#f4fffc' }
-    return { bg: '#293343', border: '#65748b', text: '#f1f5f9' }
+    if (!selectorMode && changed.has(key.code)) return { bg: undefined, border: '#f2a35e', text: undefined }
+    return { bg: undefined, border: undefined, text: undefined }
   }
 
   if (!selectorMode) return (
     <div className="mac-keymap-board macbook-keyboard">
       <BoardLegend items={[
-        { color: 'rgba(255,255,255,0.3)', label: 'Key' }, { color: '#60a5fa', label: 'Layer' },
-        { color: '#fb923c', label: 'Mod-tap' }, { color: 'rgba(255,255,255,0.15)', label: 'Pass-through' },
+        { color: 'rgba(255,255,255,0.3)', label: 'Key' }, { color: '#5fc8ec', label: 'Layer' },
+        { color: '#f2a35e', label: 'Mod-tap' }, { color: '#a48cf5', label: 'Combo' }, { color: 'rgba(255,255,255,0.15)', label: 'Pass-through' },
         { color: '#fbbf24', label: 'Rule-order conflict' },
       ]} />
       <PhysicalBoard layout={MAC_PHYSICAL_LAYOUT} label="MacBook keyboard" showDivider={false}
@@ -72,7 +72,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           const face = macKeyFace(rules, key, selectedLayer)
           if (key.code === 'power') return { ...semanticKeyVisual('normal', '', undefined, 'power: Touch ID is system controlled'), label: <Fingerprint size={14} aria-hidden="true" /> }
           const behavior: KeyBehavior = face.kind === 'layer' ? 'layer' : face.kind === 'layer-tap' ? 'layer-tap'
-            : face.kind === 'homerow' ? 'mod-tap' : face.kind === 'fallback' ? 'trans' : 'normal'
+            : face.kind === 'homerow' ? 'mod-tap' : face.kind === 'fallback' ? 'trans' : face.sub === 'Combo' ? 'combo' : 'normal'
           return semanticKeyVisual(behavior, face.label, key.small || (key.h ?? 1) < 1 ? undefined : face.sub,
             `${key.code}: ${face.detail}; output ${face.label}`)
         }}
