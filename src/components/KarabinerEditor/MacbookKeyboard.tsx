@@ -24,9 +24,13 @@ interface Props {
   comboHighlightColor?: string
   /** When true: clicking a key calls onKeyClick without opening the binding editor */
   selectorMode?: boolean
+  /** Selector mode: a small second line on these keys (e.g. the modifier a held key sends). */
+  keyBadges?: Map<string, string>
+  /** Selector mode: only these keys can be clicked; the rest are shown as a static picture. */
+  clickableKeys?: Set<string>
 }
 
-export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, selectedKeys, comboHighlights, comboColors, comboHighlightColor, selectorMode, selectedLayer = null }: Props) {
+export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, selectedKeys, comboHighlights, comboColors, comboHighlightColor, selectorMode, selectedLayer = null, keyBadges, clickableKeys }: Props) {
   const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number; top: number } | null>(null)
 
   // What each key does now, for the ones the rules change (tap output / hold output).
@@ -118,16 +122,18 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           const vars = getKeyVars(key)
           const style = getKeyStyle(key)
           const isSelected = selectedKey?.code === key.code || selectedKeys?.has(key.code)
+          const isStatic = isPreview || (clickableKeys !== undefined && !clickableKeys.has(key.code))
+          const badge = keyBadges?.get(key.code)
           return (
             <button
               type="button"
               key={key.code}
-              aria-label={`${key.label || key.code}${changed.has(key.code) ? `, ${changed.get(key.code)}` : ''}${comboColors?.has(key.code) ? `, trigger in ${comboColors.get(key.code)!.length} combo${comboColors.get(key.code)!.length === 1 ? '' : 's'}` : ''}`}
+              aria-label={`${key.label || key.code}${badge ? `, hold ${badge}` : ''}${changed.has(key.code) ? `, ${changed.get(key.code)}` : ''}${comboColors?.has(key.code) ? `, trigger in ${comboColors.get(key.code)!.length} combo${comboColors.get(key.code)!.length === 1 ? '' : 's'}` : ''}`}
               data-combo-trigger={comboColors?.has(key.code) || undefined}
               data-combo-active={comboHighlights?.has(key.code) || undefined}
               aria-pressed={isSelected}
-              className={['keycap', isSelected ? 'selected' : '', isPreview ? 'mac-key-preview' : ''].filter(Boolean).join(' ')}
-              disabled={isPreview}
+              className={['keycap', isSelected ? 'selected' : '', isStatic ? 'mac-key-preview' : ''].filter(Boolean).join(' ')}
+              disabled={isStatic}
               onClick={(e) => {
                 onKeyClick?.(key)
                 if (!selectorMode) {
@@ -148,6 +154,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
               } as CSSProperties}
             >
               <span className="key-main">{key.label}</span>
+              {badge && <span className="key-sub key-badge">{badge}</span>}
               {!selectorMode && changed.has(key.code) && <span className="key-sub" style={{ color: 'var(--accent)', opacity: 1, textTransform: 'none' }}>{changed.get(key.code)}</span>}
             </button>
           )

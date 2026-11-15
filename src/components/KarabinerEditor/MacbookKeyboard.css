@@ -33,3 +33,12 @@
   outline: 3px solid #ffffff;
   outline-offset: 2px;
 }
+
+/* A held-key badge (⌃ ⌥ ⇧ ⌘) under the letter: big enough to read at a glance. */
+.macbook-keyboard .keycap .key-badge {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 1;
+  text-transform: none;
+  color: inherit;
+}

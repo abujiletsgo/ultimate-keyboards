@@ -1,0 +1,61 @@
+/* Home-row keys: the website's keycap look (dark caps, thin rim, orange = tap/hold key). */
+.hr-cap {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 24px; padding: 0 6px;
+  border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1c1d22; color: #e5e7eb;
+  font: 600 12px/1 var(--font-mono);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.hr-cap[data-mod], .hr-cap.hr-out[data-mod] { border-color: #f2a35e; color: #f2a35e; }
+.hr-out { background: transparent; }
+.hr-chip { font-size: 11px; color: var(--text-muted); }
+.hr-taphold { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+
+.hr-pick, .hr-preset, .hr-mode {
+  font: inherit; color: var(--text); cursor: pointer; text-align: left;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+.hr-pick:hover, .hr-preset:hover, .hr-mode:not(:disabled):hover { background: rgba(255, 255, 255, 0.08); }
+.hr-pick:focus-visible, .hr-preset:focus-visible, .hr-mode:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
+.hr-pick { width: 88px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; text-align: center; }
+.hr-pick-sym { font: 600 22px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+.hr-pick[data-mod] .hr-pick-sym { color: #f2a35e; }
+.hr-pick-name { font-size: 11px; color: var(--text-secondary); }
+.hr-pick[data-on] { border-color: #f2a35e; background: rgba(242, 163, 94, 0.14); box-shadow: inset 0 0 0 1px #f2a35e; }
+.hr-pick:not([data-mod])[data-on] { border-color: var(--text-secondary); background: rgba(255, 255, 255, 0.1); box-shadow: none; }
+
+.hr-preset { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+.hr-preset:hover { border-color: #f2a35e; }
+.hr-mini { display: flex; gap: 3px; align-items: stretch; }
+.hr-mini-gap { width: 8px; }
+.hr-mini-key {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 4px 0; border-radius: 5px; border: 1px solid #f2a35e; background: #1c1d22;
+  color: #f2a35e; font: 600 12px/1 var(--font-mono);
+}
+.hr-mini-key b { color: #e5e7eb; font-size: 10px; font-weight: 600; }
+
+.hr-mode { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; min-height: 44px; }
+.hr-mode:disabled { cursor: not-allowed; opacity: 0.5; }
+.hr-mode[data-on] { background: var(--accent-soft); border-color: var(--accent); }
+.hr-badge { font-size: 10px; font-weight: 600; color: var(--accent-hover); border: 1px solid var(--accent); border-radius: 9999px; padding: 0 6px; }
+.hr-glyph { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; padding-top: 1px; }
+.hr-glyph-mid { font-size: 12px; color: var(--text-muted); min-width: 12px; text-align: center; }
+
+.hr-timeline { padding-top: 2px; }
+.hr-tl-bar { position: relative; display: flex; height: 34px; border-radius: 8px; overflow: visible; border: 1px solid var(--border); }
+.hr-tl-tap, .hr-tl-hold { display: flex; align-items: center; padding: 0 10px; font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; min-width: 0; }
+.hr-tl-tap { background: rgba(255, 255, 255, 0.06); border-radius: 7px 0 0 7px; }
+.hr-tl-hold { flex: 1; justify-content: flex-end; background: rgba(242, 163, 94, 0.16); color: #f2a35e; border-radius: 0 7px 7px 0; }
+.hr-tl-tap b, .hr-tl-hold b { font-family: var(--font-mono); margin-left: 3px; color: var(--text); }
+.hr-tl-hold b { color: #f2a35e; }
+.hr-tl-line { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #f2a35e; border-radius: 1px; }
+.hr-tl-line span { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font: 600 10px/1 var(--font-mono); color: #f2a35e; white-space: nowrap; }
+.hr-timeline { margin-top: 14px; }
+/* ⌃ ⌥ ⇧ ⌘ are tiny in the mono face; the system face draws them at full size. */
+.hr-mini-key, .hr-tl-hold b, .hr-cap[data-mod] { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+.hr-mini-key { font-size: 14px; }

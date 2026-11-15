@@ -49,7 +49,8 @@ describe('typing feel', () => {
 
   test('the editor renders the controls without the old fixed-threshold sentence', () => {
     const html = renderToStaticMarkup(createElement(HomerowModEditor))
-    expect(html).toContain('Typing feel')
+    expect(html).toContain('How long is a hold?')
+    expect(html).toContain('aria-label="MacBook keyboard"')
     expect(html).toContain('role="radiogroup"')
     expect(html).not.toContain('Hold threshold: 150 ms')
     expect(html.toLowerCase()).not.toContain('karabiner')
