@@ -10,9 +10,13 @@ export const HOLD_MODES: { id: HoldMode; label: string; help: string }[] = [
   { id: 'tap_preferred', label: 'Wait it out', help: 'A hold counts only after the full hold time. Slowest, and never early.' },
 ]
 
+/** The slider's usual range. A value outside it (imported profile) widens the slider so thumb and label agree. */
 export const HOLD_MS_MIN = 100
 export const HOLD_MS_MAX = 400
 export const HOLD_MS_STEP = 10
+/** What the engine accepts for a hold time (native/engine/src/lib.rs: "holdThresholdMs must be 50..1000"). */
+export const ENGINE_MS_MIN = 50
+export const ENGINE_MS_MAX = 1000
 
 export interface TypingFeel {
   /** How many home-row keys have a modifier on hold. */
@@ -50,7 +54,7 @@ export function feelFields(feel: TypingFeel): { holdBehavior: HoldMode; holdThre
 
 /** Pure edit: set the same feel on every home-row rule; other rules are untouched. */
 export function applyTypingFeel(rules: readonly Rule[], patch: Partial<{ holdBehavior: HoldMode; holdThresholdMs: number }>): Rule[] {
-  const ms = patch.holdThresholdMs === undefined ? undefined : Math.min(HOLD_MS_MAX, Math.max(HOLD_MS_MIN, Math.round(patch.holdThresholdMs)))
+  const ms = patch.holdThresholdMs === undefined ? undefined : Math.min(ENGINE_MS_MAX, Math.max(ENGINE_MS_MIN, Math.round(patch.holdThresholdMs)))
   return rules.map(rule => isHomerow(rule) ? { ...rule, ...(patch.holdBehavior ? { holdBehavior: patch.holdBehavior } : {}), ...(ms === undefined ? {} : { holdThresholdMs: ms }) } : rule)
 }
 
@@ -68,4 +72,38 @@ export function describeTypingFeel(feel: TypingFeel): string {
     tap_preferred: '',
   }[feel.mode]
   return `A held key becomes a modifier when ${when} you hold it for ${feel.holdMs} ms. Anything quicker types the letter.`.replace('when  you', 'when you')
+}
+
+type FeelPatch = Partial<{ holdBehavior: HoldMode; holdThresholdMs: number }>
+
+/** Picking a mode also settles a mixed hold time, so one click clears the mixed-state sentence. */
+export function chooseMode(rules: readonly Rule[], holdBehavior: HoldMode): Rule[] {
+  const feel = readTypingFeel(rules)
+  const patch: FeelPatch = { holdBehavior }
+  if (feel.holdMs === 'mixed') patch.holdThresholdMs = HOMEROW_MISFIRE_DEFAULTS.holdThresholdMs
+  return applyTypingFeel(rules, patch)
+}
+
+/** What a slider release should write, or null when nothing changed. A resting thumb on a mixed time still commits what it shows. */
+export function holdTimeToCommit(feel: TypingFeel, draftMs: number | null): number | null {
+  if (draftMs !== null) return draftMs
+  return feel.holdMs === 'mixed' ? HOMEROW_MISFIRE_DEFAULTS.holdThresholdMs : null
+}
+
+/** Slider bounds that always contain the shown value, so an imported 600 ms is not drawn at 400. */
+export function holdSliderRange(shownMs: number, committed: TypingFeel['holdMs']): { min: number; max: number; step: number } {
+  const onGrid = committed === 'mixed' || (committed - HOLD_MS_MIN) % HOLD_MS_STEP === 0
+  return { min: Math.min(HOLD_MS_MIN, shownMs), max: Math.max(HOLD_MS_MAX, shownMs), step: onGrid ? HOLD_MS_STEP : 1 }
+}
+
+/** Swap the home-row rules for a preset's, keeping the feel the person chose. */
+export function replaceHomerowRules(rules: readonly Rule[], fresh: readonly Rule[]): Rule[] {
+  const fields = feelFields(readTypingFeel(rules))
+  return [...rules.filter(r => !isHomerow(r)), ...fresh.map(r => isHomerow(r) ? { ...r, ...fields } : r)]
+}
+
+/** Short status-line wording for the home-row hold time. */
+export function describeHoldTime(feel: TypingFeel): string {
+  if (feel.count === 0) return 'off'
+  return feel.holdMs === 'mixed' ? 'differs by key' : `${feel.holdMs} ms`
 }

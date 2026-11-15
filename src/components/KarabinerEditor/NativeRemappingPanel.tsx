@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Download, Play, Square, RefreshCw, Settings2 } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
+import { describeHoldTime, readTypingFeel } from './typingFeel'
 import {
   createNativeProfile, nativeCanApply, nativeIsRunning, nativeRemapping,
   serializeNativeProfile, useNativeRemapping,
@@ -135,7 +136,7 @@ export default function NativeRemappingPanel() {
           </button>
         </div>
         <p style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>
-          {rules.length} rules · Combo {profile.comboWindowMs} ms · Home-row hold / layer fallback {profile.holdThresholdMs} ms · Tapless layers: immediate.
+          {rules.length} rules · Combo {profile.comboWindowMs} ms · Home-row hold {describeHoldTime(readTypingFeel(rules))} · Layer hold fallback {profile.holdThresholdMs} ms · Tapless layers: immediate.
           {status?.profileTitle ? ` Live profile: ${status.profileTitle}.` : ''}
         </p>
         {status?.message && <p role="status" style={{ marginTop: 6, lineHeight: 1.5, overflowWrap: 'anywhere' }}>{status.message}</p>}

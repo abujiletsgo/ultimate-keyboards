@@ -6,8 +6,8 @@ import type { HomerowModRule } from '@/lib/karabinerGenerator'
 import { HOMEROW_KEYS, HOMEROW_PRESETS, homerowRules } from '@/lib/macDefaults'
 import { HOMEROW_MISFIRE_DEFAULTS } from '@/lib/karabinerGenerator'
 import {
-  HOLD_MODES, HOLD_MS_MAX, HOLD_MS_MIN, HOLD_MS_STEP, applyTypingFeel, describeTypingFeel,
-  feelFields, isRecommendedFeel, readTypingFeel, type HoldMode,
+  HOLD_MODES, applyTypingFeel, chooseMode, describeTypingFeel, feelFields, holdSliderRange, holdTimeToCommit,
+  isRecommendedFeel, readTypingFeel, replaceHomerowRules, type HoldMode,
 } from './typingFeel'
 
 // Mod key options shown in the picker
@@ -41,9 +41,12 @@ export const HomerowModEditor: React.FC = () => {
   // While the slider is dragged only the draft moves; the rules (and undo history) change once, on release.
   const [draftMs, setDraftMs] = useState<number | null>(null)
   const shownMs = draftMs ?? (feel.holdMs === 'mixed' ? HOMEROW_MISFIRE_DEFAULTS.holdThresholdMs : feel.holdMs)
-  const setMode = (holdBehavior: HoldMode) => replaceRules(applyTypingFeel(rules, { holdBehavior }))
-  const commitMs = () => {
-    if (draftMs !== null) replaceRules(applyTypingFeel(rules, { holdThresholdMs: draftMs }))
+  const range = holdSliderRange(shownMs, feel.holdMs)
+  const setMode = (holdBehavior: HoldMode) => replaceRules(chooseMode(rules, holdBehavior))
+  // A pointer release on a mixed time commits what the thumb shows; key and blur events only finish a drag.
+  const commitMs = (fromPointer = false) => {
+    const ms = fromPointer ? holdTimeToCommit(feel, draftMs) : draftMs
+    if (ms !== null) replaceRules(applyTypingFeel(rules, { holdThresholdMs: ms }))
     setDraftMs(null)
   }
 
@@ -85,8 +88,7 @@ export const HomerowModEditor: React.FC = () => {
   }
   function applyPreset(preset: typeof PRESETS[0]) {
     // One undo step: swap the home-row rules, keeping the typing feel the person chose.
-    const fresh = homerowRules(preset).map(rule => ({ ...rule, ...feelFields(feel) }))
-    replaceRules([...rules.filter(r => r.type !== 'homerow_mod'), ...fresh])
+    replaceRules(replaceHomerowRules(rules, homerowRules(preset)))
   }
 
   function clearAll() {
@@ -177,11 +179,11 @@ export const HomerowModEditor: React.FC = () => {
               {feel.holdMs === 'mixed' && draftMs === null ? 'Mixed' : `${shownMs} ms`}
             </output>
           </div>
-          <input id="typing-feel-ms" type="range" min={HOLD_MS_MIN} max={HOLD_MS_MAX} step={HOLD_MS_STEP}
+          <input id="typing-feel-ms" type="range" min={range.min} max={range.max} step={range.step}
             disabled={feel.count === 0} value={shownMs}
             aria-valuetext={`${shownMs} milliseconds`}
             onChange={e => setDraftMs(Number(e.target.value))}
-            onPointerUp={commitMs} onKeyUp={commitMs} onBlur={commitMs}
+            onPointerUp={() => commitMs(true)} onKeyUp={() => commitMs()} onBlur={() => commitMs()}
             style={{ width: '100%', accentColor: 'var(--accent)', height: 24, margin: 0 }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)' }}>
             <span>Quicker, more accidents</span><span>Slower, fewer accidents</span>
