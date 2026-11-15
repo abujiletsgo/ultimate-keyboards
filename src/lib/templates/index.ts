@@ -22,7 +22,12 @@ export interface TemplateVideo {
 
 export interface KeyTemplate {
   id: string
+  /** Full name, used as the sheet title. */
   name: string
+  /** Card title, at most SHORT_NAME_MAX characters. */
+  shortName: string
+  /** One-line card description, at most BLURB_MAX characters. */
+  blurb: string
   category: TemplateCategory
   difficulty: TemplateDifficulty
   /** Plain "why it helps", written for a 12-year-old. */
@@ -35,6 +40,9 @@ export interface KeyTemplate {
   video: TemplateVideo
   source: { title: string; url: string; note: string }
 }
+
+export const SHORT_NAME_MAX = 32
+export const BLURB_MAX = 80
 
 export interface LeftOut { name: string; reason: string }
 
@@ -63,3 +71,9 @@ export function templateKeys(template: KeyTemplate): string[] {
   }
   return [...keys]
 }
+
+export * from './status'
+export * from './roles'
+export * from './firstRun'
+export * from './video'
+export * from './openVideo'

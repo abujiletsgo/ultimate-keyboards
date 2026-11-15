@@ -5,6 +5,8 @@
     {
       "id": "caps-esc-ctrl",
       "name": "Caps Lock: Escape and Control",
+      "shortName": "Caps Lock: Escape and Control",
+      "blurb": "Caps Lock becomes Escape when tapped and Control when held.",
       "category": "caps",
       "difficulty": "easy",
       "why": "Caps Lock is a big key in a great spot that almost nobody needs. Now a quick tap is Escape, and holding it is Control, so shortcuts like Control+C are easy to reach.",
@@ -44,6 +46,8 @@
     {
       "id": "home-row-starter",
       "name": "Home row starter: Shift and Command",
+      "shortName": "Home row starter",
+      "blurb": "Hold D, F, J or K for Command or Shift. A tap still types the letter.",
       "category": "home-row",
       "difficulty": "easy",
       "why": "Your fingers rest on A S D F and J K L ;. Hold F or J to get Shift, hold D or K to get Command, without moving your hand. Just four keys, so it is a gentle way to try the idea.",
@@ -112,6 +116,8 @@
     {
       "id": "home-row-gacs",
       "name": "Home row mods: Command, Option, Control, Shift (GACS)",
+      "shortName": "Home row mods (GACS)",
+      "blurb": "Your eight home-row letters turn into shortcut keys when you hold them.",
       "category": "home-row",
       "difficulty": "medium",
       "why": "Each finger on the home row also works as a shortcut key when you hold it: pinky is Command, then Option, Control, and the pointer finger is Shift. Same on both hands. Your hands never leave the middle row.",
@@ -217,6 +223,8 @@
     {
       "id": "home-row-cags",
       "name": "Home row mods: Control, Option, Command, Shift (CAGS)",
+      "shortName": "Home row mods (CAGS)",
+      "blurb": "The same idea, with Command on a stronger finger for Mac habits.",
       "category": "home-row",
       "difficulty": "medium",
       "why": "Like the other home-row set, but ordered for Mac habits. Command, the key Mac people use most, goes on a stronger finger, and Control, which Mac people use least, goes on the pinky.",
@@ -322,6 +330,8 @@
     {
       "id": "space-arrows",
       "name": "Hold Space for arrow keys (H J K L)",
+      "shortName": "Space for arrow keys",
+      "blurb": "Hold Space and H J K L become arrow keys.",
       "category": "layers",
       "difficulty": "medium",
       "why": "Hold the Space bar and your right hand becomes arrow keys: H is left, J is down, K is up, L is right. You can move around text without reaching for the small arrow keys. Tapping Space still types a space.",
@@ -393,6 +403,8 @@
     {
       "id": "combos-easy-reach",
       "name": "Easy-reach combos: Enter, Backspace, Escape",
+      "shortName": "Easy-reach combos",
+      "blurb": "Press two keys together for Enter, Backspace or Escape.",
       "category": "combos",
       "difficulty": "easy",
       "why": "Press two letter keys at the same moment to get a key that is far away. K and L together is Enter, I and O together is Backspace, W and E together is Escape. They are right under your fingers.",
@@ -453,6 +465,8 @@
     {
       "id": "number-pad-layer",
       "name": "Number pad under your right hand",
+      "shortName": "Number pad on your right hand",
+      "blurb": "Hold Caps Lock and your right hand becomes a number pad.",
       "category": "layers",
       "difficulty": "medium",
       "why": "Hold Caps Lock and the keys under your right hand turn into a number pad, laid out like a calculator. You type numbers without reaching to the top row.",
@@ -565,6 +579,8 @@
     {
       "id": "symbols-layer",
       "name": "Symbols without Shift",
+      "shortName": "Symbols without Shift",
+      "blurb": "Hold Right Option and type symbols without Shift.",
       "category": "layers",
       "difficulty": "medium",
       "why": "Hold the right Option key and the keys under your left hand type symbols like & * ( ) $ % ^ ! @ #. No Shift needed, so shortcuts with symbols are easier.",

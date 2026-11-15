@@ -13,14 +13,16 @@ import LayerControls from '@/components/Keyboard/LayerControls'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
 import { macLayerActivators } from '@/lib/macLayerEditing'
 import { ConfirmBanner, useToast } from '@/components/ui'
+import Templates from '@/components/Templates'
+import { initialEditorTab } from '@/lib/templates'
 import { MACBOOK_LAYOUT } from '@/lib/macbookLayout'
 import { macLayers, validMacLayer, macKeyFace, macUnplacedKeys, macKeyLabel } from '@/lib/macKeymapView'
 
-type Tab = 'keys' | 'homerow' | 'combos' | 'remapping'
-const TABS: [Tab, string][] = [['keys', 'Keymap'], ['homerow', 'Homerow mods'], ['combos', 'Combos'], ['remapping', 'Remapping']]
+type Tab = 'templates' | 'keys' | 'homerow' | 'combos' | 'remapping'
+const TABS: [Tab, string][] = [['templates', 'Templates'], ['keys', 'Keymap'], ['homerow', 'Homerow mods'], ['combos', 'Combos'], ['remapping', 'Remapping']]
 
 export default function KarabinerEditor() {
-  const [tab, setTab] = useState<Tab>('keys')
+  const [tab, setTab] = useState<Tab>(() => initialEditorTab<Tab>('keys'))
   const { profileTitle, exportJSON, rules, layerNames, isDirty, past, future, saveProfile, revertProfile, undo, redo, addLayer, renameLayer, deleteLayer } = useKarabinerStore()
   const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -106,6 +108,7 @@ export default function KarabinerEditor() {
           extraActions={<span style={{ display: tab === 'remapping' ? 'none' : 'contents' }}><NativeEmergencyStop /></span>} />
         <div id="mac-keys-editor" role="tabpanel" aria-labelledby={`mac-keys-tab-${tab}`} tabIndex={0}
           style={{ display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0, minWidth: 0 }}>
+          {tab === 'templates' && <Templates onTurnOn={() => setTab('remapping')} />}
           {tab === 'remapping' && <NativeRemappingPanel />}
           {tab === 'keys' && <>
             <LayerControls layers={layers.map(item => ({ key: item.name === null ? 'base' : `layer:${item.name}`, name: item.name ?? 'Base' }))}
