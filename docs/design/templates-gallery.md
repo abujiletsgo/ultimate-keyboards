@@ -14,14 +14,16 @@ The remapping itself changes only when they press the existing Apply and enable 
 | `AppleRules.md` F-03, F-04, F-07, F-08, F-09, F-10 (sheets), P-48 (undo), Q-01, Q-09, Q-10, Q-11, Q-12, Q-13, Q-14 | One sheet at a time; Cancel leading and the action trailing; medium detent for progressive disclosure; wide windows get a centred sheet over a dim; Mac sheets are modal to their window; undo is a toast; render before showing; glass is one fill deep (cards sit on the page, not inside another pane); anything clickable answers hover; focus rings need room; say a fact once; align by what the value is. |
 | `src/lib/templates/catalog.json` and `index.ts` | The data the screens show: `name`, `why`, `forWho`, `changes`, `caution`, `difficulty`, `category`, `rules`, `video` (title, channel, published, startSeconds, note), `source`. `templateKeys()` is the base for conflicts. |
 | `MacbookKeyboard.tsx`, `macKeymapView.ts`, `macbookLayout.ts`, `ScaledBoard.tsx`, `ui/` | Existing role colours (orange mod-tap `#f2a35e`, blue layer `#5fc8ec`, purple combo `#a48cf5`), key geometry, board scaling, `ConfirmBanner`, `Toast`. Reuse, do not restyle. |
-| `karabinerStore.ts` | `replaceRules`, `undo`, `past`: one history entry per apply is possible. |
+| `karabinerStore.ts`, `macDefaults.ts`, `macLayerEditing.ts` | `replaceRules` (sets `rules` only, one history entry), `undo`, `past`; `DEFAULT_PROFILE` is not empty: it holds `DEFAULT_RULES` (8 home-row mods + 3 combos); `macLayerNames` derives layer names from rules, so layer names need no separate write. |
 | `src-tauri/tauri.conf.json` | Window minimum is 800 x 600; the web build has no minimum. |
 | Run intent | Plain words for a 12-year-old; never name the remapper driver; templates only for MacBook keys; a video link only when it was opened and checked. |
 
 Claude Design (`/design`) is not callable from this builder session, so it was not used. In its place a
 throwaway HTML prototype was built from the app's own tokens and the real catalog data, rendered
-headless, and inspected (section 13). Re-run the design in Claude Design when a session that has it
-picks up KE-46, starting from this file; the decisions below are the brief.
+headless, and inspected. The prototype is not kept in the repo, so its screenshots cannot be re-opened;
+section 13 therefore separates what was seen in that render, what was recomputed and can be re-checked
+from this file, and what is still only proposed. Re-run the design in Claude Design when a session that has
+it picks up KE-46, starting from this file; the decisions below are the brief.
 
 ## 2. Task, comparison, next action
 
@@ -33,7 +35,11 @@ picks up KE-46, starting from this file; the decisions below are the brief.
 ## 3. Where it lives and the flow
 
 - New first tab **Templates** in the MacBook Keys editor (`KarabinerEditor`), before Keymap, Homerow mods,
-  Combos, Remapping. First run (no rules in the profile) opens on Templates.
+  Combos, Remapping. First run opens on Templates. A new profile is never empty (it starts with
+  `DEFAULT_RULES`), so first run is not decided by the rules: the editor opens on Templates until the
+  Templates tab has been shown once, recorded in one local flag (`uk.templates.seen`, written when the tab
+  first renders). After that it opens on the tab it opens on today. The gallery on first run is the
+  gallery over the default profile (section 7 lists exactly what each card says there).
 - Flow: **Gallery** -> tap a card -> **Detail sheet** (preview first) -> **Add to My Keys** -> toast with
   **Undo** -> (optional) **Turn On Remapping** goes to the Remapping tab, where the existing Apply and
   enable is the only thing that changes live typing.
@@ -52,7 +58,7 @@ Layout (single scroll column inside the tab; no inner scroll areas):
 3. Sections, in this order, with a heading each: **Caps Lock**, **Home row keys**, **Hold a key, get new
    keys** (catalog category `layers`), **Press two keys together** (`combos`). Inside a section, easy
    first, then medium, then tricky; ties keep catalog order. A section with no templates is not drawn.
-   No filter and no search: nine cards fit two screens. Revisit when the catalog passes about 12.
+   No filter and no search: eight cards fit two screens. Revisit when the catalog passes about 12.
 4. Grid: `grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))`, gap 14, driven by the content
    area's own width, not the window, so the sidebar cannot break it. Tiles in a row are equal height.
 
@@ -63,7 +69,7 @@ Card (the whole pane is one button; no nested buttons or links):
 | Preview | Mini keyboard (section 5), first, full card width. |
 | Title | `shortName`, 15/20 semibold, at most 2 lines then ellipsis (Studio States: too-long content). |
 | Line | `blurb`, 13/18, secondary ink, at most 2 lines. Always reserve 2 lines so tiles align. |
-| Footer | Difficulty word, then at most one tag: **In your keys** (check + green ink) or **Replaces N of your rules** (amber ink). No tag when neither applies. |
+| Footer | Difficulty word, then at most one tag: **In your keys** (check + green ink), **Replaces N of your rules** (amber ink) or, when every rule it would replace is one the app started you with, **Swaps N starting keys** (amber ink). No tag when none applies (including a template that is partly there already: it just adds the rest). |
 | Surface | Pane fill, 1px pane rim, radius 20, padding 14, no shadow, no gradient. |
 
 States: rest; hover (pane-hover fill, accent rim; Q-11); pressed (scale 0.98); keyboard focus (2px accent
@@ -138,9 +144,12 @@ Content order (top to bottom; each fact once, Q-13):
 
 1. Meta line: difficulty word, dot, category ("Easy . Caps Lock").
 2. Title: full `name`.
-3. **Notice** (only when there are conflicts): amber tone, bold first line "This changes keys you already
+3. **Notice** (only when the status is `clash`): amber tone, bold first line "This changes keys you already
    set up", one line "Adding it replaces N of your rules. Everything else stays.", then the replaced
-   rules' `description` as a short list. This is the single Notice on the screen.
+   rules' `description` as a short list. When every replaced rule is one the app started you with
+   (`replacesOnlyStarting`, section 7) the first line is "This swaps your starting keys" and the line is
+   "Adding it swaps N of the keys the app started you with. Everything else stays." This is the single
+   Notice on the screen.
 4. Segmented `Your keys now | With this template` (default: With this template) over the large preview and the
    role legend.
 5. **Why it helps**: `why`, then "Good for:" and `forWho`.
@@ -165,7 +174,7 @@ Footer action by state:
 | --- | --- | --- |
 | Nothing clashes, not added | **Add to My Keys** | Adds and closes. |
 | Clashes | **Replace and Add** | Replaces the listed rules and adds, one undoable step. |
-| Already added | **Already in Your Keys** (disabled, with the reason beside it) and a quiet **Remove from My Keys** link | Remove is one undoable step. |
+| Already added (`in`) | **Already in Your Keys** (disabled, with the reason beside it) and a quiet **Remove from My Keys** link | Remove takes out exactly the template's rules (section 7) and is one undoable step. |
 
 Buttons are Title Case verbs (Studio `copy/button-title-case`). Cancel never changes anything.
 
@@ -174,27 +183,84 @@ Buttons are Title Case verbs (Studio `copy/button-title-case`). Cancel never cha
 Preview first: nothing is written until the footer button. The sheet is the preview (picture, list, and
 the conflict Notice) and the button is the second step.
 
-`templateStatus(template, rules)` (pure function, in `src/lib/templates/`, unit tested) returns one of:
+### Definitions (all by value, so the function is pure and testable)
 
-- `in`: every rule of the template (compared by value, ignoring `description`) is already in `rules`.
-  Cards show "In your keys".
-- `clash`: not `in`, and a physical key in `templateKeys(template)` is used by an existing rule that is not
-  one of this template's rules. Returns the clashing existing rules (the ones to replace) and their count.
-  A layer-name collision (same `layerName` with different content) counts as a clash on the layer's
-  activator key. Cards show "Replaces N of your rules".
-- `free`: neither.
+- **Same rule**: two rules are the same when every field except `description` is equal; the keys of a combo
+  compare as a set. `description` never counts.
+- **Slot** (the thing a rule takes over; two different rules in one slot cannot both work):
+  - `hold:<fromKey>` for a `homerow_mod` or a `layer_activator` (a key can have one hold behaviour, so a
+    home-row mod and a layer activator on one key share the slot);
+  - `combo:<keys, sorted>` for a `combo` (the same pair of keys; two combos that only share one key, such as
+    K+L and K+J, are different slots and not a clash);
+  - `bind:<layerName>:<fromKey>` for a `layer_binding`.
+  A home-row mod and a combo on one key (K with K+L=Enter) are different slots. They are **not** a clash:
+  the shipped default profile already has exactly that (`DEFAULT_RULES`: 8 home-row mods plus the K+L, I+O,
+  W+E combos), so the rule must never remove one to add the other.
+- **Layer**: a template that uses a `layerName` owns that whole layer. Any existing rule with that
+  `layerName` that is not one of the template's rules is replaced (a half-merged layer would not do what the
+  picture shows).
+- **Home-row family**: the templates in category `home-row` are alternatives, not additions. A home-row
+  template owns all eight home-row keys (A S D F J K L ;): any existing `homerow_mod` on one of those keys
+  that is not one of its rules is replaced, even when the key is not in its own picture (so Starter on top of
+  Home row mods leaves exactly the Starter four). Other `homerow_mod` rules, such as Caps Lock, are not in the
+  family.
 
-A clash replaces the clashing rules, never the whole profile: other rules stay (the Notice says so).
-Replaced rules are removed, the template's rules are appended in catalog order, and layer names the
-template introduces are added. All of it is one `replaceRules` call so Undo restores everything in one step.
+### `templateStatus(template, rules)` (pure, in `src/lib/templates/`, unit tested)
 
-Known pairs the function must report (from the catalog): the three home-row sets replace each other;
-`number-pad-layer` and `caps-esc-ctrl` share Caps Lock; `symbols-layer` and the number pad use different
-layers and keys and do not clash; the home-row sets and `combos-easy-reach` share K, L and others and are
-reported as a clash even if the engine could cope. KE-46 should check whether the engine really allows a
-home-row mod and a combo on one key and, if it does, narrow this rule in the function and its tests.
+From the existing `rules` it computes three lists:
 
-After Add:
+- `kept`: existing rules that are the same as a template rule. They stay exactly where they are and are not
+  added again, so applying never creates a duplicate.
+- `replaced`: existing rules that are not `kept` and share a slot with a template rule, or are in a layer the
+  template owns, or (home-row templates) are a `homerow_mod` on a home-row key.
+- `added`: template rules that have no same rule in `rules`, in catalog order.
+
+and returns one status:
+
+- `in`: `added` and `replaced` are both empty. Cards show "In your keys".
+- `clash`: `replaced` is not empty. Returns `replaced` and its count. Cards show "Replaces N of your
+  rules". `replacesOnlyStarting` is true when every replaced rule is the same as a rule in `DEFAULT_RULES`;
+  the card then reads "Swaps N starting keys" and the sheet uses the starting-keys Notice (section 6).
+- `free`: neither. This includes a template that is partly present already (`kept` is not empty, `added`
+  is): Add appends only `added`. No tag.
+
+Because `in` needs nothing to replace, a smaller template is never `in` just because a bigger one holds its
+rules: with CAGS added, Starter is a `clash` ("Replaces 4"), not "In your keys".
+
+### Add, Replace and Add, Remove
+
+- **Add** and **Replace and Add**: `next = existing.filter(not in replaced).concat(added)`. One
+  `replaceRules(next)` call. `replaceRules` is one history entry, so Undo restores everything in one step.
+  Layer names need no write: `macLayerNames` derives them from the rules, and calling `addLayer` would add a
+  second history entry and break the one-step Undo, so KE-46 must not call it.
+- **Remove from My Keys** (only when `in`): `next = existing.filter(not the same as any template rule)`.
+  One `replaceRules` call. No other template's rules are touched because no catalog rule is shared between two
+  templates that can both be `in` (a unit test asserts it, section 14).
+- A clash replaces only the listed rules, never the whole profile: other rules stay (the Notice says so).
+
+### What the app must report (these results are the unit test's expected values)
+
+On the default profile (a fresh install; first-run gallery): Easy-reach combos is `in` (the profile already
+has the three combos, so the card says "In your keys" and that is true); Home row starter, Home row mods
+(GACS) and (CAGS) are `clash` with `replacesOnlyStarting` and counts 8, 6 and 4 ("Swaps 8 starting keys",
+"Swaps 6", "Swaps 4"; the GACS count is lower because the default S and L already match, the CAGS count
+because A, S, L and ; do; Starter replaces all eight because it owns the whole home row and none of the
+default rules match its four); the other four are `free`.
+
+With exactly one template in the profile, status of the others:
+
+| In the profile | Result for the others |
+| --- | --- |
+| Caps Lock: Escape and Control | Number pad: `clash` (1). All others `free`. |
+| Number pad | Caps Lock: Escape and Control: `clash` (1; both own the Caps Lock hold slot). Symbols and the others `free`. |
+| Home row starter | GACS: `clash` (2: D and K differ; F and J are kept). CAGS: `free` (adds 4; D F J K are kept). |
+| GACS | Starter: `clash` (6). CAGS: `clash` (4). |
+| CAGS | Starter: `clash` (4, adds none, so the result is exactly Starter). GACS: `clash` (4). |
+| Space arrows, Symbols, Easy-reach combos | Every other template `free`: layers and combos never clash with home-row mods. |
+
+Applying any single template to a profile that has none of its slots yields `rules + template.rules`.
+
+### After Add
 
 - Dialog closes. Toast (6 s): "Added “Caps Lock: Escape and Control” to your keys. Not turned on yet." with
   **Undo** (calls the store's undo; works for the whole step) and a second action **Turn On** that opens the
@@ -224,7 +290,7 @@ The field is an ordinary text area; remapping is system-wide, so no hook into ty
 
 | State | Gallery | Sheet |
 | --- | --- | --- |
-| First run (empty profile) | Templates is the opening tab; lede is the explanation; no empty shell | n/a |
+| First run (default profile, Templates not yet seen) | Templates is the opening tab; lede is the explanation; no empty shell. Over `DEFAULT_RULES`: Easy-reach combos "In your keys", the three home-row cards "Swaps N starting keys", the rest untagged (section 7) | n/a |
 | Loading | None: the catalog is bundled JSON, so nothing to wait for | None |
 | Empty catalog | EmptyState "No templates yet" (should not happen; guards a bad build) | n/a |
 | Error | n/a | Video fails: toast with Copy Link. Add fails (store throws): the sheet stays open with an error panel "Couldn’t add this. Your keys are unchanged. Try again." and **Try Again** |
@@ -232,7 +298,7 @@ The field is an ordinary text area; remapping is system-wide, so no hook into ty
 | Remapping unavailable (driver not approved) | Fully works; adding only edits the draft | Try it shows "Turn On Remapping" path; nothing else is blocked |
 | Many conflicts | Tag shows the real count | Rule list in the Notice scrolls with the body; never more than the body height |
 | Long content | Title 2 lines then ellipsis; line 2 lines | Title wraps; `why` and `changes` wrap; no horizontal scroll at any width |
-| Zero | No tag instead of "0 rules" | No Notice instead of an empty one |
+| Zero | No tag instead of "0 rules"; a template that adds only (nothing replaced) has no tag | No Notice instead of an empty one |
 | Done | "In your keys" tag | "Already in Your Keys" |
 
 ## 10. Responsive behaviour
@@ -284,15 +350,28 @@ inside the key, and a dashed variant; that is why the mark rule in section 5 is 
   nothing in the gallery depends on an entrance animation.
 - Text sizes: body 13 to 14, 12 for tags and metadata, nothing under 12 outside the scaled keyboard art.
 
-## 13. Rendered verification (prototype, throwaway)
+## 13. Rendered verification: what is proven, what is not
 
-Build: one HTML file using the catalog JSON and the app's token values, outside the repo (not committed; this
-task owns only this document). Rendered headless with `af-browse` at 1280x800, 820x900 and 390x844, in dark
-and light. Frames inspected: gallery at all six combinations; detail sheet (no clash) at 1280 dark and
-390 dark (medium detent); detail with conflict at 1280 light, 820 dark and 390 light (large detent); Added
-toast at 390 dark; card hover (light) and keyboard focus (dark). Contrast figures were computed, not eyeballed.
+Honest status. The design tool the plan asks for (Claude Design, `/design`) was not available to this
+session. The check that was done is a throwaway prototype outside the repo (one HTML file using the catalog
+JSON and the app's token values), rendered headless with `af-browse`. The prototype and its screenshots were
+not kept, so nothing in the "seen in the render" list can be re-opened from the repo; treat it as the
+author's observation, not evidence. The right-hand column says how a later session re-checks each claim.
 
-Found in the render and already folded into the spec above:
+| Claim | Status | How to re-check |
+| --- | --- | --- |
+| Role-colour contrast: ink `#101827` on orange 8.6, blue 9.3, purple 6.5; primary button 9.2 dark, 5.5 light | Recomputed in this fix round (WCAG relative luminance) and matches | Recompute from the hex values in sections 5 and 11; the unit test for tokens can assert them. |
+| Light neutral key `#f1f3fa` against the roles is 1.9, 1.7, 2.5:1 (below 3:1) | Recomputed; matches the "1.7 to 2.5" claim | Same. The mark and rim rule in section 5 exists because of it. |
+| Green `#166534` passes 4.5:1 on its tint; `#15803d` did not | Seen in the render only | Compute on the final tint values. |
+| Gallery at 1280, 820, 390 in both themes (first screen) | Seen in the render only | Rendered QA in section 14, on the real build. |
+| Grid minimum 240 gives 2 columns at 820; 270 gave one oversized card | Seen in the render only | The same sizes on the real build. |
+| Detail sheet: no conflict at 1280 dark and 390 dark; conflict at 1280 light, 820 dark, 390 light; Added toast 390 dark; hover (light), focus (dark) | Seen in the render only, for one template (Space arrows) at 390 | Section 14 lists every template. |
+| Cards and sheets for Home row, Number pad, Symbols and Combos | **Not verified.** The first-screen frames cut off the lower rows and only one layer sheet was inspected, so the previews, wrapping and legends of those cards are unchecked | KE-46 renders all eight cards and eight sheets. |
+| Pressed state, segmented switch animation, sheet drag between detents, Reduce Motion | **Not verified.** Specified only | KE-46 renders and records them. |
+| The real app in Tauri (fonts, real sidebar), and the Try it live state (needs the remapper running; Tom, manual) | **Not verified** | KE-46; Tom for the live state. |
+| Claude Design output | **Not produced** | Run `/design` from this file as the brief before KE-46 styles the screen. |
+
+Findings from the render that are folded into the spec above (author's observation):
 
 1. A grid minimum of 270 gave one oversized card at 820; changed to 240 (2 columns).
 2. Full catalog names truncated mid-phrase on cards ("... Shift…"); added `shortName`.
@@ -301,32 +380,41 @@ Found in the render and already folded into the spec above:
 5. Light neutral keys were the same white as the card and disappeared; set to `#f1f3fa` with a stronger rim.
 6. Role colours alone are weak on the light page (1.7 to 2.5:1); every role now carries a mark and rim.
 
-Not verified yet (KE-46 must, on the real build, with screenshots in the QA ledger):
-
-- The real app in Tauri, not the prototype; real fonts and the real sidebar.
-- Pressed state, the segmented switch animation, sheet drag between detents, and Reduce Motion.
-- Layer and combo cards (space, number pad, symbols, combos) in the final component: the prototype drew them,
-  but only the Space-arrows sheet at 390 was inspected, and the card rows below the first screen were cut off
-  in the gallery frames.
-- The Try it live state, which needs the remapper running (Tom, manual).
-- Claude Design output, because this session could not run `/design`.
+KE-46 must not call the visual design finished until the "Not verified" rows are rendered on the real build,
+with screenshots attached to the QA ledger.
 
 ## 14. Test plan for KE-46
 
-Unit (bun test): `templateStatus` for each catalog pair (in, free, clash, layer-name clash, counts);
-`blurb` and `shortName` present and within limits for every template; `TemplateKeyboard` role map
-(each rule type -> role, glyph); one history entry per apply and one `undo` restores the previous rules;
-video fields required when a row is drawn. Existing engine, service and app tests stay green:
+Unit (bun test):
+
+- `templateStatus` for the whole catalog, using the expected results in section 7: the default profile (statuses,
+  counts, `replacesOnlyStarting`), and every ordered pair "profile holds only template A, status of template
+  B" (the table in section 7 is the expected data). Plus: each template alone is `in` for itself; applying any
+  `free` or `clash` template and then asking again returns `in` for it (apply is idempotent); applying
+  never leaves two rules in one of the template's slots and never produces a duplicate rule; a home-row mod and a combo on one
+  key never clash; same layer name with different content is a clash.
+- Remove: after Add then Remove on a profile that did not have the template, the rules equal the original;
+  Remove is offered only for `in`.
+- Across the catalog, no rule is the same as a rule of two different templates that can be `in` together.
+- One history entry per Add or Remove: `past` grows by one, one `undo` restores the previous rules, and
+  `addLayer` is never called.
+- `blurb` and `shortName` present and within limits for every template; `TemplateKeyboard` role map (each
+  rule type to role and glyph); video fields required when a row is drawn.
+- First-run flag: Templates opens first while `uk.templates.seen` is unset, and not after.
+
+Existing engine, service and app tests stay green:
 `bun test && npx tsc --noEmit && (cd native/engine && cargo test -q)`.
 
-Rendered QA (screenshots, both themes, 390 / 820 / 1280): gallery at rest, hover, focus, with an "In your
-keys" card and a "Replaces" card; sheet with and without a conflict; sheet at medium and large detent on
-phone; toast with Undo; the video row opening the browser; card and sheet at ~130% text zoom with no
-clipping and no sideways scroll.
+Rendered QA (screenshots, both themes, 390 / 820 / 1280): the gallery over the default profile (first run:
+"In your keys" on combos, "Swaps N starting keys" on the three home-row cards) and over a customised profile
+(a "Replaces N of your rules" card); all eight cards and all eight sheets, with and without a conflict;
+sheet at medium and large detent on phone; pressed state, hover and keyboard focus; toast with Undo; the video
+row opening the browser; Reduce Motion; card and sheet at ~130% text zoom with no clipping and no sideways
+scroll.
 
 ## 15. Left out on purpose (and why)
 
-- Filter chips and search: nine cards; revisit past about 12.
+- Filter chips and search: eight cards; revisit past about 12.
 - A third "merge" choice when keys clash: a half-applied template would not do what its picture shows.
 - A "Not here yet" list of ideas the engine cannot do (`leftOut` in the catalog): its reasons mention the
   engine and need rewriting in plain words first.
