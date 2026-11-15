@@ -327,6 +327,54 @@ fn open_github_url(url: String) -> Result<(), String> {
         .and_then(|s| if s.success() { Ok(()) } else { Err(format!("open exited with {s}")) })
 }
 
+/// Hosts of the template catalog's video and source links (src/lib/templates/catalog.json).
+/// The front end checks the exact catalog URL first; this is the second, host-level fence.
+const TEMPLATE_LINK_HOSTS: &[&str] = &[
+    "www.youtube.com",
+    "github.com",
+    "geekhack.org",
+    "manual.raycast.com",
+    "precondition.github.io",
+    "zmk.dev",
+];
+
+fn template_link_allowed(url: &str) -> bool {
+    if url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return false;
+    }
+    let Some(rest) = url.strip_prefix("https://") else { return false };
+    let host = rest.split(['/', '?', '#']).next().unwrap_or("");
+    TEMPLATE_LINK_HOSTS.contains(&host)
+}
+
+#[tauri::command]
+fn open_template_link(url: String) -> Result<(), String> {
+    if !template_link_allowed(&url) {
+        return Err("only template video and source links can be opened".into());
+    }
+    std::process::Command::new("/usr/bin/open")
+        .arg(&url)
+        .status()
+        .map_err(|e| e.to_string())
+        .and_then(|s| if s.success() { Ok(()) } else { Err(format!("open exited with {s}")) })
+}
+
+#[cfg(test)]
+mod template_link_tests {
+    use super::template_link_allowed;
+
+    #[test]
+    fn allows_catalog_hosts_only() {
+        assert!(template_link_allowed("https://www.youtube.com/watch?v=XuQVbZ0wENE&t=622s"));
+        assert!(template_link_allowed("https://zmk.dev/docs/keymaps/behaviors/hold-tap"));
+        assert!(!template_link_allowed("http://www.youtube.com/watch?v=x"));
+        assert!(!template_link_allowed("https://www.youtube.com.evil.example/watch"));
+        assert!(!template_link_allowed("https://user@www.youtube.com/watch"));
+        assert!(!template_link_allowed("file:///etc/passwd"));
+        assert!(!template_link_allowed("https://www.youtube.com/watch?v=a b"));
+    }
+}
+
 #[tauri::command]
 fn get_mouse_config() -> MouseConfig {
     let (enabled, reverse, speed) = mouse_engine::get_config();
@@ -380,6 +428,7 @@ pub fn run() {
             accessibility_trusted,
             open_accessibility_settings,
             open_github_url,
+            open_template_link,
             newconfig::create_zmk_config,
             newconfig::push_initial_config
         ])
