@@ -76,6 +76,10 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
       </div>
 
       <nav className="anim-stagger" style={{ padding: '2px 10px', display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflowY: 'auto' }}>
+        {/* MacBook first (Tom, 2026-11-15): the built-in keyboard is the main product; split keyboards follow. */}
+        <GroupLabel>This Mac</GroupLabel>
+        {HOST_NAV.map(h => item(h.section, h.label, h.icon))}
+
         <GroupLabel>Keyboards</GroupLabel>
         {keyboards.length === 0 && (
           <div style={{ padding: '4px 8px 6px', fontSize: 'var(--text-11)', color: 'var(--text-muted)' }}>
@@ -84,9 +88,6 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
         )}
         {keyboards.map(kb => item({ kind: 'keyboard', id: kb.id }, kb.name, Keyboard, undefined, kb.firmware.toUpperCase()))}
         {item({ kind: 'settings', add: 'find' }, 'Add keyboard…', Plus, { color: 'var(--text-muted)' })}
-
-        <GroupLabel>This Mac</GroupLabel>
-        {HOST_NAV.map(h => item(h.section, h.label, h.icon))}
 
         <GroupLabel>App</GroupLabel>
         {item({ kind: 'settings' }, 'Settings', Settings)}

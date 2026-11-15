@@ -44,6 +44,7 @@ Object.assign(nativeRemapping,createNativeRemappingController({available:true,in
   })
   await page.goto(baseURL)
   await page.getByRole('tab', { name: 'Keymap', exact: true }).waitFor()
+  await page.getByRole('tab', { name: 'Keymap', exact: true }).click() // Templates may open first
   await page.getByRole('group', { name: 'MacBook keyboard' }).waitFor()
   // Website shots only: the site never mentions the optional export, so its collapsed panel is hidden here.
   await page.evaluate(() => document.querySelectorAll('details, section, div').forEach(el => {
