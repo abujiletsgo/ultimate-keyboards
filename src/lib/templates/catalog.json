@@ -1,0 +1,727 @@
+{
+  "schema": 1,
+  "checkedAt": "2026-11-15",
+  "templates": [
+    {
+      "id": "caps-esc-ctrl",
+      "name": "Caps Lock: Escape and Control",
+      "category": "caps",
+      "difficulty": "easy",
+      "why": "Caps Lock is a big key in a great spot that almost nobody needs. Now a quick tap is Escape, and holding it is Control, so shortcuts like Control+C are easy to reach.",
+      "forWho": "Anyone who uses Terminal, a code editor, or Vim, and anyone who hits Caps Lock by accident.",
+      "changes": [
+        "Tap Caps Lock: Escape",
+        "Hold Caps Lock and press another key: Control",
+        "Caps Lock no longer shouts in capital letters"
+      ],
+      "caution": "Hold it a moment longer to get Control. If you type very fast right before it, it may give Escape instead.",
+      "rules": [
+        {
+          "type": "homerow_mod",
+          "description": "Caps Lock: tap is Escape, hold is Control",
+          "fromKey": "caps_lock",
+          "tapKey": "escape",
+          "modKey": "left_control",
+          "holdBehavior": "balanced"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=XuQVbZ0wENE",
+        "videoId": "XuQVbZ0wENE",
+        "title": "Turning the worst key on a keyboard into the most useful one",
+        "channel": "Dreams of Code",
+        "published": "2024-07-23",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "Shows tap for Escape and hold for Control on Caps Lock, and why the Mac needs it."
+      },
+      "source": {
+        "title": "Raycast manual, Hyper Key: Caps Lock \"Quick Press\" can send Escape",
+        "url": "https://manual.raycast.com/hyper-key",
+        "note": "A mainstream Mac app offers a tap-for-Escape on Caps Lock, so it is an expected choice."
+      }
+    },
+    {
+      "id": "home-row-starter",
+      "name": "Home row starter: Shift and Command",
+      "category": "home-row",
+      "difficulty": "easy",
+      "why": "Your fingers rest on A S D F and J K L ;. Hold F or J to get Shift, hold D or K to get Command, without moving your hand. Just four keys, so it is a gentle way to try the idea.",
+      "forWho": "First-timers who want to try home-row keys before using all eight.",
+      "changes": [
+        "Hold F or J: Shift",
+        "Hold D or K: Command",
+        "Tapping the same keys types the letter as usual",
+        "A key only turns into a modifier when you press a key from the other hand"
+      ],
+      "caution": "Give it a week. Most people stop mistyping after about two weeks.",
+      "rules": [
+        {
+          "type": "homerow_mod",
+          "description": "D: tap types D, hold is Command",
+          "fromKey": "d",
+          "tapKey": "d",
+          "modKey": "left_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "F: tap types F, hold is Shift",
+          "fromKey": "f",
+          "tapKey": "f",
+          "modKey": "left_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "J: tap types J, hold is Shift",
+          "fromKey": "j",
+          "tapKey": "j",
+          "modKey": "right_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "K: tap types K, hold is Command",
+          "fromKey": "k",
+          "tapKey": "k",
+          "modKey": "right_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=MGs6dBn9irg",
+        "videoId": "MGs6dBn9irg",
+        "title": "Stop twisting your fingers! Home-row mods vs. Thumbkeys",
+        "channel": "Dygma Lab",
+        "published": "2025-03-27",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "Explains why modifiers on the home row are easier on the wrist. This template uses just the Shift and Command part."
+      },
+      "source": {
+        "title": "A guide to home row mods (Precondition): why use them, and how Shift on the index finger avoids accidental capitals",
+        "url": "https://precondition.github.io/home-row-mods",
+        "note": "The guide recommends opposite-hand Shift and putting Shift on the index column."
+      }
+    },
+    {
+      "id": "home-row-gacs",
+      "name": "Home row mods: Command, Option, Control, Shift (GACS)",
+      "category": "home-row",
+      "difficulty": "medium",
+      "why": "Each finger on the home row also works as a shortcut key when you hold it: pinky is Command, then Option, Control, and the pointer finger is Shift. Same on both hands. Your hands never leave the middle row.",
+      "forWho": "People who use many shortcuts and want the most popular order, used by Miryoku and many guides.",
+      "changes": [
+        "Hold A or ;: Command",
+        "Hold S or L: Option",
+        "Hold D or K: Control",
+        "Hold F or J: Shift",
+        "Tapping any of them types the letter"
+      ],
+      "caution": "Eight keys act two ways, so it takes a couple of weeks to feel natural.",
+      "rules": [
+        {
+          "type": "homerow_mod",
+          "description": "A: tap types A, hold is Command",
+          "fromKey": "a",
+          "tapKey": "a",
+          "modKey": "left_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "S: tap types S, hold is Option",
+          "fromKey": "s",
+          "tapKey": "s",
+          "modKey": "left_option",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "D: tap types D, hold is Control",
+          "fromKey": "d",
+          "tapKey": "d",
+          "modKey": "left_control",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "F: tap types F, hold is Shift",
+          "fromKey": "f",
+          "tapKey": "f",
+          "modKey": "left_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "J: tap types J, hold is Shift",
+          "fromKey": "j",
+          "tapKey": "j",
+          "modKey": "right_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "K: tap types K, hold is Control",
+          "fromKey": "k",
+          "tapKey": "k",
+          "modKey": "right_control",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "L: tap types L, hold is Option",
+          "fromKey": "l",
+          "tapKey": "l",
+          "modKey": "right_option",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "Semicolon: tap types ;, hold is Command",
+          "fromKey": "semicolon",
+          "tapKey": "semicolon",
+          "modKey": "right_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=sLWQ4Gx88h4",
+        "videoId": "sLWQ4Gx88h4",
+        "title": "This weird keyboard technique has improved the way I type.",
+        "channel": "Dreams of Code",
+        "published": "2024-10-31",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "Shows eight home-row keys used as modifiers, and says he runs it on laptop keyboards too. His own order differs slightly (Command, Option, Shift, Control); the idea is the same."
+      },
+      "source": {
+        "title": "A guide to home row mods (Precondition): GACS section",
+        "url": "https://precondition.github.io/home-row-mods",
+        "note": "Says \"if you're undecided, pick GACS\" and that it is the order used by Miryoku."
+      }
+    },
+    {
+      "id": "home-row-cags",
+      "name": "Home row mods: Control, Option, Command, Shift (CAGS)",
+      "category": "home-row",
+      "difficulty": "medium",
+      "why": "Like the other home-row set, but ordered for Mac habits. Command, the key Mac people use most, goes on a stronger finger, and Control, which Mac people use least, goes on the pinky.",
+      "forWho": "Mac users who use Command all day and want the order the guide recommends for macOS.",
+      "changes": [
+        "Hold A or ;: Control",
+        "Hold S or L: Option",
+        "Hold D or K: Command",
+        "Hold F or J: Shift",
+        "Tapping any of them types the letter"
+      ],
+      "caution": "Same two-week learning curve as the other home-row set.",
+      "rules": [
+        {
+          "type": "homerow_mod",
+          "description": "A: tap types A, hold is Control",
+          "fromKey": "a",
+          "tapKey": "a",
+          "modKey": "left_control",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "S: tap types S, hold is Option",
+          "fromKey": "s",
+          "tapKey": "s",
+          "modKey": "left_option",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "D: tap types D, hold is Command",
+          "fromKey": "d",
+          "tapKey": "d",
+          "modKey": "left_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "F: tap types F, hold is Shift",
+          "fromKey": "f",
+          "tapKey": "f",
+          "modKey": "left_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "J: tap types J, hold is Shift",
+          "fromKey": "j",
+          "tapKey": "j",
+          "modKey": "right_shift",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "K: tap types K, hold is Command",
+          "fromKey": "k",
+          "tapKey": "k",
+          "modKey": "right_command",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "L: tap types L, hold is Option",
+          "fromKey": "l",
+          "tapKey": "l",
+          "modKey": "right_option",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        },
+        {
+          "type": "homerow_mod",
+          "description": "Semicolon: tap types ;, hold is Control",
+          "fromKey": "semicolon",
+          "tapKey": "semicolon",
+          "modKey": "right_control",
+          "holdThresholdMs": 220,
+          "holdBehavior": "opposite_hand"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=PBjV6nxQpqs",
+        "videoId": "PBjV6nxQpqs",
+        "title": "Homerow Mods & the Shift Problem: My Fix in Kanata",
+        "channel": "linkarzu",
+        "published": "2025-06-11",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "A Mac demo of home-row mods with Command, Option, Control and Shift, plus how to stop accidental capitals. His letter order differs; the idea is the same."
+      },
+      "source": {
+        "title": "A guide to home row mods (Precondition): \"What if you use MacOS instead?\"",
+        "url": "https://precondition.github.io/home-row-mods",
+        "note": "Ranks Mac modifiers Ctrl < Option < Command < Shift by use and names CAGS as the macOS order."
+      }
+    },
+    {
+      "id": "space-arrows",
+      "name": "Hold Space for arrow keys (H J K L)",
+      "category": "layers",
+      "difficulty": "medium",
+      "why": "Hold the Space bar and your right hand becomes arrow keys: H is left, J is down, K is up, L is right. You can move around text without reaching for the small arrow keys. Tapping Space still types a space.",
+      "forWho": "Writers, coders and Vim fans who want to edit text without moving their hands.",
+      "changes": [
+        "Tap Space: a space",
+        "Hold Space, press H: Left Arrow",
+        "Hold Space, press J: Down Arrow",
+        "Hold Space, press K: Up Arrow",
+        "Hold Space, press L: Right Arrow",
+        "Add Command or Shift to jump or select as usual"
+      ],
+      "caution": "Pause a tiny bit after Space when you type fast, or it may think you held it.",
+      "rules": [
+        {
+          "type": "layer_activator",
+          "description": "Space: tap is Space, hold turns on arrow keys",
+          "fromKey": "spacebar",
+          "layerName": "arrows",
+          "tapKey": "spacebar",
+          "holdBehavior": "balanced"
+        },
+        {
+          "type": "layer_binding",
+          "description": "H is Left Arrow",
+          "layerName": "arrows",
+          "fromKey": "h",
+          "toKey": "left_arrow"
+        },
+        {
+          "type": "layer_binding",
+          "description": "J is Down Arrow",
+          "layerName": "arrows",
+          "fromKey": "j",
+          "toKey": "down_arrow"
+        },
+        {
+          "type": "layer_binding",
+          "description": "K is Up Arrow",
+          "layerName": "arrows",
+          "fromKey": "k",
+          "toKey": "up_arrow"
+        },
+        {
+          "type": "layer_binding",
+          "description": "L is Right Arrow",
+          "layerName": "arrows",
+          "fromKey": "l",
+          "toKey": "right_arrow"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=4yiMbP_ZySQ&t=622s",
+        "videoId": "4yiMbP_ZySQ",
+        "title": "I Can Use a Laptop Again!",
+        "channel": "Ben Vallack",
+        "published": "2025-03-14",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "startSeconds": 622,
+        "note": "Starts at the part about holding a key to switch to another set of keys (layers) on a laptop. It does not use Space; it shows the same idea."
+      },
+      "source": {
+        "title": "The SpaceFN layout: trying to end keyboard inflation (Geekhack thread)",
+        "url": "https://geekhack.org/index.php?topic=51069.0",
+        "note": "The long-running community thread (over 500,000 reads) about turning Space into a layer key; also see Miryoku's Nav layer with the cursor keys on the home row."
+      }
+    },
+    {
+      "id": "combos-easy-reach",
+      "name": "Easy-reach combos: Enter, Backspace, Escape",
+      "category": "combos",
+      "difficulty": "easy",
+      "why": "Press two letter keys at the same moment to get a key that is far away. K and L together is Enter, I and O together is Backspace, W and E together is Escape. They are right under your fingers.",
+      "forWho": "Anyone tired of reaching for Return, Delete and Escape.",
+      "changes": [
+        "K + L together: Enter",
+        "I + O together: Backspace",
+        "W + E together: Escape",
+        "Typing those letters one after the other works as usual"
+      ],
+      "caution": "The two keys must land within about 50 thousandths of a second. If a word like \"we\" ever turns into Escape, you are pressing too evenly; type it a little more one-by-one.",
+      "rules": [
+        {
+          "type": "combo",
+          "description": "K and L together are Enter",
+          "fromKeys": [
+            "k",
+            "l"
+          ],
+          "toKey": "return_or_enter"
+        },
+        {
+          "type": "combo",
+          "description": "I and O together are Backspace",
+          "fromKeys": [
+            "i",
+            "o"
+          ],
+          "toKey": "delete_or_backspace"
+        },
+        {
+          "type": "combo",
+          "description": "W and E together are Escape",
+          "fromKeys": [
+            "w",
+            "e"
+          ],
+          "toKey": "escape"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=4yiMbP_ZySQ&t=726s",
+        "videoId": "4yiMbP_ZySQ",
+        "title": "I Can Use a Laptop Again!",
+        "channel": "Ben Vallack",
+        "published": "2025-03-14",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "startSeconds": 726,
+        "note": "The \"Chords\" part shows two keys pressed at nearly the same time doing a different key, on a laptop, with a very short time window."
+      },
+      "source": {
+        "title": "ZMK docs: Combos (all keys must be pressed within timeout-ms; the example is Q and W for Escape, 50 ms)",
+        "url": "https://zmk.dev/docs/features/combos",
+        "note": "The same 50 ms window is used here."
+      }
+    },
+    {
+      "id": "number-pad-layer",
+      "name": "Number pad under your right hand",
+      "category": "layers",
+      "difficulty": "medium",
+      "why": "Hold Caps Lock and the keys under your right hand turn into a number pad, laid out like a calculator. You type numbers without reaching to the top row.",
+      "forWho": "People who type lots of numbers: spreadsheets, prices, codes.",
+      "changes": [
+        "Hold Caps Lock: numbers on the right hand",
+        "U I O is 7 8 9",
+        "J K L is 4 5 6",
+        "M , . is 1 2 3",
+        "N is 0",
+        "Tap Caps Lock: Escape"
+      ],
+      "caution": "This uses Caps Lock, so it cannot be combined with the Caps Lock template.",
+      "rules": [
+        {
+          "type": "layer_activator",
+          "description": "Caps Lock: tap is Escape, hold turns on the number pad",
+          "fromKey": "caps_lock",
+          "layerName": "numbers",
+          "tapKey": "escape",
+          "holdBehavior": "balanced"
+        },
+        {
+          "type": "layer_binding",
+          "description": "U is 7",
+          "layerName": "numbers",
+          "fromKey": "u",
+          "toKey": "7"
+        },
+        {
+          "type": "layer_binding",
+          "description": "I is 8",
+          "layerName": "numbers",
+          "fromKey": "i",
+          "toKey": "8"
+        },
+        {
+          "type": "layer_binding",
+          "description": "O is 9",
+          "layerName": "numbers",
+          "fromKey": "o",
+          "toKey": "9"
+        },
+        {
+          "type": "layer_binding",
+          "description": "J is 4",
+          "layerName": "numbers",
+          "fromKey": "j",
+          "toKey": "4"
+        },
+        {
+          "type": "layer_binding",
+          "description": "K is 5",
+          "layerName": "numbers",
+          "fromKey": "k",
+          "toKey": "5"
+        },
+        {
+          "type": "layer_binding",
+          "description": "L is 6",
+          "layerName": "numbers",
+          "fromKey": "l",
+          "toKey": "6"
+        },
+        {
+          "type": "layer_binding",
+          "description": "M is 1",
+          "layerName": "numbers",
+          "fromKey": "m",
+          "toKey": "1"
+        },
+        {
+          "type": "layer_binding",
+          "description": ", is 2",
+          "layerName": "numbers",
+          "fromKey": "comma",
+          "toKey": "2"
+        },
+        {
+          "type": "layer_binding",
+          "description": ". is 3",
+          "layerName": "numbers",
+          "fromKey": "period",
+          "toKey": "3"
+        },
+        {
+          "type": "layer_binding",
+          "description": "N is 0",
+          "layerName": "numbers",
+          "fromKey": "n",
+          "toKey": "0"
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=XWRDj4KLs5g",
+        "videoId": "XWRDj4KLs5g",
+        "title": "My Corne Keyboard Keymaps: Number/Symbol Layer",
+        "channel": "Dong Zhou",
+        "published": "2023-10-23",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "Shows holding one key to get numbers one to zero under the fingers, with a thumb zero."
+      },
+      "source": {
+        "title": "Miryoku reference manual, Num layer: \"numerals are in the standard numpad locations\"",
+        "url": "https://github.com/manna-harbour/miryoku/blob/master/docs/reference/readme.org",
+        "note": "Same shape as the calculator pad."
+      }
+    },
+    {
+      "id": "symbols-layer",
+      "name": "Symbols without Shift",
+      "category": "layers",
+      "difficulty": "medium",
+      "why": "Hold the right Option key and the keys under your left hand type symbols like & * ( ) $ % ^ ! @ #. No Shift needed, so shortcuts with symbols are easier.",
+      "forWho": "Coders and anyone who types many symbols.",
+      "changes": [
+        "Hold Right Option: symbols on the left hand",
+        "W E R T is & * ( )",
+        "S D F is $ % ^",
+        "X C V is ! @ #",
+        "Right Option does nothing else while this is on"
+      ],
+      "caution": "Right Option stops working as Option, so skip this if you use it.",
+      "rules": [
+        {
+          "type": "layer_activator",
+          "description": "Right Option: hold turns on symbols",
+          "fromKey": "right_option",
+          "layerName": "symbols"
+        },
+        {
+          "type": "layer_binding",
+          "description": "W is &",
+          "layerName": "symbols",
+          "fromKey": "w",
+          "toKey": "7",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "E is *",
+          "layerName": "symbols",
+          "fromKey": "e",
+          "toKey": "8",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "R is (",
+          "layerName": "symbols",
+          "fromKey": "r",
+          "toKey": "9",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "T is )",
+          "layerName": "symbols",
+          "fromKey": "t",
+          "toKey": "0",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "S is $",
+          "layerName": "symbols",
+          "fromKey": "s",
+          "toKey": "4",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "D is %",
+          "layerName": "symbols",
+          "fromKey": "d",
+          "toKey": "5",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "F is ^",
+          "layerName": "symbols",
+          "fromKey": "f",
+          "toKey": "6",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "X is !",
+          "layerName": "symbols",
+          "fromKey": "x",
+          "toKey": "1",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "C is @",
+          "layerName": "symbols",
+          "fromKey": "c",
+          "toKey": "2",
+          "toModifiers": [
+            "shift"
+          ]
+        },
+        {
+          "type": "layer_binding",
+          "description": "V is #",
+          "layerName": "symbols",
+          "fromKey": "v",
+          "toKey": "3",
+          "toModifiers": [
+            "shift"
+          ]
+        }
+      ],
+      "video": {
+        "url": "https://www.youtube.com/watch?v=yiwUjLaebuw",
+        "videoId": "yiwUjLaebuw",
+        "title": "My 34 key keymap... (and how you can create your own)",
+        "channel": "winter Nebs",
+        "published": "2021-03-02",
+        "checkedAt": "2026-11-15",
+        "checkedHow": "Watch page fetched live and captions or chapters read on the check date",
+        "note": "Tours a keymap with a custom symbols layer and a number layer, and how to choose what goes where."
+      },
+      "source": {
+        "title": "Miryoku reference manual, Sym layer: \"shifted symbols in the same locations to reduce chording\"",
+        "url": "https://github.com/manna-harbour/miryoku/blob/master/docs/reference/readme.org",
+        "note": "Same idea: the symbols match the digits on the number pad."
+      }
+    }
+  ],
+  "leftOut": [
+    {
+      "name": "Hyper key on Caps Lock",
+      "reason": "The engine can hold one modifier per key, not all four at once. Needs KE-40."
+    },
+    {
+      "name": "One-shot Shift (tap Shift, then the next letter is capital)",
+      "reason": "The engine has no one-shot or sticky behaviour."
+    },
+    {
+      "name": "Shift tap types ( and )",
+      "reason": "A tap action cannot carry its own Shift, so this would need engine work."
+    },
+    {
+      "name": "Globe/Fn and Touch ID key setups",
+      "reason": "Fn and vendor keys are not visible to the engine."
+    },
+    {
+      "name": "Tap dance and leader keys",
+      "reason": "Not supported by the engine."
+    }
+  ]
+}
