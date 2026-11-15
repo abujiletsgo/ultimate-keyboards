@@ -25,7 +25,10 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 ## Price
 | Plan | Price | Source, date |
 |---|---|---|
-| App | **Freemium** (Tom, 2026-11-15): free to start, with paid features. `[NEED FACT: which features are paid, and the prices]` | Tom, 2026-11-15 |
+| Ultimate Keyboards (free) | $0: home-row mods with misfire protection, layers, combos, Hyper on Caps Lock, layer overlay, health panel, ZMK/QMK editing and flashing | Tom, 2026-11-15 |
+| **Ultimate Keyboards Pro** | **$24 one-time (launch price $19)**: type on iPhone/iPad from the MacBook keyboard, per-app layers, one layout for MacBook + ZMK/QMK board, iCloud sync and presets | Tom, 2026-11-15 |
+| iPhone/iPad app | Free; Pro is checked on the Mac (the Mac sends the keys). App Store rule check pending before launch | Tom, 2026-11-15 |
+| Sales | Direct, license key (Paddle or Lemon Squeezy); optional Setapp later. No subscription | plan, 2026-11-15 |
 | Source code | MIT licensed | LICENSE |
 
 ## What it does (each provable)
@@ -38,6 +41,10 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 | Edits ZMK and QMK configs in place; builds firmware with the user's own GitHub Actions | README | 2026-11-15 |
 | Needs two System Settings approvals (driver, Input Monitoring) and an admin password at install | site FAQ | 2026-11-15 |
 | Typing accuracy at speed (no misfires) | `[NEED FACT: measured misfire rate or typing test on a named MacBook]` | — |
+
+## Positioning (Tom, 2026-11-15)
+- Pitch: the friendliest way to get split-keyboard powers on a MacBook; explained in plain words, set up by clicking, not config files.
+- Differentiators: misfire-safe home-row mods; UI/UX (visual keyboard, plain language) vs Karabiner JSON / Kanata Lisp; one layout for MacBook and board; MacBook keyboard on iPhone/iPad.
 
 ## Limits and known gaps
 - No notarized public build yet (waitlist).
@@ -63,4 +70,5 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 ## Change log
 - 2026-11-15: first version (SEO/AEO/GEO workflow run).
 - 2026-11-15: competitor research added (Reddit not reachable; re-check prices by eye before public copy).
+- 2026-11-15: tiers and price locked (Tom): free core + Pro $24 one-time (launch $19).
 - 2026-11-15: price model set to freemium (Tom); split and prices still open.

@@ -21,7 +21,7 @@ All rows are `seed` (brainstormed from the problem space) until confirmed by Red
 | 15 | best zmk config editor | category | Reddit r/ErgoMechKeyboards, ZMK Discord | off-site | yes |
 | 16 | ultimate keyboards mac | branded | /keyboards/ | live | yes |
 | 17 | is ultimate keyboards safe (driver, input monitoring) | branded | FAQ "What does it ask for?" + privacy note | partial | yes |
-| 18 | ultimate keyboards price / free | branded | FAQ: freemium; split `[NEED FACT]` | next | yes |
+| 18 | ultimate keyboards price / free | branded | FAQ: free + Pro $24 one-time | next | yes |
 | 19 | how to undo ultimate keyboards / uninstall | branded | FAQ + help page | partial (no uninstall page) | yes |
 | 20 | ultimate keyboards intel mac | branded | FAQ "Which Macs work?" | live | no |
 
