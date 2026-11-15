@@ -112,7 +112,15 @@ export interface HomerowModRule {
   fromKey: string;   // e.g. 'a'
   tapKey: string;    // e.g. 'a'  (what it types when tapped quickly)
   modKey: string;    // e.g. 'left_control'
+  /** Native only: per-key hold time in ms; omitted = the profile's holdThresholdMs. */
+  holdThresholdMs?: number;
+  /** Native only: omitted = tap_preferred. opposite_hand holds early only for other-hand keys. */
+  holdBehavior?: 'balanced' | 'hold_preferred' | 'tap_preferred' | 'opposite_hand';
 }
+
+/** Misfire-safe home-row defaults (2026-11-15): opposite-hand hold, 220 ms, typing-streak guard. */
+export const HOMEROW_MISFIRE_DEFAULTS = { holdBehavior: 'opposite_hand' as const, holdThresholdMs: 220 }
+export const TYPING_STREAK_MS = 150
 
 export type Rule = SimpleRemapRule | ComboRule | LayerActivatorRule | LayerBindingRule | HomerowModRule;
 

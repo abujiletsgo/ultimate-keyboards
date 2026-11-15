@@ -105,7 +105,7 @@ describe('Mac keymap local editing and retained drafts', () => {
   test('empty layer metadata and history never enter the native profile payload', () => {
     const { state }=setup(blank);state().addLayer('empty');state().addRule(simple)
     const profile=createNativeProfile(state().profileTitle,state().rules)
-    expect(Object.keys(profile).sort()).toEqual(['comboWindowMs','holdThresholdMs','rules','title','version'])
+    expect(Object.keys(profile).sort()).toEqual(['comboWindowMs','holdThresholdMs','rules','title','typingStreakMs','version'])
     expect(profile.rules).toEqual([simple]);expect(JSON.stringify(profile)).not.toContain('empty')
   })
 })

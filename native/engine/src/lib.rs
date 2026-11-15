@@ -20,6 +20,10 @@ pub struct Profile {
     pub hold_threshold_ms: u64,
     #[serde(default = "default_combo")]
     pub combo_window_ms: u64,
+    /// Typing-streak guard for home-row mods: a home-row key pressed within this
+    /// many ms of the previous key press types its letter at once (0 = off).
+    #[serde(default)]
+    pub typing_streak_ms: u64,
 }
 
 impl Default for Profile {
@@ -30,6 +34,7 @@ impl Default for Profile {
             rules: vec![],
             hold_threshold_ms: default_hold(),
             combo_window_ms: default_combo(),
+            typing_streak_ms: 0,
         }
     }
 }
@@ -45,6 +50,27 @@ pub enum HoldBehavior {
     HoldPreferred,
     /// Decide solely from the leader's release time and hold deadline.
     TapPreferred,
+    /// Like balanced, but only a key on the other hand of the keyboard can make
+    /// it hold early; same-hand keys wait for release or the hold deadline.
+    OppositeHand,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Hand {
+    Left,
+    Right,
+}
+
+/// Which hand types a key on a MacBook ANSI/ISO layout; thumbs and modifiers are neither.
+fn hand(usage: u16) -> Option<Hand> {
+    match usage {
+        4..=10 | 20..=23 | 25..=27 | 29 | 30..=34 | 43 | 53 | 57 | 100 => {
+            // a b c d e f g, q r s t, v w x, z, 1-5, tab, grave, caps, non-US backslash
+            Some(Hand::Left)
+        }
+        11..=19 | 24 | 28 | 35..=40 | 42 | 45..=52 | 54..=56 => Some(Hand::Right),
+        _ => None,
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -98,6 +124,12 @@ pub enum Rule {
         from_key: String,
         tap_key: String,
         mod_key: String,
+        /// Per-key hold time; omitted = the profile's holdThresholdMs.
+        #[serde(default)]
+        hold_threshold_ms: Option<u64>,
+        /// Omitted = tap_preferred (the original behaviour).
+        #[serde(default)]
+        hold_behavior: Option<HoldBehavior>,
     },
 }
 
@@ -275,6 +307,8 @@ enum Compiled {
         tap: Option<u16>,
         hold: Hold,
         behavior: HoldBehavior,
+        hold_ms: u64,
+        streak_guard: bool,
     },
     Binding {
         from: u16,
@@ -307,8 +341,9 @@ enum Pending {
 /// move backwards are clamped. Duplicate downs/releases are ignored.
 pub struct Engine {
     rules: Vec<Compiled>,
-    hold_ms: u64,
     combo_ms: u64,
+    streak_ms: u64,
+    last_down_at: Option<u64>,
     now: u64,
     physical: BTreeSet<u16>,
     queue: VecDeque<KeyEvent>,
@@ -330,6 +365,9 @@ impl Engine {
         }
         if !(10..=200).contains(&profile.combo_window_ms) {
             return Err(ProfileError("comboWindowMs must be 10..200".into()));
+        }
+        if profile.typing_streak_ms > 500 {
+            return Err(ProfileError("typingStreakMs must be 0..500".into()));
         }
         if profile.rules.len() > 1024 {
             return Err(ProfileError("At most 1024 rules are supported".into()));
@@ -378,13 +416,21 @@ impl Engine {
                     tap: tap_key.as_deref().map(key).transpose()?,
                     hold: Hold::Layer(layer(&layer_name)?),
                     behavior: hold_behavior,
+                    hold_ms: profile.hold_threshold_ms,
+                    streak_guard: false,
                 },
                 Rule::HomerowMod {
                     from_key,
                     tap_key,
                     mod_key,
+                    hold_threshold_ms,
+                    hold_behavior,
                     ..
                 } => {
+                    let hold_ms = hold_threshold_ms.unwrap_or(profile.hold_threshold_ms);
+                    if !(50..=1000).contains(&hold_ms) {
+                        return Err(ProfileError("holdThresholdMs must be 50..1000".into()));
+                    }
                     let m = key(&mod_key)?;
                     if !(224..=231).contains(&m) {
                         return Err(ProfileError(
@@ -395,7 +441,9 @@ impl Engine {
                         from: key(&from_key)?,
                         tap: Some(key(&tap_key)?),
                         hold: Hold::Modifier(m),
-                        behavior: HoldBehavior::TapPreferred,
+                        behavior: hold_behavior.unwrap_or(HoldBehavior::TapPreferred),
+                        hold_ms,
+                        streak_guard: true,
                     }
                 }
                 Rule::LayerBinding {
@@ -413,8 +461,9 @@ impl Engine {
         }
         Ok(Self {
             rules,
-            hold_ms: profile.hold_threshold_ms,
             combo_ms: profile.combo_window_ms,
+            streak_ms: profile.typing_streak_ms,
+            last_down_at: None,
             now: 0,
             physical: BTreeSet::new(),
             queue: VecDeque::new(),
@@ -469,6 +518,7 @@ impl Engine {
         self.physical.clear();
         self.queue.clear();
         self.pending = None;
+        self.last_down_at = None;
         self.active.clear();
         self.layers.clear();
         self.refs.clear();
@@ -543,6 +593,12 @@ impl Engine {
         }
     }
     fn down(&mut self, event: KeyEvent, allow_combo: bool, out: &mut Vec<OutputEvent>) {
+        // A combo candidate is re-queued and comes back through here, so only
+        // record the streak once the press is actually resolved below.
+        let previous_down = self.last_down_at;
+        if !(224..=231).contains(&event.usage) {
+            self.last_down_at = Some(event.at_ms);
+        }
         let selected = self
             .rules
             .iter()
@@ -561,23 +617,35 @@ impl Engine {
                     tap,
                     hold,
                     behavior,
+                    hold_ms,
+                    streak_guard,
                     ..
                 },
             )) => {
+                let in_streak = streak_guard
+                    && self.streak_ms > 0
+                    && previous_down.is_some_and(|t| event.at_ms.saturating_sub(t) < self.streak_ms);
                 if tap.is_none() {
                     // A dedicated layer key has no tap decision to wait for.
                     self.start_hold(event.usage, hold, out);
+                } else if in_streak {
+                    // Mid-word: a home-row key typed right after another key is a letter.
+                    let usages: Vec<_> = tap.into_iter().collect();
+                    self.press(&usages, out);
+                    self.active.insert(event.usage, Active::Output(usages));
                 } else {
                     self.pending = Some(Pending::Dual {
                         key: event.usage,
                         tap,
                         hold,
-                        deadline: event.at_ms.saturating_add(self.hold_ms),
+                        deadline: event.at_ms.saturating_add(hold_ms),
                         behavior,
                     });
                 }
             }
             Some((i, Compiled::Combo { .. })) => {
+                // Not resolved yet: the press comes back through down() later.
+                self.last_down_at = previous_down;
                 let candidates = (i..self.rules.len()).filter(|&n| matches!(&self.rules[n], Compiled::Combo {from, ..} if from.contains(&event.usage))).collect();
                 self.queue.push_front(event);
                 self.pending = Some(Pending::Combo {
@@ -624,9 +692,15 @@ impl Engine {
                                     hold_decision = Some(true);
                                     break;
                                 }
-                                other_downs.insert(event.usage);
-                            } else if behavior == HoldBehavior::Balanced
-                                && other_downs.remove(&event.usage)
+                                let same_hand = hand(event.usage).is_some()
+                                    && hand(event.usage) == hand(key);
+                                if !(behavior == HoldBehavior::OppositeHand && same_hand) {
+                                    other_downs.insert(event.usage);
+                                }
+                            } else if matches!(
+                                behavior,
+                                HoldBehavior::Balanced | HoldBehavior::OppositeHand
+                            ) && other_downs.remove(&event.usage)
                             {
                                 hold_decision = Some(true);
                                 break;

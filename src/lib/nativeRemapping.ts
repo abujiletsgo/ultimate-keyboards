@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { IS_TAURI } from './io'
-import { HOMEROW_HOLD_MS, type Rule } from './karabinerGenerator'
+import { HOMEROW_HOLD_MS, TYPING_STREAK_MS, type Rule } from './karabinerGenerator'
 
 export interface NativeProfile {
   version: 1
@@ -9,6 +9,8 @@ export interface NativeProfile {
   rules: Rule[]
   holdThresholdMs: number
   comboWindowMs: number
+  /** A home-row key pressed within this many ms of the previous key types its letter. */
+  typingStreakMs: number
 }
 
 export interface NativeStatus {
@@ -30,6 +32,7 @@ export function createNativeProfile(title: string, rules: readonly Rule[]): Nati
     rules: structuredClone([...rules]),
     holdThresholdMs: HOMEROW_HOLD_MS,
     comboWindowMs: 50,
+    typingStreakMs: TYPING_STREAK_MS,
   }
 }
 

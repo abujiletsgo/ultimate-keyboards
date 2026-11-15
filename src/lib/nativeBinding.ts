@@ -1,4 +1,4 @@
-import { KEY_CODES, type Rule } from './karabinerGenerator'
+import { HOMEROW_MISFIRE_DEFAULTS, KEY_CODES, type Rule } from './karabinerGenerator'
 import { NATIVE_SYMBOLS, isShiftModifier, nativeShiftedSymbol, nativeSymbolChoice, nativeSymbolFromChoice } from './nativeSymbols'
 import { macBaseRuleIndex, macLayerBindingIndex } from './macKeymapView'
 
@@ -59,7 +59,7 @@ export function nativeBindingContextError(rules: readonly Rule[], code: string):
   return rules.some(rule => 'fromKey' in rule && rule.fromKey === code && !['simple', 'combo', 'layer_activator', 'homerow_mod', 'layer_binding'].includes(rule.type))
     ? 'This key has an unsupported imported action. Review it in the rule list first.' : null
 }
-const VARIANT_FIELDS = ['type', 'fromKey', 'fromKeys', 'fromModifiers', 'toKey', 'toModifiers', 'tapKey', 'modKey', 'layerName', 'holdBehavior']
+const VARIANT_FIELDS = ['type', 'fromKey', 'fromKeys', 'fromModifiers', 'toKey', 'toModifiers', 'tapKey', 'modKey', 'layerName', 'holdBehavior', 'holdThresholdMs']
 /** Pure working-profile edit: one replacement or atomic clearing, never runtime application. */
 export function applyNativeBinding(rules: readonly Rule[], code: string, layer: string | null, binding: NativeBinding): Rule[] {
   const error = nativeBindingError(binding, code, layer)
@@ -74,7 +74,13 @@ export function applyNativeBinding(rules: readonly Rule[], code: string, layer: 
   const common = { ...metadata, description: previous?.description ?? `${code} binding`, fromKey: code }
   let next: Rule
   if (binding.behavior === 'key') next = { ...common, type: layer === null ? 'simple' : 'layer_binding', ...(layer === null ? {} : { layerName: layer }), toKey: binding.key, ...(binding.modifiers.length ? { toModifiers: [...binding.modifiers] } : {}) } as Rule
-  else if (binding.behavior === 'mt') next = { ...common, type: 'homerow_mod', tapKey: binding.key, modKey: binding.modifier }
+  else if (binding.behavior === 'mt') {
+    // Keep a home-row key's timing when only its letter or modifier changes; new ones get the misfire-safe defaults.
+    const timing = previous?.type === 'homerow_mod'
+      ? { ...(previous.holdBehavior ? { holdBehavior: previous.holdBehavior } : {}), ...(previous.holdThresholdMs ? { holdThresholdMs: previous.holdThresholdMs } : {}) }
+      : HOMEROW_MISFIRE_DEFAULTS
+    next = { ...common, type: 'homerow_mod', tapKey: binding.key, modKey: binding.modifier, ...timing }
+  }
   else next = { ...common, type: 'layer_activator', layerName: binding.layer, ...(binding.behavior === 'lt' ? { tapKey: binding.key, holdBehavior: binding.holdBehavior } : {}) }
   return index < 0 ? [...rules, next] : rules.map((rule, i) => i === index ? next : rule)
 }

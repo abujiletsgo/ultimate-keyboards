@@ -52,7 +52,7 @@ describe('native profile contract', () => {
     const original = structuredClone(fixture)
     const profile = createNativeProfile('  Test  ', original)
     expect(JSON.parse(serializeNativeProfile(profile))).toEqual({
-      version: 1, title: 'Test', rules: fixture, holdThresholdMs: 150, comboWindowMs: 50,
+      version: 1, title: 'Test', rules: fixture, holdThresholdMs: 150, comboWindowMs: 50, typingStreakMs: 150,
     })
     expect(profile.rules).not.toBe(original)
     if (profile.rules[0].type === 'simple') profile.rules[0].fromModifiers!.push('shift')
@@ -289,5 +289,20 @@ describe('native command lifecycle', () => {
     poll.resolve(ready)
     await pending
     expect(timer.pending.size).toBe(0)
+  })
+})
+
+describe('home-row misfire defaults', () => {
+  test('default home-row rules use opposite-hand hold and per-key time; re-binding keeps timing', async () => {
+    const { DEFAULT_RULES } = await import('../src/lib/macDefaults')
+    const { applyNativeBinding } = await import('../src/lib/nativeBinding')
+    const homerow = DEFAULT_RULES.filter(r => r.type === 'homerow_mod')
+    expect(homerow.length).toBeGreaterThan(0)
+    for (const r of homerow) expect(r).toMatchObject({ holdBehavior: 'opposite_hand', holdThresholdMs: 220 })
+    const f = homerow.find(r => r.fromKey === 'f')!
+    const custom = DEFAULT_RULES.map(r => r === f ? { ...f, holdThresholdMs: 300 } : r)
+    const next = applyNativeBinding(custom, 'f', null, { behavior: 'mt', key: 'f', modifiers: [], layer: '', modifier: 'left_shift', holdBehavior: 'balanced' })
+    expect(next.find(r => r.type === 'homerow_mod' && r.fromKey === 'f')).toMatchObject({ modKey: 'left_shift', holdThresholdMs: 300, holdBehavior: 'opposite_hand' })
+    expect(createNativeProfile('x', DEFAULT_RULES).typingStreakMs).toBe(150)
   })
 })

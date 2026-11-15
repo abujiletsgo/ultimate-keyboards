@@ -426,8 +426,13 @@ fn v1_defaults_balanced_and_rejects_unknown_behavior_values() {
         rule["holdBehavior"] = value;
         assert!(serde_json::from_value::<Profile>(json!({"version":1,"rules":[rule]})).is_err());
     }
+    // Home-row mods accept a hold behaviour and per-key time since the misfire guard;
+    // unknown values are still rejected.
     assert!(serde_json::from_value::<Profile>(json!({"version":1,"rules":[{
-        "type":"homerow_mod","fromKey":"a","tapKey":"a","modKey":"left_control","holdBehavior":"balanced"
+        "type":"homerow_mod","fromKey":"a","tapKey":"a","modKey":"left_control","holdBehavior":"opposite_hand","holdThresholdMs":220
+    }]})).is_ok());
+    assert!(serde_json::from_value::<Profile>(json!({"version":1,"rules":[{
+        "type":"homerow_mod","fromKey":"a","tapKey":"a","modKey":"left_control","holdBehavior":"opposite-hand"
     }]})).is_err());
 }
 
