@@ -8,6 +8,7 @@
  * Pure text, no I/O; shared by detection, the deep-sleep setting and the
  * catalogue lookups.
  */
+import { toLf } from '../lineEndings'
 
 /** Suffix that names one part of a multi-part keyboard: `corne_left`, `glove80_lh`. */
 export const PART_SUFFIX = /_(left|right|lh|rh|dongle|central|peripheral)$/
@@ -61,7 +62,7 @@ function clean(s: string): string {
  * the `include:` list and the older `board: [...]` / `shield: [...]` matrix.
  */
 export function parseBuildTargets(yaml: string): BuildTarget[] {
-  const text = yaml.replace(/#.*$/gm, '')
+  const text = toLf(yaml).replace(/#.*$/gm, '')
   // `include:` entries each start with "- key:"; the matrix form is one block
   const blocks = /^\s*include\s*:/m.test(text)
     ? text.split(/^[ \t]*-[ \t]+(?=[\w-]+[ \t]*:)/m).slice(1)

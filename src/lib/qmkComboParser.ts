@@ -5,6 +5,7 @@
  *   const uint16_t PROGMEM combo_enter[] = {KC_K, KC_L, COMBO_END};
  *   [COMBO_ENTER] = COMBO(combo_enter, KC_ENT),
  */
+import { keepEol, toLf } from './lineEndings'
 
 export interface QMKCombo {
   name: string       // variable name, e.g. "combo_enter"
@@ -15,7 +16,8 @@ export interface QMKCombo {
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
-export function parseQMKCombos(source: string): QMKCombo[] {
+export function parseQMKCombos(input: string): QMKCombo[] {
+  const source = toLf(input)
   const combos: QMKCombo[] = []
 
   // 1. Find all array declarations: const uint16_t PROGMEM combo_X[] = {K1, K2, COMBO_END};
@@ -46,6 +48,10 @@ export function parseQMKCombos(source: string): QMKCombo[] {
 // ── Writer ────────────────────────────────────────────────────────────────────
 
 export function updateQMKCombosInSource(source: string, combos: QMKCombo[]): string {
+  return keepEol(source, lf => updateQMKCombosInSourceLf(lf, combos))
+}
+
+function updateQMKCombosInSourceLf(source: string, combos: QMKCombo[]): string {
   // Build new declarations block
   const declLines = combos.map(c =>
     `const uint16_t PROGMEM ${c.name}[] = {${c.fromKeys.join(', ')}, COMBO_END};`

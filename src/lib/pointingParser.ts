@@ -12,6 +12,7 @@
  *   - listener child nodes for per-layer overrides (snipe/scroll):
  *       snipe { layers = <N>; input-processors = <&zip_xy_scaler 1 D>; };
  */
+import { keepEol } from './lineEndings'
 
 export interface NodeSpan {
   /** absolute offset of the node's opening `{` */
@@ -48,6 +49,10 @@ export function getBoolProp(node: NodeSpan, name: string): boolean {
 }
 
 export function setBoolProp(source: string, node: NodeSpan, name: string, value: boolean): string {
+  return keepEol(source, lf => setBoolPropLf(lf, lfNode(source, node), name, value))
+}
+
+function setBoolPropLf(source: string, node: NodeSpan, name: string, value: boolean): string {
   const has = getBoolProp(node, name)
   if (has === value) return source
   if (value) {
@@ -72,6 +77,10 @@ export function getIntProp(node: NodeSpan, name: string): number | null {
 }
 
 export function setIntProp(source: string, node: NodeSpan, name: string, value: number): string {
+  return keepEol(source, lf => setIntPropLf(lf, lfNode(source, node), name, value))
+}
+
+function setIntPropLf(source: string, node: NodeSpan, name: string, value: number): string {
   const re = new RegExp(`(${escapeRe(name)}\\s*=\\s*<)(\\d+)(>)`)
   const m = re.exec(node.body)
   if (m) {
@@ -92,6 +101,10 @@ export function getStringProp(node: NodeSpan, name: string): string | null {
 }
 
 export function setStringProp(source: string, node: NodeSpan, name: string, value: string): string {
+  return keepEol(source, lf => setStringPropLf(lf, lfNode(source, node), name, value))
+}
+
+function setStringPropLf(source: string, node: NodeSpan, name: string, value: string): string {
   const re = new RegExp(`(${escapeRe(name)}\\s*=\\s*")([^"]*)(")`)
   const m = re.exec(node.body)
   if (m) {
@@ -113,6 +126,10 @@ export function getScaler(node: NodeSpan): ScalerValue | null {
 }
 
 export function setScaler(source: string, node: NodeSpan, mul: number, div: number): string {
+  return keepEol(source, lf => setScalerLf(lf, lfNode(source, node), mul, div))
+}
+
+function setScalerLf(source: string, node: NodeSpan, mul: number, div: number): string {
   const re = /(input-processors\s*=\s*<\s*&zip_xy_scaler\s+)(\d+)(\s+)(\d+)(\s*>)/
   const m = re.exec(node.body)
   if (m) {
@@ -142,6 +159,10 @@ export function getSnipe(source: string, listenerRe: RegExp): SnipeConfig | null
 
 /** Enable/update or remove the snipe child node. Ensures processors include. */
 export function setSnipe(source: string, listenerRe: RegExp, cfg: SnipeConfig | null): string {
+  return keepEol(source, lf => setSnipeLf(lf, listenerRe, cfg))
+}
+
+function setSnipeLf(source: string, listenerRe: RegExp, cfg: SnipeConfig | null): string {
   // Only pull in the processors include when we're actually adding content
   let result = cfg !== null ? ensureProcessorsInclude(source) : source
   const listener = findNode(result, listenerRe)
@@ -196,6 +217,10 @@ export function getScrollLayer(source: string, listenerRe: RegExp): ScrollLayerC
 }
 
 export function setScrollLayer(source: string, listenerRe: RegExp, cfg: ScrollLayerConfig | null): string {
+  return keepEol(source, lf => setScrollLayerLf(lf, listenerRe, cfg))
+}
+
+function setScrollLayerLf(source: string, listenerRe: RegExp, cfg: ScrollLayerConfig | null): string {
   // Only pull in the processors include when we're actually adding content
   let result = cfg !== null ? ensureProcessorsInclude(source) : source
   const listener = findNode(result, listenerRe)
@@ -227,6 +252,10 @@ function scrollNodeText(cfg: ScrollLayerConfig): string {
 
 /** Add `#include <input/processors.dtsi>` if the overlay lacks it. */
 export function ensureProcessorsInclude(source: string): string {
+  return keepEol(source, lf => ensureProcessorsIncludeLf(lf))
+}
+
+function ensureProcessorsIncludeLf(source: string): string {
   if (source.includes('<input/processors.dtsi>')) return source
   // Insert after the last existing #include, or at the top
   const includes = [...source.matchAll(/^#include\s+.*$/gm)]
@@ -239,6 +268,12 @@ export function ensureProcessorsInclude(source: string): string {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+/** `node` was found in `source` (maybe CRLF); the same node in the LF form of `source`. */
+function lfNode(source: string, n: NodeSpan): NodeSpan {
+  const shift = (i: number) => i - (source.slice(0, i).match(/\r\n/g)?.length ?? 0)
+  return { open: shift(n.open), close: shift(n.close), body: n.body.replace(/\r\n/g, '\n') }
+}
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

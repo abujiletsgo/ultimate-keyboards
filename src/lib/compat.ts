@@ -5,6 +5,7 @@
  * cannot faithfully reproduce. The real devicetree parser (Phase 2) shrinks
  * this list.
  */
+import { toLf } from './lineEndings'
 
 export interface CompatIssue {
   /** 1-based line */
@@ -25,7 +26,7 @@ export function checkZmkCompatibility(source: string, syntaxErrorLines: number[]
   for (const line of syntaxErrorLines) {
     issues.push({ line, construct: 'syntax the parser cannot read', detail: 'usually a C macro standing in for devicetree (e.g. ZMK_LAYER(...))', blocking: true })
   }
-  const lines = source.split('\n')
+  const lines = toLf(source).split('\n')
 
   // Locate the keymap block (line span) so conditionals inside it can be flagged as blocking.
   const kmStart = lines.findIndex(l => /\bkeymap\s*\{/.test(l))

@@ -5,6 +5,7 @@
  * file is touched, so comments, macros, includes and unknown nodes survive
  * byte-for-byte. Edits are applied right-to-left so earlier spans stay valid.
  */
+import { keepEol, toLf } from '../lineEndings'
 import { namedChildren, parseDevicetree, syntaxErrorLines, type SyntaxNode, type Tree } from './runtime'
 
 // ── model ────────────────────────────────────────────────────────────────────
@@ -241,7 +242,7 @@ function parseFull(source: string): Parsed {
 }
 
 export function parseKeymapText(source: string): ZMKKeymap {
-  const p = parseFull(source)
+  const p = parseFull(toLf(source))
   return {
     layers: p.layers.map(({ spans: _s, ...l }) => l),
     combos: p.combos.map(({ spans: _s, ...c }) => c),
@@ -273,6 +274,10 @@ function formatBindingRows(keys: string[], indent: string, perRow = 12): string 
  * through the UI), its cells are rewritten as a whole.
  */
 export function updateLayerBindingsInSource(source: string, layers: ZMKLayer[]): string {
+  return keepEol(source, lf => updateLayerBindingsInSourceLf(lf, layers))
+}
+
+function updateLayerBindingsInSourceLf(source: string, layers: ZMKLayer[]): string {
   const p = parseFull(source)
   const edits: Edit[] = []
   for (const layer of layers) {
@@ -313,6 +318,10 @@ export function generateCombosBlock(combos: ZMKCombo[]): string {
  * brace, removed nodes are deleted with their trailing `;`.
  */
 export function updateCombosInSource(source: string, combos: ZMKCombo[]): string {
+  return keepEol(source, lf => updateCombosInSourceLf(lf, combos))
+}
+
+function updateCombosInSourceLf(source: string, combos: ZMKCombo[]): string {
   const p = parseFull(source)
   if (!p.combosNode) {
     if (combos.length === 0) return source
@@ -356,6 +365,10 @@ export function updateCombosInSource(source: string, combos: ZMKCombo[]): string
 
 /** Append a new all-&trans layer node at the end of the keymap block. */
 export function addLayerToSource(source: string, name: string, keyCount: number): string {
+  return keepEol(source, lf => addLayerToSourceLf(lf, name, keyCount))
+}
+
+function addLayerToSourceLf(source: string, name: string, keyCount: number): string {
   const p = parseFull(source)
   if (!p.keymapNode) return source
   const close = closingBrace(source, p.keymapNode)
@@ -374,6 +387,10 @@ export function addLayerToSource(source: string, name: string, keyCount: number)
 
 /** Rename a layer node (and its display-name when it mirrored the name). */
 export function renameLayerInSource(source: string, oldName: string, newName: string): string {
+  return keepEol(source, lf => renameLayerInSourceLf(lf, oldName, newName))
+}
+
+function renameLayerInSourceLf(source: string, oldName: string, newName: string): string {
   const p = parseFull(source)
   const l = p.layers.find(x => x.name === oldName)
   if (!l) return source
@@ -384,6 +401,10 @@ export function renameLayerInSource(source: string, oldName: string, newName: st
 
 /** Remove a layer node entirely (with its trailing `;`). */
 export function deleteLayerFromSource(source: string, name: string): string {
+  return keepEol(source, lf => deleteLayerFromSourceLf(lf, name))
+}
+
+function deleteLayerFromSourceLf(source: string, name: string): string {
   const p = parseFull(source)
   const l = p.layers.find(x => x.name === name)
   if (!l) return source

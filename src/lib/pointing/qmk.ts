@@ -4,6 +4,7 @@
  * formatting: an existing line is rewritten in place, a missing one is
  * appended, a cleared flag is removed.
  */
+import { keepEol, toLf } from '../lineEndings'
 
 export const QMK_DRIVERS = ['pmw3360', 'pmw3389', 'pmw3320', 'adns5050', 'adns9800', 'analog_joystick', 'azoteq_iqs5xx', 'cirque_pinnacle_i2c', 'cirque_pinnacle_spi', 'paw3204', 'pimoroni_trackball', 'custom'] as const
 export type QmkDriver = typeof QMK_DRIVERS[number]
@@ -25,11 +26,15 @@ const CPI_DEFINES = ['PMW33XX_CPI', 'PMW3360_CPI', 'PMW3389_CPI', 'ADNS9800_CPI'
 // ── rules.mk ─────────────────────────────────────────────────────────────────
 
 function mkVar(text: string, name: string): string | null {
-  const m = new RegExp(`^[ \\t]*${name}[ \\t]*[:?+]?=[ \\t]*(.*?)[ \\t]*$`, 'm').exec(text)
+  const m = new RegExp(`^[ \\t]*${name}[ \\t]*[:?+]?=[ \\t]*(.*?)[ \\t]*$`, 'm').exec(toLf(text))
   return m ? m[1].replace(/#.*$/, '').trim() : null
 }
 
-export function setMkVar(text: string, name: string, value: string | null): string {
+export function setMkVar(input: string, name: string, value: string | null): string {
+  return keepEol(input, lf => setMkVarLf(lf, name, value))
+}
+
+function setMkVarLf(text: string, name: string, value: string | null): string {
   const re = new RegExp(`^[ \\t]*${name}[ \\t]*[:?+]?=.*(?:\\r?\\n|$)`, 'm')
   if (value === null) return text.replace(re, '')
   if (re.test(text)) return text.replace(re, (line) => `${name} = ${value}${line.endsWith('\n') ? '\n' : ''}`)
@@ -40,15 +45,19 @@ export function setMkVar(text: string, name: string, value: string | null): stri
 // ── config.h ─────────────────────────────────────────────────────────────────
 
 function hasDefine(text: string, name: string): boolean {
-  return new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${name}\\b`, 'm').test(text)
+  return new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${name}\\b`, 'm').test(toLf(text))
 }
 function defineValue(text: string, name: string): string | null {
-  const m = new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${name}[ \\t]+([^\\s/]+)`, 'm').exec(text)
+  const m = new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${name}[ \\t]+([^\\s/]+)`, 'm').exec(toLf(text))
   return m ? m[1] : null
 }
 
 /** Set (`value` = '' for a bare define), replace, or remove (`null`) a #define. Appended before a trailing #endif when the header uses include guards. */
-export function setDefine(text: string, name: string, value: string | null): string {
+export function setDefine(input: string, name: string, value: string | null): string {
+  return keepEol(input, lf => setDefineLf(lf, name, value))
+}
+
+function setDefineLf(text: string, name: string, value: string | null): string {
   const re = new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${name}\\b.*(?:\\r?\\n|$)`, 'm')
   if (value === null) return text.replace(re, '')
   const line = value === '' ? `#define ${name}` : `#define ${name} ${value}`
@@ -89,7 +98,7 @@ export function applyQmkPointing(rules: string, config: string, before: QmkPoint
   if (after.rotation !== before.rotation) {
     // rewrite an existing rotation define in place (keeps its position), else append / remove
     const existing = /^[ \t]*#[ \t]*define[ \t]+POINTING_DEVICE_ROTATION_(90|180|270)\b.*(?:\r?\n|$)/m
-    if (existing.test(c) && after.rotation !== 0) c = c.replace(existing, (old) => `#define POINTING_DEVICE_ROTATION_${after.rotation}${old.endsWith('\n') ? '\n' : ''}`)
+    if (existing.test(c) && after.rotation !== 0) c = keepEol(c, lf => lf.replace(existing, (old) => `#define POINTING_DEVICE_ROTATION_${after.rotation}${old.endsWith('\n') ? '\n' : ''}`))
     else for (const deg of [90, 180, 270]) c = setDefine(c, `POINTING_DEVICE_ROTATION_${deg}`, after.rotation === deg ? '' : null)
   }
   if (after.invertX !== before.invertX) c = setDefine(c, 'POINTING_DEVICE_INVERT_X', after.invertX ? '' : null)

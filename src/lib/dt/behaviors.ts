@@ -7,6 +7,7 @@
  * text (e.g. `<200>`, `"balanced"`, `<&kp A>, <&kp B>`, or empty for flags)
  * so any property the editor does not understand survives untouched.
  */
+import { keepEol, toLf } from '../lineEndings'
 import { namedChildren, parseDevicetree, type SyntaxNode } from './runtime'
 
 export interface DtProp {
@@ -89,7 +90,8 @@ function indentBefore(source: string, index: number): string {
   return (/^[ \t]*/.exec(source.slice(lineStart, index)) ?? [''])[0]
 }
 
-export function parseBehaviors(source: string): BehaviorsDoc {
+export function parseBehaviors(input: string): BehaviorsDoc {
+  const source = toLf(input)
   const tree = parseDevicetree(source)
   const root = tree.rootNode
   const out: ZmkBehavior[] = []
@@ -141,6 +143,10 @@ function apply(source: string, edits: Edit[]): string {
 
 /** Set (or add) a property on a behavior. `value` is raw devicetree text; '' makes a flag. `null` removes it. */
 export function setBehaviorProp(source: string, label: string, name: string, value: string | null): string {
+  return keepEol(source, lf => setBehaviorPropLf(lf, label, name, value))
+}
+
+function setBehaviorPropLf(source: string, label: string, name: string, value: string | null): string {
   const doc = parseBehaviors(source)
   const b = doc.behaviors.find(x => x.label === label)
   if (!b) return source
@@ -171,6 +177,10 @@ export function setBehaviorProp(source: string, label: string, name: string, val
 
 /** Remove a behavior node (with trailing `;`). */
 export function removeBehavior(source: string, label: string): string {
+  return keepEol(source, lf => removeBehaviorLf(lf, label))
+}
+
+function removeBehaviorLf(source: string, label: string): string {
   const doc = parseBehaviors(source)
   const b = doc.behaviors.find(x => x.label === label)
   if (!b) return source
@@ -200,6 +210,10 @@ export interface NewBehavior {
 
 /** Add a behavior node. Creates the `behaviors { }` / `macros { }` section under the root node when missing. */
 export function addBehavior(source: string, nb: NewBehavior): string {
+  return keepEol(source, lf => addBehaviorLf(lf, nb))
+}
+
+function addBehaviorLf(source: string, nb: NewBehavior): string {
   const doc = parseBehaviors(source)
   const section = nb.section ?? (nb.compatible === 'zmk,behavior-macro' ? 'macros' : 'behaviors')
   if (doc.behaviors.some(b => b.label === nb.label)) throw new Error(`a behavior labelled "${nb.label}" already exists`)

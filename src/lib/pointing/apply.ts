@@ -4,6 +4,7 @@
  * wizard reads the three files, calls `planAdd`/`planRemove`, shows the diffs,
  * and writes the results through lib/io.
  */
+import { keepEol, toLf } from '../lineEndings'
 import { MARK, renderConf, renderOverlay, type PointingTemplate } from './templates'
 
 export interface FileChange {
@@ -23,10 +24,14 @@ export interface Plan {
 // ── west.yml (text-level YAML edit, keeps the user's formatting) ─────────────
 
 export function westHasProject(west: string, project: string): boolean {
-  return new RegExp(`^\\s*-\\s*name:\\s*${project.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(#.*)?$`, 'm').test(west)
+  return new RegExp(`^\\s*-\\s*name:\\s*${project.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*(#.*)?$`, 'm').test(toLf(west))
 }
 
 export function westAddModule(west: string, remoteName: string, urlBase: string, project: string, revision: string, id: string): string {
+  return keepEol(west, lf => westAddModuleLf(lf, remoteName, urlBase, project, revision, id))
+}
+
+function westAddModuleLf(west: string, remoteName: string, urlBase: string, project: string, revision: string, id: string): string {
   if (westHasProject(west, project)) return west
   let out = west
   const hasRemote = new RegExp(`^\\s*-\\s*name:\\s*${remoteName}\\s*$`, 'm').test(out)
@@ -58,6 +63,10 @@ export function westAddModule(west: string, remoteName: string, urlBase: string,
 }
 
 export function westRemoveModule(west: string, id: string): string {
+  return keepEol(west, lf => westRemoveModuleLf(lf, id))
+}
+
+function westRemoveModuleLf(west: string, id: string): string {
   // remove any list item whose first line carries our marker, plus its indented continuation lines
   const lines = west.split('\n')
   const out: string[] = []
@@ -105,8 +114,8 @@ export interface RepoFiles {
 
 export function planAdd(t: PointingTemplate, values: Record<string, string>, id: string, files: RepoFiles): Plan {
   if (hasMarkedBlock(files.overlay, id)) throw new Error(`the overlay already contains a "${id}" block`)
-  const overlayAfter = files.overlay.replace(/\s*$/, '\n') + renderOverlay(t, values, id)
-  const confAfter = files.conf.replace(/\s*$/, files.conf.trim() ? '\n' : '') + renderConf(t, id)
+  const overlayAfter = keepEol(files.overlay, lf => lf.replace(/\s*$/, '\n') + renderOverlay(t, values, id))
+  const confAfter = keepEol(files.conf, lf => lf.replace(/\s*$/, lf.trim() ? '\n' : '') + renderConf(t, id))
   let west: FileChange | null = null
   if (t.west) {
     if (!files.west || !files.westPath) throw new Error('this driver needs a west.yml module but no config/west.yml was found')
@@ -121,8 +130,8 @@ export function planAdd(t: PointingTemplate, values: Record<string, string>, id:
 }
 
 export function planRemove(id: string, files: RepoFiles): Plan {
-  const overlayAfter = stripBlock(files.overlay, MARK(id, 'begin'), MARK(id, 'end'))
-  const confAfter = stripBlock(files.conf, MARK(id, 'begin').replace('//', '#'), MARK(id, 'end').replace('//', '#'))
+  const overlayAfter = keepEol(files.overlay, lf => stripBlock(lf, MARK(id, 'begin'), MARK(id, 'end')))
+  const confAfter = keepEol(files.conf, lf => stripBlock(lf, MARK(id, 'begin').replace('//', '#'), MARK(id, 'end').replace('//', '#')))
   let west: FileChange | null = null
   if (files.west && files.westPath) {
     const after = westRemoveModule(files.west, id)
@@ -138,7 +147,7 @@ export function planRemove(id: string, files: RepoFiles): Plan {
 // ── tiny unified diff for the preview ───────────────────────────────────────
 
 export function unifiedDiff(a: string, b: string, name: string): string {
-  const al = a.split('\n'), bl = b.split('\n')
+  const al = toLf(a).split('\n'), bl = toLf(b).split('\n')
   // LCS-based diff (files are small)
   const n = al.length, m = bl.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))

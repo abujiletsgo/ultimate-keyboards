@@ -11,6 +11,8 @@
  * would make a setting look applied while it does nothing.
  */
 
+import { keepEol, toLf } from './lineEndings'
+
 export const SLEEP_KEY = 'CONFIG_ZMK_SLEEP'
 export const TIMEOUT_KEY = 'CONFIG_ZMK_IDLE_SLEEP_TIMEOUT'
 /** ZMK's default for CONFIG_ZMK_IDLE_SLEEP_TIMEOUT (app/Kconfig). */
@@ -36,7 +38,8 @@ const assignRe = (key: string) => new RegExp(`^[ \\t]*${esc(key)}[ \\t]*=[ \\t]*
 const notSetRe = (key: string) => new RegExp(`^[ \\t]*#[ \\t]*${esc(key)} is not set[ \\t]*$`, 'gm')
 
 /** Last value assigned to `key` in a Kconfig fragment (`# KEY is not set` reads as `n`), or null. */
-export function readKey(text: string, key: string): string | null {
+export function readKey(input: string, key: string): string | null {
+  const text = toLf(input)
   let best: { at: number; value: string } | null = null
   for (const m of text.matchAll(assignRe(key))) if (!best || m.index! >= best.at) best = { at: m.index!, value: m[1] }
   for (const m of text.matchAll(notSetRe(key))) if (!best || m.index! >= best.at) best = { at: m.index!, value: 'n' }
@@ -67,6 +70,10 @@ export function sameSleep(a: Sleep, b: Sleep): boolean {
 
 /** Replace every assignment of `key` (and `# key is not set`) with `key=value`, or append one. */
 export function setKey(text: string, key: string, value: string, comment?: string): string {
+  return keepEol(text, lf => setKeyLf(lf, key, value, comment))
+}
+
+function setKeyLf(text: string, key: string, value: string, comment?: string): string {
   const line = `${key}=${value}`
   let hit = false
   const out = text
