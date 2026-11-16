@@ -3,32 +3,21 @@
 //! one initial commit + push of the files the app writes (build.yaml, keymap,
 //! west.yml pin). Nothing else in the app pushes.
 
+use crate::build::{find_gh as find_installed_gh, git};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::{Duration, Instant};
 
 const TEMPLATE: &str = "zmkfirmware/unified-zmk-config-template";
 
 fn find_gh() -> Result<PathBuf, String> {
-    ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| p.exists())
-        .ok_or_else(|| "GitHub CLI (gh) is not installed. Install it with `brew install gh`, run `gh auth login`, then try again.".to_string())
+    find_installed_gh().ok_or_else(|| {
+        let how = if cfg!(windows) { "`winget install GitHub.cli`" } else { "`brew install gh`" };
+        format!("GitHub CLI (gh) is not installed. Install it with {how}, run `gh auth login`, then try again.")
+    })
 }
 
 fn run(bin: &Path, args: &[&str], cwd: Option<&Path>) -> Result<String, String> {
-    let mut cmd = Command::new(bin);
-    cmd.args(args);
-    if let Some(d) = cwd {
-        cmd.current_dir(d);
-    }
-    let out = cmd.output().map_err(|e| format!("{}: {e}", bin.display()))?;
-    if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
-    } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
-    }
+    crate::build::run(bin, args, cwd).map(|s| s.trim().to_string())
 }
 
 /// GitHub repo names: letters, digits, `-`, `_`, `.`; 1–100 chars; not `.`/`..`.
@@ -42,7 +31,8 @@ pub fn valid_repo_name(name: &str) -> bool {
 }
 
 fn documents_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME").ok_or("HOME is not set")?;
+    let var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    let home = std::env::var_os(var).ok_or(format!("{var} is not set"))?;
     Ok(PathBuf::from(home).join("Documents"))
 }
 
@@ -131,7 +121,8 @@ pub fn push_initial_config(repo: String, message: String) -> Result<(), String> 
     if !canon.starts_with(docs.canonicalize().map_err(|e| e.to_string())?) || !canon.join(".git").exists() {
         return Err("only a config repo in ~/Documents can be pushed".into());
     }
-    let git = Path::new("/usr/bin/git");
+    let git = git();
+    let git = git.as_path();
     let origin = run(git, &["remote", "get-url", "origin"], Some(&canon))?;
     if !origin.contains("github.com") {
         return Err("the repo has no GitHub origin".into());
@@ -158,6 +149,15 @@ mod tests {
         assert!(!valid_repo_name("-x"));
         assert!(!valid_repo_name("a/b"));
         assert!(!valid_repo_name("a b"));
+    }
+
+    /// The pin edits the ref only: a CRLF workflow file keeps every CRLF.
+    #[test]
+    fn workflow_pin_keeps_line_endings() {
+        let t = "jobs:\r\n  build:\r\n    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3\r\n";
+        assert_eq!(super::pin_ref(t), "jobs:\r\n  build:\r\n    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main\r\n");
+        let no_eol = "uses: x/build-user-config.yml@v0.3";
+        assert_eq!(super::pin_ref(no_eol), "uses: x/build-user-config.yml@main");
     }
 
     #[test]

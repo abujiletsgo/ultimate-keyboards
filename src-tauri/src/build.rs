@@ -8,28 +8,90 @@
 //! flash can only ever use the build of the config that is on screen.
 //! No tokens are stored.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-fn git() -> &'static str {
-    "/usr/bin/git"
+/// Keep a console window from flashing up for every `git`/`gh`/`curl` call
+/// from the GUI app on Windows (CREATE_NO_WINDOW). No-op elsewhere.
+pub(crate) fn hide_console(cmd: &mut Command) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    #[cfg(not(windows))]
+    let _ = cmd;
 }
 
-fn find_gh() -> Option<PathBuf> {
-    ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| p.exists())
+/// Places a Windows installer puts `tool`, given an environment lookup:
+/// `(variable, path below it)` pairs, in the order they are tried.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_install_paths(env: &dyn Fn(&str) -> Option<OsString>, tool: &str) -> Vec<PathBuf> {
+    let spots: &[(&str, &str)] = match tool {
+        "gh" => &[
+            ("ProgramFiles", "GitHub CLI\\gh.exe"),
+            ("ProgramFiles(x86)", "GitHub CLI\\gh.exe"),
+            ("LOCALAPPDATA", "Programs\\GitHub CLI\\gh.exe"),
+            ("USERPROFILE", "scoop\\shims\\gh.exe"),
+        ],
+        _ => &[
+            ("ProgramFiles", "Git\\cmd\\git.exe"),
+            ("ProgramFiles(x86)", "Git\\cmd\\git.exe"),
+            ("LOCALAPPDATA", "Programs\\Git\\cmd\\git.exe"),
+            ("USERPROFILE", "scoop\\shims\\git.exe"),
+        ],
+    };
+    spots.iter().filter_map(|(var, rel)| env(var).map(|base| PathBuf::from(base).join(rel))).collect()
 }
 
-fn run(bin: &str, args: &[&str], cwd: Option<&Path>) -> Result<String, String> {
+/// First `<dir>/<exe>` that exists, over the directories of a PATH value.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn find_in_path(exe: &str, path_var: Option<OsString>) -> Option<PathBuf> {
+    std::env::split_paths(&path_var?).map(|d| d.join(exe)).find(|p| p.is_file())
+}
+
+/// `gh` or `git`: the fixed Homebrew/system locations on macOS; on Windows the
+/// PATH, then the installer and scoop locations.
+fn find_tool(tool: &str) -> Option<PathBuf> {
+    if cfg!(windows) {
+        let exe = format!("{tool}.exe");
+        find_in_path(&exe, std::env::var_os("PATH"))
+            .or_else(|| windows_install_paths(&|k| std::env::var_os(k), tool).into_iter().find(|p| p.is_file()))
+    } else {
+        [format!("/opt/homebrew/bin/{tool}"), format!("/usr/local/bin/{tool}"), format!("/usr/bin/{tool}")]
+            .iter()
+            .map(PathBuf::from)
+            .find(|p| p.exists())
+    }
+}
+
+pub(crate) fn git() -> PathBuf {
+    if cfg!(windows) {
+        find_tool("git").unwrap_or_else(|| PathBuf::from("git.exe"))
+    } else {
+        PathBuf::from("/usr/bin/git")
+    }
+}
+
+pub(crate) fn find_gh() -> Option<PathBuf> {
+    find_tool("gh")
+}
+
+/// A repo-relative path as git wants it: `/` separators on every OS.
+fn git_path(rel: &Path) -> String {
+    rel.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/")
+}
+
+pub(crate) fn run(bin: &Path, args: &[&str], cwd: Option<&Path>) -> Result<String, String> {
     let mut cmd = Command::new(bin);
+    hide_console(&mut cmd);
     cmd.args(args);
     if let Some(d) = cwd {
         cmd.current_dir(d);
     }
-    let out = cmd.output().map_err(|e| format!("{bin}: {e}"))?;
+    let out = cmd.output().map_err(|e| format!("{}: {e}", bin.display()))?;
     if out.status.success() {
         Ok(String::from_utf8_lossy(&out.stdout).to_string())
     } else {
@@ -76,29 +138,29 @@ fn repo_rel(repo: &Path, path: &str) -> Result<String, String> {
     if rel.components().any(|c| matches!(c, std::path::Component::ParentDir)) || rel.as_os_str().is_empty() {
         return Err(format!("{path} is outside the repository"));
     }
-    Ok(rel.to_string_lossy().to_string())
+    Ok(git_path(&rel))
 }
 
 #[tauri::command(async)]
 pub fn git_repo_status(repo: String) -> Result<RepoStatus, String> {
     let p = check_repo(&repo)?;
-    let branch = run(git(), &["rev-parse", "--abbrev-ref", "HEAD"], Some(&p))?.trim().to_string();
+    let branch = run(&git(), &["rev-parse", "--abbrev-ref", "HEAD"], Some(&p))?.trim().to_string();
     let (mut ahead, mut behind) = (0u32, 0u32);
-    if let Ok(counts) = run(git(), &["rev-list", "--left-right", "--count", "HEAD...@{upstream}"], Some(&p)) {
+    if let Ok(counts) = run(&git(), &["rev-list", "--left-right", "--count", "HEAD...@{upstream}"], Some(&p)) {
         let mut it = counts.split_whitespace();
         ahead = it.next().and_then(|s| s.parse().ok()).unwrap_or(0);
         behind = it.next().and_then(|s| s.parse().ok()).unwrap_or(0);
     }
-    let changes = run(git(), &["status", "--porcelain"], Some(&p))?
+    let changes = run(&git(), &["status", "--porcelain"], Some(&p))?
         .lines()
         .map(|l| l.to_string())
         .collect();
-    let remote = run(git(), &["remote", "get-url", "origin"], Some(&p)).ok().map(|s| s.trim().to_string());
+    let remote = run(&git(), &["remote", "get-url", "origin"], Some(&p)).ok().map(|s| s.trim().to_string());
     let github = remote.as_ref().and_then(|r| {
         let r = r.trim_end_matches(".git");
         r.split("github.com").nth(1).map(|rest| rest.trim_start_matches([':', '/']).to_string())
     });
-    let head = run(git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string();
+    let head = run(&git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string();
     Ok(RepoStatus { branch, ahead, behind, changes, remote, github, head })
 }
 
@@ -118,35 +180,31 @@ pub fn git_commit_push(repo: String, paths: Vec<String>, message: String) -> Res
     if !rels.is_empty() {
         let mut add = vec!["add", "--"];
         add.extend(rels.iter().map(|s| s.as_str()));
-        run(git(), &add, Some(&p))?;
+        run(&git(), &add, Some(&p))?;
         let mut diff = vec!["diff", "--cached", "--quiet", "--"];
         diff.extend(rels.iter().map(|s| s.as_str()));
-        if run(git(), &diff, Some(&p)).is_err() {
+        if run(&git(), &diff, Some(&p)).is_err() {
             let msg = if message.trim().is_empty() { "Update keymap" } else { message.trim() };
             let mut commit = vec!["commit", "-m", msg, "--"];
             commit.extend(rels.iter().map(|s| s.as_str()));
-            run(git(), &commit, Some(&p))?;
+            run(&git(), &commit, Some(&p))?;
         }
     }
-    let ahead = run(git(), &["rev-list", "--count", "@{upstream}..HEAD"], Some(&p))
+    let ahead = run(&git(), &["rev-list", "--count", "@{upstream}..HEAD"], Some(&p))
         .map(|s| s.trim().parse::<u32>().unwrap_or(0))
         .map_err(|e| format!("branch has no upstream to push to: {e}"))?;
     if ahead > 0 {
-        run(git(), &["push"], Some(&p)).map_err(|e| format!("push failed: {e}"))?;
+        run(&git(), &["push"], Some(&p)).map_err(|e| format!("push failed: {e}"))?;
     }
-    Ok(run(git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string())
+    Ok(run(&git(), &["rev-parse", "HEAD"], Some(&p))?.trim().to_string())
 }
 
 /// Unified diff of one file inside the repo (working tree vs HEAD).
 #[tauri::command(async)]
 pub fn git_diff_file(repo: String, path: String) -> Result<String, String> {
     let p = check_repo(&repo)?;
-    let rel = Path::new(&path)
-        .strip_prefix(&p)
-        .map_err(|_| "file is outside the repository".to_string())?
-        .to_string_lossy()
-        .to_string();
-    run(git(), &["diff", "--no-color", "--", &rel], Some(&p))
+    let rel = git_path(Path::new(&path).strip_prefix(&p).map_err(|_| "file is outside the repository".to_string())?);
+    run(&git(), &["diff", "--no-color", "--", &rel], Some(&p))
 }
 
 #[derive(serde::Serialize)]
@@ -159,9 +217,11 @@ pub struct GhInfo {
 #[tauri::command(async)]
 pub fn gh_info() -> GhInfo {
     let Some(gh) = find_gh() else {
-        return GhInfo { available: false, logged_in: false, detail: "gh CLI not found (brew install gh)".into() };
+        return GhInfo { available: false, logged_in: false, detail: "gh CLI not found (macOS: brew install gh; Windows: winget install GitHub.cli)".into() };
     };
-    match Command::new(&gh).args(["auth", "status"]).output() {
+    let mut cmd = Command::new(&gh);
+    hide_console(&mut cmd);
+    match cmd.args(["auth", "status"]).output() {
         Ok(o) => {
             let text = format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
             GhInfo { available: true, logged_in: o.status.success(), detail: text.lines().take(3).collect::<Vec<_>>().join(" ") }
@@ -186,7 +246,7 @@ pub fn gh_run_list(repo: String, branch: String, limit: u32, commit: Option<Stri
         }
         args.extend(["--commit", c]);
     }
-    run(gh.to_str().unwrap(), &args, Some(&p))
+    run(&gh, &args, Some(&p))
 }
 
 /// Download every artifact of a run into `<repo>/firmware/<sha>/` and list the uf2 files found.
@@ -202,7 +262,7 @@ pub fn gh_run_download(repo: String, run_id: u64, sha: String) -> Result<Vec<Str
     std::fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
     let tmp = std::env::temp_dir().join(format!("uk-artifacts-{run_id}"));
     let _ = std::fs::remove_dir_all(&tmp);
-    run(gh.to_str().unwrap(), &["run", "download", &run_id.to_string(), "-D", tmp.to_str().unwrap()], Some(&p))?;
+    run(&gh, &["run", "download", &run_id.to_string(), "-D", tmp.to_str().unwrap()], Some(&p))?;
     let mut found = Vec::new();
     fn walk(dir: &Path, dest: &Path, found: &mut Vec<String>) {
         if let Ok(rd) = std::fs::read_dir(dir) {
@@ -269,9 +329,13 @@ pub fn flash_uf2(path: String, timeout_secs: u64) -> Result<String, String> {
     let target = volume.join(src.file_name().unwrap());
     // The board reboots as soon as the file lands, which makes the copy report
     // "Device not configured" on macOS even though the write completed.
+    // On Windows the same reboot cuts the drive mid-copy with a different
+    // error each time (not ready, I/O device error, ...): if the drive is gone
+    // by the time the copy reports, the board took the file and restarted.
     match std::fs::copy(&src, &target) {
         Ok(_) => {}
-        Err(e) if e.raw_os_error() == Some(6) => {}
+        Err(e) if cfg!(unix) && e.raw_os_error() == Some(6) => {}
+        Err(_) if cfg!(windows) && !volume.exists() => {}
         Err(e) => return Err(format!("copy failed: {e}")),
     }
     // Wait for the volume to disappear = the board rebooted into the new firmware.
@@ -282,11 +346,30 @@ pub fn flash_uf2(path: String, timeout_secs: u64) -> Result<String, String> {
     Ok(format!("{} → {}{}", src.file_name().unwrap().to_string_lossy(), volume.display(), if volume.exists() { " (volume still mounted)" } else { " (board rebooted)" }))
 }
 
+/// Every UF2 bootloader exposes `INFO_UF2.TXT` at the root of its volume.
+const UF2_MARKER: &str = "INFO_UF2.TXT";
+
+/// Drive roots a UF2 bootloader can mount on Windows: `D:\` to `Z:\`. A: and B:
+/// are legacy floppies and C: is the system drive.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_drive_roots() -> Vec<PathBuf> {
+    ('D'..='Z').map(|letter| PathBuf::from(format!("{letter}:\\"))).collect()
+}
+
+/// The first of `roots` whose top level holds the UF2 marker, judged by `exists`.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn find_uf2_drive(roots: &[PathBuf], exists: impl Fn(&Path) -> bool) -> Option<PathBuf> {
+    roots.iter().find(|root| exists(&root.join(UF2_MARKER))).cloned()
+}
+
 fn find_uf2_volume() -> Option<PathBuf> {
+    if cfg!(windows) {
+        return find_uf2_drive(&windows_drive_roots(), |p| p.exists());
+    }
     let vols = std::fs::read_dir("/Volumes").ok()?;
     for e in vols.flatten() {
         let p = e.path();
-        if p.join("INFO_UF2.TXT").exists() {
+        if p.join(UF2_MARKER).exists() {
             return Some(p);
         }
     }
@@ -305,6 +388,69 @@ mod tests {
         assert!(repo_rel(repo, "/r/other/a.keymap").is_err());
         assert!(repo_rel(repo, "../x").is_err());
         assert!(repo_rel(repo, "config/../../x").is_err());
+    }
+
+    #[test]
+    fn git_paths_use_forward_slashes() {
+        assert_eq!(git_path(Path::new("config").join("a.keymap").as_path()), "config/a.keymap");
+        assert_eq!(git_path(Path::new("a.keymap")), "a.keymap");
+    }
+
+    #[test]
+    fn uf2_drive_found_by_drive_letter() {
+        let roots = windows_drive_roots();
+        assert_eq!(roots.first().unwrap(), &PathBuf::from("D:\\"));
+        assert_eq!(roots.last().unwrap(), &PathBuf::from("Z:\\"));
+        assert_eq!(roots.len(), 23, "D: to Z: only; no floppies and no system drive");
+        // Only E:\ carries the bootloader marker.
+        let marker = PathBuf::from("E:\\").join("INFO_UF2.TXT");
+        assert_eq!(find_uf2_drive(&roots, |p| p == marker), Some(PathBuf::from("E:\\")));
+        // A drive with other files, or no drives with the marker: nothing to flash onto.
+        let other = PathBuf::from("F:\\").join("notes.txt");
+        assert_eq!(find_uf2_drive(&roots, |p| p == other), None);
+        assert_eq!(find_uf2_drive(&roots, |_| false), None);
+        // Two bootloaders (both halves in reset): the lower letter wins, deterministically.
+        let (g, h) = (PathBuf::from("G:\\").join("INFO_UF2.TXT"), PathBuf::from("H:\\").join("INFO_UF2.TXT"));
+        assert_eq!(find_uf2_drive(&roots, |p| p == g || p == h), Some(PathBuf::from("G:\\")));
+    }
+
+    #[test]
+    fn uf2_drive_real_directory_marker() {
+        let dir = std::env::temp_dir().join(format!("uk-uf2-drive-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let roots = vec![dir.clone()];
+        assert_eq!(find_uf2_drive(&roots, |p| p.exists()), None);
+        std::fs::write(dir.join("INFO_UF2.TXT"), "UF2 Bootloader").unwrap();
+        assert_eq!(find_uf2_drive(&roots, |p| p.exists()), Some(dir.clone()));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn windows_tools_found_in_install_locations() {
+        let env = |k: &str| match k {
+            "ProgramFiles" => Some(OsString::from("C:\\Program Files")),
+            "LOCALAPPDATA" => Some(OsString::from("C:\\Users\\u\\AppData\\Local")),
+            _ => None,
+        };
+        let gh = windows_install_paths(&env, "gh");
+        assert_eq!(gh.len(), 2, "unset variables are skipped");
+        assert!(gh[0].ends_with("GitHub CLI\\gh.exe") || gh[0].to_string_lossy().ends_with("GitHub CLI\\gh.exe"));
+        let git = windows_install_paths(&env, "git");
+        assert!(git[0].to_string_lossy().ends_with("Git\\cmd\\git.exe"));
+    }
+
+    #[test]
+    fn path_lookup_finds_executable() {
+        let dir = std::env::temp_dir().join(format!("uk-path-lookup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("gh.exe"), "").unwrap();
+        let path = std::env::join_paths([Path::new("/nonexistent-uk"), dir.as_path()]).unwrap();
+        assert_eq!(find_in_path("gh.exe", Some(path.clone())), Some(dir.join("gh.exe")));
+        assert_eq!(find_in_path("git.exe", Some(path)), None);
+        assert_eq!(find_in_path("gh.exe", None), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -343,9 +489,9 @@ mod tests {
         let keymap = work.join("a.keymap").to_string_lossy().to_string();
         let sha = git_commit_push(repo.clone(), vec![keymap.clone()], "Update keymap".into()).unwrap();
         assert!(is_sha(&sha));
-        let remote_head = run(git(), &["rev-parse", "main"], Some(&remote)).unwrap();
+        let remote_head = run(&git(), &["rev-parse", "main"], Some(&remote)).unwrap();
         assert_eq!(remote_head.trim(), sha);
-        let status = run(git(), &["status", "--porcelain"], Some(&work)).unwrap();
+        let status = run(&git(), &["status", "--porcelain"], Some(&work)).unwrap();
         assert_eq!(status.trim(), "M notes.md");
         // Nothing changed: no new commit, same sha.
         assert_eq!(git_commit_push(repo, vec![keymap], "again".into()).unwrap(), sha);

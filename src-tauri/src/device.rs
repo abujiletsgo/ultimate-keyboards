@@ -102,19 +102,29 @@ impl<T> Registry<T> {
 // ── Path validation ─────────────────────────────────────────────────────────
 
 /// A serial path is accepted only if it is a macOS call-out device
-/// (`/dev/cu.*`), has no traversal or odd characters, and is one of the ports
-/// `serialport::available_ports()` reports right now.
+/// (`/dev/cu.*`) or a Windows COM port (`COM3`), has no traversal or odd
+/// characters, and is one of the ports `serialport::available_ports()` reports
+/// right now.
 pub fn validate_serial_path(path: &str, known: &[String]) -> Result<(), String> {
-    if !path.starts_with("/dev/cu.") {
-        return Err("serial path must start with /dev/cu.".into());
-    }
-    if path.contains("..") || path[5..].contains('/') || path.chars().any(|c| c.is_whitespace() || c.is_control()) {
+    if is_com_port(path) {
+        // fall through to the connected-port check
+    } else if !path.starts_with("/dev/cu.") {
+        return Err("serial path must start with /dev/cu. or be a COM port".into());
+    } else if path.contains("..") || path[5..].contains('/') || path.chars().any(|c| c.is_whitespace() || c.is_control()) {
         return Err("invalid serial path".into());
     }
     if !known.iter().any(|k| k == path) {
         return Err(format!("{path} is not a connected serial port"));
     }
     Ok(())
+}
+
+/// `COM1`..`COM999`: the names Windows gives USB serial ports.
+fn is_com_port(path: &str) -> bool {
+    match path.strip_prefix("COM") {
+        Some(n) => !n.is_empty() && n.len() <= 3 && !n.starts_with('0') && n.bytes().all(|b| b.is_ascii_digit()),
+        None => false,
+    }
 }
 
 /// One enumerated HID interface: (path, usage_page, usage).
@@ -580,12 +590,25 @@ pub fn validate_fetch_url(url: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Fetch a small JSON document from an allow-listed host (via /usr/bin/curl,
+/// The system curl: /usr/bin/curl on macOS, the curl.exe Windows ships in
+/// System32 (Windows 10 1803 and later, x64 and ARM64).
+fn curl_bin() -> std::path::PathBuf {
+    if cfg!(windows) {
+        let root = std::env::var_os("SystemRoot").or_else(|| std::env::var_os("windir")).unwrap_or_else(|| "C:\\Windows".into());
+        std::path::PathBuf::from(root).join("System32").join("curl.exe")
+    } else {
+        std::path::PathBuf::from("/usr/bin/curl")
+    }
+}
+
+/// Fetch a small JSON document from an allow-listed host (via the system curl,
 /// https only, 20 s, 16 MB). Returns the body; HTTP errors → Err("HTTP 404").
 #[tauri::command(async)]
 pub fn fetch_device_metadata(url: String) -> Result<String, String> {
     validate_fetch_url(&url)?;
-    let out = std::process::Command::new("/usr/bin/curl")
+    let mut cmd = std::process::Command::new(curl_bin());
+    crate::build::hide_console(&mut cmd);
+    let out = cmd
         .args([
             "--silent",
             "--show-error",
@@ -670,6 +693,18 @@ mod tests {
         assert!(validate_serial_path("/dev/cu.x/y", &["/dev/cu.x/y".into()]).is_err());
         assert!(validate_serial_path("/etc/passwd", &known).is_err());
         assert!(validate_serial_path("/dev/cu.usb modem", &["/dev/cu.usb modem".into()]).is_err());
+    }
+
+    #[test]
+    fn windows_com_ports_are_serial_paths() {
+        let known = vec!["COM3".to_string(), "COM10".to_string(), "COM0".to_string(), "COMX".to_string(), "COM1234".to_string()];
+        assert!(validate_serial_path("COM3", &known).is_ok());
+        assert!(validate_serial_path("COM10", &known).is_ok());
+        assert!(validate_serial_path("COM4", &known).is_err(), "not connected");
+        assert!(validate_serial_path("COM0", &known).is_err());
+        assert!(validate_serial_path("COMX", &known).is_err());
+        assert!(validate_serial_path("COM1234", &known).is_err());
+        assert!(validate_serial_path("\\\\.\\COM3", &["\\\\.\\COM3".into()]).is_err());
     }
 
     #[test]
