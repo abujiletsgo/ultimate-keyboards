@@ -1,0 +1,10 @@
+# KE-74: MOD_OPTIONS (const) became modOptions() in the same file; same entries, labels follow the host OS (Mac glyphs unchanged).
+B-1: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+B-2: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+B-3: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+B-4: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+B-5: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+B-6: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+FRAME-CHECK: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+FRAME-FIRST: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
+FRAME-TIME: {kept: "src/components/KarabinerEditor/HomerowModEditor.tsx:modOptions + bun test 549 pass, tsc clean on d6fda3e7ea5d (tests/platform.test.ts covers Mac labels unchanged)"}
