@@ -47,7 +47,7 @@ export function nativeBindingError(binding: NativeBinding, code: string, layer: 
   if (['key', 'lt', 'mt'].includes(binding.behavior) && !NATIVE_KEYS.includes(binding.key)) return `Unsupported native key: ${binding.key}. Choose a supported key.`
   if (binding.behavior === 'key' && binding.modifiers.some(mod => !NATIVE_MODIFIERS.includes(mod))) return 'This binding contains an unsupported output modifier.'
   if (['mo', 'lt'].includes(binding.behavior) && (!binding.layer.trim() || new TextEncoder().encode(binding.layer).length > 64)) return 'Choose a layer with a name of at most 64 bytes.'
-  if (binding.behavior === 'mt' && !NATIVE_MODIFIERS.includes(binding.modifier)) return 'Choose a supported hold modifier.'
+  if (binding.behavior === 'mt' && !NATIVE_MODIFIERS.includes(binding.modifier) && binding.modifier !== 'hyper') return 'Choose a supported hold modifier.'
   if (binding.behavior === 'lt' && !['balanced', 'hold_preferred', 'tap_preferred'].includes(binding.holdBehavior)) return 'Choose a supported layer timing.'
   return null
 }

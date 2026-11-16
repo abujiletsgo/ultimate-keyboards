@@ -40,7 +40,7 @@ function WindowsSetupSteps() {
     </p>
     <ol className="win-steps" style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
       <li>Choose <strong>Start keyboard service</strong>. It also starts by itself each time you sign in.</li>
-      <li>Set your rules in Keymap, Homerow mods and Combos.</li>
+      <li>Pick what your keys do on the Keys tab.</li>
       <li>Choose <strong>Apply and enable</strong>. <strong>Stop remapping</strong> puts your keyboard back to normal right away.</li>
     </ol>
     <p style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--text-secondary)' }}>

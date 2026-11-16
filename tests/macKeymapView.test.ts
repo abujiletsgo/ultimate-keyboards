@@ -19,11 +19,11 @@ describe('Mac Keymap configured preview', () => {
   test('layer faces show configured output, physical origin and inherited Base separately', () => {
     const rules: Rule[] = [binding, { type: 'simple', description: 'A to B', fromKey: 'a', toKey: 'b' }]
     expect(macKeyFace(rules, key('h'), 'nav')).toMatchObject({ label: '←', sub: '', kind: 'remap', ruleIndex: 0 })
-    expect(macKeyFace(rules, key('a'), 'nav')).toMatchObject({ label: '···', sub: 'pass', kind: 'fallback', ruleIndex: -1 })
+    expect(macKeyFace(rules, key('a'), 'nav')).toMatchObject({ label: '···', sub: '', kind: 'fallback', ruleIndex: -1 })
     expect(macKeyFace([], key('spacebar'), null)).toMatchObject({ label: 'SPC', kind: 'normal' })
-    expect(macKeyFace([activator], key('spacebar'), null)).toMatchObject({ label: 'SPC', sub: 'hold nav', kind: 'layer-tap' })
+    expect(macKeyFace([activator], key('spacebar'), null)).toMatchObject({ label: 'SPC', sub: 'nav', kind: 'layer' })
   })
-  test('earlier unconditional Base rules flag a configured layer binding; preview never reorders to hide conflict', () => {
+  test('a layer binding shows its own output whatever Base rules come first (the order never matters)', () => {
     for (const base of [
       { type: 'simple', description: 'H to J', fromKey: 'h', toKey: 'j' },
       { type: 'homerow_mod', description: 'H control', fromKey: 'h', tapKey: 'h', modKey: 'left_control' },
@@ -31,19 +31,22 @@ describe('Mac Keymap configured preview', () => {
     ] as Rule[]) {
       const rules = [base, binding]
       const before = structuredClone(rules)
-      expect(macKeyFace(rules, key('h'), 'nav')).toMatchObject({ label: '←', kind: 'conflict', shadowedBy: 0, ruleIndex: 1 })
-      expect(macKeyFace([binding, base], key('h'), 'nav').shadowedBy).toBeUndefined()
+      expect(macKeyFace(rules, key('h'), 'nav')).toMatchObject({ label: '←', kind: 'remap', ruleIndex: 1 })
+      expect(macKeyFace([binding, base], key('h'), 'nav')).toMatchObject({ label: '←', kind: 'remap', ruleIndex: 0 })
       expect(rules).toEqual(before)
     }
   })
-  test('modifier and combo conditions are disclosed without claiming unconditional runtime output', () => {
+  test('key face: tap is the big label, hold the small one, and a combo adds the ring flag', () => {
     const rules: Rule[] = [
-      { type: 'simple', description: 'Control H', fromKey: 'h', fromModifiers: ['control'], toKey: 'delete_or_backspace' }, binding,
-      { type: 'combo', description: 'HK Escape', fromKeys: ['h', 'k'], toKey: 'escape' },
+      { type: 'homerow_mod', description: 'K control', fromKey: 'k', tapKey: 'k', modKey: 'right_control' },
+      { type: 'combo', description: 'KL Enter', fromKeys: ['k', 'l'], toKey: 'return_or_enter' },
     ]
-    expect(macKeyFace(rules, key('h'), null)).toMatchObject({ label: 'H', conditional: true, ruleIndex: -1 })
-    expect(macKeyFace(rules, key('h'), 'nav')).toMatchObject({ kind: 'remap', conditional: true })
-    expect(macKeyFace(rules, key('h'), 'nav').detail).toContain('configured preview')
+    expect(macKeyFace(rules, key('k'), null)).toMatchObject({ label: 'K', sub: '⌃', kind: 'homerow', combo: true })
+    expect(macKeyFace(rules, key('l'), null)).toMatchObject({ label: 'L', sub: '', kind: 'normal', combo: true })
+    expect(macKeyFace(rules, key('j'), null).combo).toBe(false)
+    expect(macKeyFace(rules, key('k'), null).detail).toBe('K: types K, hold ⌃, in a combo')
+    // Combos are Base-only, and a layer fallback shows nothing extra.
+    expect(macKeyFace(rules, key('l'), 'nav')).toMatchObject({ kind: 'fallback', combo: false })
   })
   test('contextual edit retains first binding global index, additional fields, unrelated rules, and native policy', () => {
     const saved = { ...binding, editorMetadata: { note: 'keep' } }

@@ -20,6 +20,8 @@ export interface KeyVisual {
   label: ReactNode
   /** small line under the label naming the behavior (e.g. "HOLD L1", "MOD-TAP") */
   sub?: string
+  /** Replaces the default accessible name. */
+  ariaLabel?: string
   /** Hover tooltip (usually the raw binding) */
   title?: string
   bg?: string
@@ -28,6 +30,8 @@ export interface KeyVisual {
   /** Role colour for the sub-label and the hover rim (mod-tap orange, layer blue, …) */
   accent?: string
   dashed?: boolean
+  /** A purple ring: the key is part of a combo. */
+  ring?: boolean
   /** Font size override in px */
   fontSize?: number
 }
@@ -137,7 +141,7 @@ export default function PhysicalBoard({ layout, keyAt, selected, editable = true
               '--key-accent': v?.accent,
             } as CSSProperties),
           }
-          const name = k.encoder ? `Encoder ${pos}` : `Key ${pos}: ${v?.title ?? ''}${v?.sub ? ` (${v.sub})` : ''}`
+          const name = k.encoder ? `Encoder ${pos}` : v?.ariaLabel ?? `Key ${pos}: ${v?.title ?? ''}${v?.sub ? ` (${v.sub})` : ''}`
           return (
             <button
               key={pos}
@@ -148,6 +152,7 @@ export default function PhysicalBoard({ layout, keyAt, selected, editable = true
               aria-label={name}
               aria-pressed={selected ? isSelected : undefined}
               title={k.encoder ? 'Encoder' : v?.title}
+              data-ring={v?.ring || undefined}
               className={['keycap', isSelected ? 'selected' : '', (v?.dashed || k.encoder) && !isSelected ? 'dashed' : ''].filter(Boolean).join(' ')}
               onFocus={() => setFocusPos(pos)}
               onKeyDown={e => onKeyDown(e, pos)}

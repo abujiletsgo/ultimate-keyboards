@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { RuleList } from './RuleList'
 import MacbookKeyboard from './MacbookKeyboard'
-import MacComboEditor from './MacComboEditor'
-import HomerowModEditor from './HomerowModEditor'
+import KeyPanel, { type AddingCombo } from './KeyPanel'
+import TypingFeelPanel from './TypingFeelPanel'
 import NativeRemappingPanel, { NativeEmergencyStop } from './NativeRemappingPanel'
 import KeymapActionBar from '@/components/Keyboard/KeymapActionBar'
 import LayerControls from '@/components/Keyboard/LayerControls'
@@ -14,10 +14,12 @@ import Templates from '@/components/Templates'
 import { initialEditorTab } from '@/lib/templates'
 import { LAPTOP_LAYOUT } from '@/lib/macbookLayout'
 import { hostTerms } from '@/lib/platform'
-import { macLayers, validMacLayer, macKeyFace, macUnplacedKeys, macKeyLabel } from '@/lib/macKeymapView'
+import { macLayers, validMacLayer, macUnplacedKeys, macKeyLabel } from '@/lib/macKeymapView'
+import { keyName } from '@/lib/keyActions'
+import { NATIVE_KEYS } from '@/lib/nativeBinding'
 
-type Tab = 'templates' | 'keys' | 'homerow' | 'combos' | 'remapping'
-const TABS: [Tab, string][] = [['templates', 'Templates'], ['keys', 'Keymap'], ['homerow', 'Homerow mods'], ['combos', 'Combos'], ['remapping', 'Remapping']]
+type Tab = 'keys' | 'templates' | 'remapping'
+const TABS: [Tab, string][] = [['keys', 'Keys'], ['templates', 'Templates'], ['remapping', 'Remapping']]
 
 export default function KarabinerEditor() {
   const [tab, setTab] = useState<Tab>(() => initialEditorTab<Tab>('keys'))
@@ -36,14 +38,25 @@ export default function KarabinerEditor() {
   const layer = validMacLayer(rules, selectedLayer, layerNames)
   const layerIndex = layers.findIndex(item => item.name === layer)
   const layerInfo = layers[layerIndex]
-  const conflicts = layer === null ? [] : LAPTOP_LAYOUT.filter(key => macKeyFace(rules, key, layer).shadowedBy !== undefined)
   const unplaced = macUnplacedKeys(rules)
   useEffect(() => { if (selectedLayer !== layer) setSelectedLayer(layer) }, [selectedLayer, layer])
+  // The key whose panel is open, and the add-combo steps ("click the other key").
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [adding, setAdding] = useState<AddingCombo | null>(null)
+  const closePanel = () => { setSelectedKey(null); setAdding(null) }
+  const clickKey = (code: string) => {
+    if (adding && adding.partner === null && selectedKey !== null) {
+      if (code === selectedKey) return
+      setAdding(NATIVE_KEYS.includes(code) ? { partner: code } : { partner: null, error: `${keyName(code)} can’t be part of a combo. Click another key.` })
+      return
+    }
+    setAdding(null); setSelectedKey(code)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div className="section-header" style={{ flexWrap: 'wrap', height: 'auto', minHeight: 52, flexShrink: 0, gap: 10 }}>
-        <span className="section-title" style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>{hostTerms().laptop}<span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-secondary)' }}>Native · US ANSI · {LAPTOP_LAYOUT.length} keys</span></span>
+        <span className="section-title" style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>{hostTerms().laptop}<span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-secondary)' }}>US keyboard · {LAPTOP_LAYOUT.length} keys</span></span>
         <div className="seg-ctrl" role="tablist" aria-label={`${hostTerms().laptopKeys} sections`} style={{ flexWrap: 'wrap' }}>
           {TABS.map(([id, label], index) => (
             <button key={id} id={`mac-keys-tab-${id}`} role="tab" aria-selected={tab === id}
@@ -62,17 +75,32 @@ export default function KarabinerEditor() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'clamp(12px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <KeymapActionBar label={<span className="mono" title={profileTitle} style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profileTitle}</span>}
           dirty={isDirty} canUndo={past.length > 0} canRedo={future.length > 0} onSave={saveLocal} onRevert={revertProfile} onUndo={undo} onRedo={redo}
           extraActions={<span style={{ display: tab === 'remapping' ? 'none' : 'contents' }}><NativeEmergencyStop /></span>} />
         <div id="mac-keys-editor" role="tabpanel" aria-labelledby={`mac-keys-tab-${tab}`} tabIndex={0}
           style={{ display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0, minWidth: 0 }}>
           {tab === 'templates' && <Templates onTurnOn={() => setTab('remapping')} />}
-          {tab === 'remapping' && <NativeRemappingPanel />}
+          {tab === 'remapping' && <>
+            <NativeRemappingPanel />
+            <details className="glass" style={{ flexShrink: 0, overflow: 'hidden' }}>
+              <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 12 }}>Advanced</summary>
+              <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <TypingFeelPanel />
+                <div>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text)' }}>All changes, in order ({rules.length})</h4>
+                  {unplaced.length > 0 && <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--warning)', overflowWrap: 'anywhere' }}>
+                    These keys aren’t on the picture: {unplaced.join(', ')}. Their changes are kept here.
+                  </p>}
+                  <RuleList />
+                </div>
+              </div>
+            </details>
+          </>}
           {tab === 'keys' && <>
             <LayerControls layers={layers.map(item => ({ key: item.name === null ? 'base' : `layer:${item.name}`, name: item.name ?? 'Base' }))}
-              selected={layerIndex} onSelect={index => { setSelectedLayer(layers[index].name); setConfirmDelete(null) }}
+              selected={layerIndex} onSelect={index => { setSelectedLayer(layers[index].name); setConfirmDelete(null); setAdding(null) }}
               label={`${hostTerms().laptop} layers`} idPrefix="mac-layer-tab" panelId="mac-layer-panel" accessibleLayerNames
               canRename={layer !== null} canDelete={layer !== null}
               onAdd={name => { const error = addLayer(name); if (!error) setSelectedLayer(name); return error }}
@@ -80,43 +108,29 @@ export default function KarabinerEditor() {
               onDelete={() => setConfirmDelete(layer)} />
             {confirmDelete !== null && (macLayerActivators(rules, confirmDelete).length > 0
               ? <div className="panel-inset" role="alert" style={{ padding: '10px 14px', fontSize: 12 }}>
-                  Layer "{confirmDelete}" can't be deleted yet. Remove or change its layer keys first: {macLayerActivators(rules, confirmDelete).map(macKeyLabel).join(', ')}.
+                  Layer "{confirmDelete}" can't be deleted yet. Change its layer keys first: {macLayerActivators(rules, confirmDelete).map(macKeyLabel).join(', ')}.
                   <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>Close</button>
                 </div>
-              : <ConfirmBanner danger message={<>Delete layer <strong>{confirmDelete}</strong> and its {rules.filter(rule => rule.type === 'layer_binding' && rule.layerName === confirmDelete).length} bindings? Other rules remain unchanged.</>}
+              : <ConfirmBanner danger message={<>Delete layer <strong>{confirmDelete}</strong> and its {rules.filter(rule => rule.type === 'layer_binding' && rule.layerName === confirmDelete).length} changed keys?</>}
                   confirmLabel="Delete layer" onCancel={() => setConfirmDelete(null)} onConfirm={() => {
                     const error = deleteLayer(confirmDelete)
                     if (error) toast.error(error)
                     else { setSelectedLayer(null); setConfirmDelete(null) }
                   }} />)}
-            <div className="glass anim-fade-up" id="mac-layer-panel" role="tabpanel" aria-labelledby={`mac-layer-tab-${layerIndex}`}
+            <div className="glass" id="mac-layer-panel" role="tabpanel" aria-labelledby={`mac-layer-tab-${layerIndex}`}
               style={{ padding: '12px 16px', minWidth: 0 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', overflowWrap: 'anywhere' }}>
-                Layer {layerIndex}: {layer ?? 'Base'}<span style={{ fontWeight: 400, marginLeft: 8 }}>— click key to edit</span>
-              </div>
-              <MacbookKeyboard key={layer === null ? 'base' : `layer:${layer}`}  rules={rules} selectedLayer={layer} />
-              <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 10, overflowWrap: 'anywhere' }}>
-                {layer === null ? 'Configured Base mappings. Modifier rules and combos can change the result.'
-                  : `${layerInfo.activators.length ? `Layer key: ${layerInfo.activators.map(macKeyLabel).join(', ')}.` : 'No activator configured for this layer.'} Dashed keys inherit Base. Layer selection only previews mappings.`}
-              </p>
-              {conflicts.length > 0 && <p role="note" style={{ fontSize: 11, color: 'var(--warning)', marginTop: 6, lineHeight: 1.5 }}>
-                Rule-order conflict: {conflicts.map(key => macKeyLabel(key.code)).join(', ')}. These configured bindings follow an earlier Base rule; inspect the ordered rules below.
+              <MacbookKeyboard key={layer === null ? 'base' : `layer:${layer}`} rules={rules} selectedLayer={layer} selectedCode={selectedKey}
+                onKeyClick={key => clickKey(key.code)} />
+              {selectedKey === null && <p style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 10, overflowWrap: 'anywhere' }}>
+                {layer === null ? 'Click a key to change it.' : `Click a key to change it. Keys marked ··· use the Base key.${layerInfo.activators.length ? '' : ' To reach this layer, set a key on Base to Hold → Layer.'}`}
               </p>}
-              {rules.length === 0 && <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 12 }}>
-                No mappings yet. Click a key to begin.
-                <button className="btn btn-secondary btn-sm" onClick={() => useKarabinerStore.getState().loadExample()}>Load example profile</button>
+              {rules.length === 0 && <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 12 }}>
+                Nothing changed yet.
+                <button className="btn btn-secondary btn-sm" onClick={() => useKarabinerStore.getState().loadExample()}>Load example</button>
               </div>}
             </div>
-            <details className="glass" style={{ flexShrink: 0, overflow: 'hidden' }}>
-              <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 12 }}>Ordered rules ({rules.length}) · advanced mappings</summary>
-              {unplaced.length > 0 && <p style={{ padding: '0 14px 10px', fontSize: 11, color: 'var(--warning)', overflowWrap: 'anywhere' }}>
-                Keys outside this US ANSI diagram: {unplaced.join(', ')}. Their rules are retained below.
-              </p>}
-              <RuleList />
-            </details>
+            {selectedKey !== null && <KeyPanel key={selectedKey} code={selectedKey} layer={layer} adding={adding} onAdding={setAdding} onClose={closePanel} onTurnOn={() => setTab('remapping')} />}
           </>}
-          {tab === 'homerow' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><HomerowModEditor onTurnOn={() => setTab('remapping')} /></div>}
-          {tab === 'combos' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><MacComboEditor onTurnOn={() => setTab('remapping')} /></div>}
         </div>
       </div>
     </div>

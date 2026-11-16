@@ -1,32 +1,15 @@
-/* A static keyboard is an information display, not an unavailable action. */
-.macbook-keyboard .keycap.mac-key-preview:disabled {
-  opacity: 1;
-  cursor: default;
-  transform: none;
-  color: var(--key-text, #d8d8dc);
-  border-color: var(--key-border, rgba(255, 255, 255, 0.08));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 0 rgba(0, 0, 0, 0.6);
+/* Key face: big label = tap, small label under it = hold. */
+.macbook-keyboard .keycap .key-sub {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-.macbook-keyboard .keycap[data-combo-trigger] {
-  font-weight: 700;
-  border-width: 2px;
-}
-
-.macbook-keyboard .keycap[data-combo-active]:disabled {
-  box-shadow: 0 0 0 1px #101827, 0 0 0 3px #ffffff, var(--shadow-key);
-}
-
-.macbook-keyboard:not(.mac-keymap-board) .keycap.selected {
-  background: #5eead4;
-  color: #101827;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 0 1px #101827, var(--shadow-key);
-}
-
-.macbook-keyboard:not(.mac-keymap-board) .keycap:not(:disabled):hover {
-  color: var(--key-text, #101827);
-  border-color: #f1f5f9;
+/* Purple ring: the key is part of a combo. */
+.macbook-keyboard .keycap[data-ring] {
+  box-shadow: 0 0 0 2px #a48cf5, inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .macbook-keyboard .keycap:focus-visible {
@@ -34,11 +17,16 @@
   outline-offset: 2px;
 }
 
-/* A held-key badge (⌃ ⌥ ⇧ ⌘) under the letter: big enough to read at a glance. */
-.macbook-keyboard .keycap .key-badge {
-  font-size: 13px;
-  line-height: 1;
-  opacity: 1;
-  text-transform: none;
-  color: inherit;
+/* The key whose panel is open: solid and unmistakable, still readable. */
+.macbook-keyboard .keycap.selected {
+  background: #5eead4;
+  color: #101827;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px #101827, 0 0 0 4px #5eead4;
+  animation: none;
+  --key-accent: #101827;
+}
+.macbook-keyboard .keycap.selected .key-sub { color: #101827; }
+.macbook-keyboard .keycap.selected[data-ring] {
+  box-shadow: 0 0 0 2px #101827, 0 0 0 4px #a48cf5;
 }

@@ -1,5 +1,5 @@
 import { MACBOOK_LAYOUT, LAPTOP_LAYOUT, type MacKey } from './macbookLayout'
-import { isWindows, modifierName, modifierPrefix, modifierText, hyperName } from './platform'
+import { modifierName, modifierPrefix, hyperName } from './platform'
 import { nativeShiftedSymbol, isShiftModifier } from './nativeSymbols'
 import { keycodeLabel } from './keyLabel'
 import { macLayerNames } from './macLayerEditing'
@@ -40,51 +40,48 @@ export function macBaseRuleIndex(rules: readonly Rule[], code: string): number {
 }
 /** Held modifiers as a prefix for a key label: `⌃⇧` on a Mac, `Ctrl+Shift+` on Windows. */
 export const macModifierLabel = (mods?: readonly string[]) => modifierPrefix(mods)
-/** Modifiers on their own ("If ⌃⇧", "If Ctrl+Shift"). */
-const macModifierText = (mods?: readonly string[]) => modifierText(mods)
 export function macKeyLabel(code: string): string {
   const aliases: Record<string, string> = { spacebar: 'SPACE', return_or_enter: 'ENTER', delete_or_backspace: 'BSPC', delete_forward: 'DELETE', grave_accent_and_tilde: 'GRAVE', open_bracket: 'LBKT', close_bracket: 'RBKT', quote: 'SQT', period: 'DOT', left_option: 'LALT', right_option: 'RALT' }
   return keycodeLabel(aliases[code] ?? code.toUpperCase())
 }
 export interface MacKeyFace {
-  label: string; sub: string; detail: string
-  kind: 'normal' | 'remap' | 'layer' | 'layer-tap' | 'homerow' | 'fallback' | 'conflict'
-  ruleIndex: number; conditional: boolean; shadowedBy?: number
+  /** Big label: what a tap types. */
+  label: string
+  /** Small label under it: what a hold does (⌃ ⇧ ⌥ ⌘ or a layer name). Empty when nothing. */
+  sub: string
+  /** Spoken description of the whole key. */
+  detail: string
+  kind: 'normal' | 'remap' | 'layer' | 'homerow' | 'fallback'
+  /** The key is part of at least one combo. */
+  combo: boolean
+  ruleIndex: number
 }
 export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | null): MacKeyFace {
   const physical = macKeyLabel(key.code)
-  const baseIndex = macBaseRuleIndex(rules, key.code)
-  const index = layer === null ? baseIndex : macLayerBindingIndex(rules, key.code, layer)
-  const conditional = rules.some(rule => (rule.type === 'simple' && rule.fromKey === key.code && !!rule.fromModifiers?.length)
-    || (rule.type === 'combo' && rule.fromKeys.includes(key.code)))
+  const index = layer === null ? macBaseRuleIndex(rules, key.code) : macLayerBindingIndex(rules, key.code, layer)
+  const combo = layer === null && rules.some(rule => rule.type === 'combo' && rule.fromKeys.includes(key.code))
   if (layer !== null && index < 0) {
     const base = macKeyFace(rules, key, null)
-    return { ...base, kind: 'fallback', label: '···', sub: 'pass', detail: `${physical}: Base fallback. ${base.detail}`, ruleIndex: -1 }
+    return { ...base, kind: 'fallback', label: '···', sub: '', combo: false, detail: `${physical}: same as Base`, ruleIndex: -1 }
   }
   const rule = rules[index]
-  const combo = rules.some(rule => rule.type === 'combo' && rule.fromKeys.includes(key.code))
-  const modifierRule = rules.find(rule => rule.type === 'simple' && rule.fromKey === key.code && !!rule.fromModifiers?.length)
-  let label = physical, sub = combo ? 'Combo' : modifierRule?.type === 'simple' ? `If ${macModifierText(modifierRule.fromModifiers)}` : '', kind: MacKeyFace['kind'] = 'normal'
+  let label = physical, sub = '', kind: MacKeyFace['kind'] = 'normal'
   if (rule?.type === 'simple' || rule?.type === 'layer_binding') {
     const symbol = nativeShiftedSymbol(rule.toKey, rule.toModifiers ?? [])
     const modifiers = symbol ? (rule.toModifiers ?? []).filter(mod => !isShiftModifier(mod)) : rule.toModifiers
     label = `${macModifierLabel(modifiers)}${symbol?.symbol ?? macKeyLabel(rule.toKey)}`
-    sub = modifiers?.length ? 'shortcut' : ''; kind = 'remap'
+    kind = 'remap'
   } else if (rule?.type === 'layer_activator') {
-    label = rule.tapKey ? macKeyLabel(rule.tapKey) : rule.layerName
-    sub = rule.tapKey ? `hold ${rule.layerName}` : 'hold'; kind = rule.tapKey ? 'layer-tap' : 'layer'
+    label = macKeyLabel(rule.tapKey ?? key.code)
+    sub = rule.layerName; kind = 'layer'
   } else if (rule?.type === 'homerow_mod') {
     label = macKeyLabel(rule.tapKey)
     const family = rule.modKey.replace(/^(left|right)_/, '')
-    const held = family === 'hyper' ? hyperName() : ['control', 'option', 'shift', 'command'].includes(family) ? modifierName(family) : macKeyLabel(rule.modKey)
-    // Windows words (Ctrl, Shift) don't fit after 'hold'; the mod-tap colour already says hold.
-    sub = isWindows() ? held : `hold ${held}`; kind = 'homerow'
+    sub = family === 'hyper' ? hyperName() : ['control', 'option', 'shift', 'command'].includes(family) ? modifierName(family) : macKeyLabel(rule.modKey)
+    kind = 'homerow'
   }
-  const shadowedBy = layer !== null && index >= 0 && baseIndex >= 0 && baseIndex < index ? baseIndex : undefined
-  const detail = `${physical}: ${rule ? rule.description : 'Original key'}${conditional ? '. Modifier or combo rules also apply; this is a configured preview.' : ''}`
-  return { label, sub: shadowedBy !== undefined ? 'Order !' : sub,
-    detail: shadowedBy !== undefined ? `${detail}. Configured layer binding follows earlier Base rule ${shadowedBy + 1}; inspect rule order.` : detail,
-    kind: shadowedBy !== undefined ? 'conflict' : kind, ruleIndex: index, conditional, shadowedBy }
+  const detail = `${physical}: types ${label}${sub ? `, hold ${sub}` : ''}${combo ? ', in a combo' : ''}`
+  return { label, sub, detail, kind, combo, ruleIndex: index }
 }
 export function macUnplacedKeys(rules: readonly Rule[]): string[] {
   const physical = new Set(LAPTOP_LAYOUT.map(key => key.code))

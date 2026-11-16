@@ -61,6 +61,6 @@ test('key labels, home-row sub-labels and rule text use Win / Alt / Ctrl on Wind
   expect(bindingLabel('&mt LCTRL A')).toBe('A')
   expect(macModifierLabel(['control', 'shift'])).toBe('Ctrl+Shift+')
   const rules: Rule[] = [{ type: 'homerow_mod', description: 'x', fromKey: 'f', tapKey: 'f', modKey: 'left_command', holdBehavior: 'hold_preferred', holdThresholdMs: 200 }]
-  expect(macKeyFace(rules, MACBOOK_LAYOUT.find(k => k.code === 'f')!, null).sub).toBe('Win') // Windows drops 'hold': the words don't fit after it; the mod-tap colour says hold
+  expect(macKeyFace(rules, MACBOOK_LAYOUT.find(k => k.code === 'f')!, null).sub).toBe('Win') // the small label under the key is the hold; the orange rim says so too
   expect(homerowRules(HOMEROW_PRESETS[0])[3].description).toBe('F: hold → Win, tap → f')
 })

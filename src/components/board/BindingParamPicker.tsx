@@ -2,18 +2,24 @@ import { useState, useRef, useMemo } from 'react'
 import { Popover } from '@/components/ui'
 
 export default function BindingParamPicker({
-  options, value, onChange, label = "Choose a value", allowCustom = true, hint = "Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable",
-}: { options: string[]; value: string; onChange: (v: string) => void; label?: string; allowCustom?: boolean; hint?: string }) {
+  options, value, onChange, label = "Choose a value", allowCustom = true, hint = "Modifier wraps work: LG(A)=⌘A · LS=⇧ · LC=⌃ · LA=⌥ — nestable", format, placeholder,
+}: { options: string[]; value: string; onChange: (v: string) => void; label?: string; allowCustom?: boolean; hint?: string
+  /** Friendlier text for a value (shown on the button and in the list); onChange still gets the raw option. */
+  format?: (value: string) => string
+  /** Shown on the button while nothing is chosen. */
+  placeholder?: string }) {
+  const show = (v: string) => format ? format(v) : v
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [anchor, setAnchor] = useState({ x: 0, y: 0, top: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const filtered = useMemo(() => {
-    if (!query) return options.slice(0, 40)
+    if (!query) return options.slice(0, 80)
     const q = query.toLowerCase()
-    return options.filter(o => o.toLowerCase().includes(q)).slice(0, 40)
-  }, [query, options])
+    return options.filter(o => o.toLowerCase().includes(q) || show(o).toLowerCase().includes(q)).slice(0, 80)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, options, format])
 
   function handleOpen() {
     if (!open && btnRef.current) {
@@ -23,7 +29,7 @@ export default function BindingParamPicker({
     setOpen(v => !v)
   }
 
-  const display = value || '—'
+  const display = value ? show(value) : placeholder ?? '—'
 
   return (
     <div style={{ display: 'inline-block', minWidth: 90 }}>
@@ -91,7 +97,7 @@ export default function BindingParamPicker({
                 aria-pressed={opt === value}
                 style={{ display: 'block', width: '100%', textAlign: 'left' }}
               >
-                {opt}
+                {show(opt)}
               </button>
             ))}
           </div>

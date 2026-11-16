@@ -25,6 +25,6 @@ describe('Caps Lock as Hyper (hold) and Escape (tap)', () => {
   })
   test('the keyboard preview shows Escape on tap and the four Hyper symbols on hold', () => {
     const caps = MACBOOK_LAYOUT.find(k => k.code === 'caps_lock')!
-    expect(macKeyFace([HYPER_CAPS_RULE], caps, null)).toMatchObject({ label: 'ESC', sub: 'hold ⌃⌥⇧⌘', kind: 'homerow' })
+    expect(macKeyFace([HYPER_CAPS_RULE], caps, null)).toMatchObject({ label: 'ESC', sub: '⌃⌥⇧⌘', kind: 'homerow' })
   })
 })
