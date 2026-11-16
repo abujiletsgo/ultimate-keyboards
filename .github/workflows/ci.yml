@@ -44,6 +44,7 @@ jobs:
       - run: cargo clippy --locked --manifest-path native/service/Cargo.toml --all-targets -- -D warnings
       - run: python3 -m unittest discover -s native/service/tests
       - run: python3 -m unittest discover -s native/packaging/tests
+      - run: python3 -m unittest discover -s native/packaging/windows/tests
       - run: python3 -m unittest discover -s scripts/tests
   # Windows x64 and ARM64. scripts/check-windows-ci.sh reads these job names.
   windows:
@@ -51,7 +52,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, windows-11-arm]
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -67,6 +72,7 @@ jobs:
           key: ${{ matrix.os }}
           workspaces: |
             native/engine
+            native/service-win
             src-tauri
       - run: bun install --frozen-lockfile
       - run: bun test
@@ -77,3 +83,10 @@ jobs:
       - run: cargo build --manifest-path src-tauri/Cargo.toml
       - if: hashFiles('native/service-win/Cargo.toml') != ''
         run: cargo test --locked --manifest-path native/service-win/Cargo.toml
+      # Unsigned per-user NSIS installer with the keyboard service bundled (KE-75).
+      - run: native/packaging/windows/build-installer.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uk-windows-${{ matrix.arch }}
+          path: src-tauri/target/*/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error

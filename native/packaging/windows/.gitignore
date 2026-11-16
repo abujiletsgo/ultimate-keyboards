@@ -1,0 +1,2 @@
+# CI stages the service sidecar here as <name>-<target-triple>.exe before `tauri build`.
+stage/

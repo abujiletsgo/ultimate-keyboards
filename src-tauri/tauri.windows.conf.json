@@ -1,9 +1,15 @@
 {
   "bundle": {
     "targets": ["nsis"],
+    "resources": {
+      "../native/packaging/windows/stop-service.ps1": "native/stop-service.ps1"
+    },
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper" },
-      "nsis": { "installMode": "currentUser" }
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "../native/packaging/windows/installer-hooks.nsh"
+      }
     }
   }
 }

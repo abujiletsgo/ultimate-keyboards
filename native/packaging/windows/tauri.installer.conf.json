@@ -1,0 +1,5 @@
+{
+  "bundle": {
+    "externalBin": ["../native/packaging/windows/stage/ultimate-keyboards-remapper-win"]
+  }
+}
