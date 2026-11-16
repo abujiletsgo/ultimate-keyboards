@@ -1,6 +1,8 @@
 import type { Rule } from '../karabinerGenerator'
 import { createNativeProfile, type NativeProfile } from '../nativeRemapping'
+import { hostOS, type HostOS } from '../platform'
 import raw from './catalog.json'
+import { windowsTemplate } from './windows'
 
 export type TemplateCategory = 'caps' | 'home-row' | 'layers' | 'combos'
 export type TemplateDifficulty = 'easy' | 'medium' | 'tricky'
@@ -47,7 +49,11 @@ export const BLURB_MAX = 80
 export interface LeftOut { name: string; reason: string }
 
 export const TEMPLATE_CATALOG = raw as unknown as { schema: 1; checkedAt: string; templates: KeyTemplate[]; leftOut: LeftOut[] }
-export const KEY_TEMPLATES: readonly KeyTemplate[] = TEMPLATE_CATALOG.templates
+/** The templates as one computer shows and applies them; the catalog file is the Mac set. */
+export function templatesFor(os: HostOS): readonly KeyTemplate[] {
+  return os === 'windows' ? TEMPLATE_CATALOG.templates.map(windowsTemplate) : TEMPLATE_CATALOG.templates
+}
+export const KEY_TEMPLATES: readonly KeyTemplate[] = templatesFor(hostOS())
 
 export function templateById(id: string): KeyTemplate | undefined {
   return KEY_TEMPLATES.find(t => t.id === id)
@@ -77,3 +83,4 @@ export * from './roles'
 export * from './firstRun'
 export * from './video'
 export * from './openVideo'
+export { windowsTemplate } from './windows'
