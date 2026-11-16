@@ -90,3 +90,10 @@ jobs:
           name: uk-windows-${{ matrix.arch }}
           path: src-tauri/target/*/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
+      # Test-only keyboard service for the ZenBook end-to-end run (native/service-win/e2e). Never bundled.
+      - run: cargo build --release --locked --features e2e --manifest-path native/service-win/Cargo.toml --target-dir target-e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uk-remapper-e2e-${{ matrix.arch }}
+          path: target-e2e/release/ultimate-keyboards-remapper-win.exe
+          if-no-files-found: error

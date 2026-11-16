@@ -36,6 +36,10 @@ windows-sys = { version = "0.61", features = [
   "Win32_UI_WindowsAndMessaging",
 ] }
 
+[features]
+# Test-only: act on keys tagged by native/service-win/e2e. Never enable for the shipped installer.
+e2e = []
+
 [profile.release]
 panic = "abort"
 lto = true

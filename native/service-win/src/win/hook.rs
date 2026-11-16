@@ -18,6 +18,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::*;
 pub const OUT_TAG: usize = 0x554B_0001;
 /// A key-up of an unassigned virtual key the watchdog injects to prove the hook is alive.
 pub const PROBE_TAG: usize = 0x554B_0002;
+/// Keys sent by native/service-win/e2e carry this tag; only `--features e2e` builds act on them.
+#[cfg(feature = "e2e")]
+pub const E2E_TAG: usize = 0x5555_4B45;
 const VK_UNASSIGNED: u16 = 0xE8;
 const WM_INSTALL: u32 = WM_APP + 1;
 const PUMP_TIMER_MS: u32 = 100;
@@ -135,8 +138,14 @@ fn handle(sh: &Shared, k: &KBDLLHOOKSTRUCT, message: u32) -> bool {
     if k.dwExtraInfo == PROBE_TAG {
         return true;
     }
+    // Test-only builds (`--features e2e`, never shipped) treat keys carrying E2E_TAG as physical,
+    // so the ZenBook end-to-end run can drive the real hook, engine and output.
+    #[cfg(feature = "e2e")]
+    let e2e_key = k.dwExtraInfo == E2E_TAG;
+    #[cfg(not(feature = "e2e"))]
+    let e2e_key = false;
     // Our own output and anyone else's injected input (other tools, remote sessions) go through.
-    if k.dwExtraInfo == OUT_TAG || k.flags & LLKHF_INJECTED != 0 {
+    if k.dwExtraInfo == OUT_TAG || (k.flags & LLKHF_INJECTED != 0 && !e2e_key) {
         return false;
     }
     let down = match message {
