@@ -36,7 +36,7 @@ public static class UkE2E {
 
 $pipeName = 'ultimatekeyboards-remapper'
 function Send-Request([hashtable] $req) {
-  $c = New-Object System.IO.Pipes.NamedPipeClientStream('.', $pipeName, [System.IO.Pipes.PipeDirection]::InOut)
+  $c = New-Object System.IO.Pipes.NamedPipeClientStream('.', $pipeName, [System.IO.Pipes.PipeDirection]::InOut, [System.IO.Pipes.PipeOptions]::None, [System.Security.Principal.TokenImpersonationLevel]::Identification)
   $c.Connect(3000)
   $w = New-Object System.IO.StreamWriter($c); $w.AutoFlush = $true
   $r = New-Object System.IO.StreamReader($c)

@@ -26,6 +26,9 @@ targets:
   mac-app:
     kind: other
     label: Fresh release build on the Mac (open -n from src-tauri/target/release/bundle/macos), driven through orca computer; Tom's /Applications copy is never touched
+  zenbook:
+    kind: other
+    label: Tom's ASUS ZenBook (Win11 Home x64) over NetBird SSH, see ~/.claude/refs/windows-test-pc.md; desktop-session runs via Task Scheduler /IT
 
 # Optional: shared infrastructure whose change selects every row (a list), or
 # every row on the named targets (a mapping). Build scripts, signing, manifests.
@@ -194,3 +197,19 @@ checks:
       class: a periodic tick re-renders UI that did not change
       prevention: refresh compares the status and only notifies on change; tests/nativeRemapping.test.ts still passes
       sweep: 'UK src/: no other intervals drive React state (Mouse permission poll runs only while waiting, toasts are one-shot)'
+
+  - id: B-7
+    area: windows-remap
+    check: 'Reported break does not recur: Windows keyboard service refused every Apply: it checked the pipe client''s identity before reading, which Windows rejects, so the app could never turn remapping on'
+    targets: [zenbook]
+    how: 'agent: run native/service-win/e2e/run-e2e.ps1 on the ZenBook desktop session via Task Scheduler with the e2e build; result.json ok=true'
+    proof: result.json from the ZenBook with ok=true and every case pass
+    affects: [native/service-win/src/win/pipe.rs, native/service-win/src/service.rs]
+    added: '2026-11-16 bug: Windows keyboard service refused every Apply: it checked the pipe client''s identity before reading, which Windows rejects, so the app could never turn remapping on'
+    why:
+      cause: serve_client called ImpersonateNamedPipeClient before reading the request; Windows returns ERROR_CANNOT_IMPERSONATE until data is read, so authorized was always false
+      made_by: KE-72 builder (Sonnet) wrote the Win32 pipe code; only unit-tested platform-neutral logic on macOS
+      missed_by: 'no test ran the Win32 pipe on Windows: CI runs cargo test on Windows but the pipe auth path had no Windows integration test; the gate only compiled it'
+      class: platform API contract untested on the real OS
+      prevention: KE-89 e2e harness on the ZenBook now applies a profile through the real pipe; add a Windows-only cargo test that connects to a live pipe instance and expects an authorized apply (KE-90)
+      sweep: 'src-tauri app client: default SecurityImpersonation, fine after the fix; macOS service uses audit tokens (not affected); no other ImpersonateNamedPipeClient calls in the repo'

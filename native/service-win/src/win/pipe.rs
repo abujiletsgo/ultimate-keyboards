@@ -187,8 +187,10 @@ impl Drop for Conn {
 }
 
 fn serve_client(sh: &Shared, mut conn: Conn, ours: &UserSid) {
-    let authorized = client_is_same_user(conn.pipe, ours);
+    // Read first: Windows refuses ImpersonateNamedPipeClient until data has been read from the pipe
+    // (ERROR_CANNOT_IMPERSONATE), so checking before the read refused every client, the app included.
     let request = read_request(&mut conn);
+    let authorized = client_is_same_user(conn.pipe, ours);
     let response = {
         let mut svc = sh.svc.lock().unwrap_or_else(|e| e.into_inner());
         svc.handle(request, authorized, now_ms())
