@@ -1,5 +1,5 @@
 import { MACBOOK_LAYOUT, LAPTOP_LAYOUT, type MacKey } from './macbookLayout'
-import { modifierName, modifierPrefix, modifierText, hyperName } from './platform'
+import { isWindows, modifierName, modifierPrefix, modifierText, hyperName } from './platform'
 import { nativeShiftedSymbol, isShiftModifier } from './nativeSymbols'
 import { keycodeLabel } from './keyLabel'
 import { macLayerNames } from './macLayerEditing'
@@ -76,7 +76,9 @@ export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | 
   } else if (rule?.type === 'homerow_mod') {
     label = macKeyLabel(rule.tapKey)
     const family = rule.modKey.replace(/^(left|right)_/, '')
-    sub = `hold ${family === 'hyper' ? hyperName() : ['control', 'option', 'shift', 'command'].includes(family) ? modifierName(family) : macKeyLabel(rule.modKey)}`; kind = 'homerow'
+    const held = family === 'hyper' ? hyperName() : ['control', 'option', 'shift', 'command'].includes(family) ? modifierName(family) : macKeyLabel(rule.modKey)
+    // Windows words (Ctrl, Shift) don't fit after 'hold'; the mod-tap colour already says hold.
+    sub = isWindows() ? held : `hold ${held}`; kind = 'homerow'
   }
   const shadowedBy = layer !== null && index >= 0 && baseIndex >= 0 && baseIndex < index ? baseIndex : undefined
   const detail = `${physical}: ${rule ? rule.description : 'Original key'}${conditional ? '. Modifier or combo rules also apply; this is a configured preview.' : ''}`

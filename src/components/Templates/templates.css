@@ -108,8 +108,11 @@
 .tpl-key {
   position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 6px;
   background: var(--t-key); border: 1px solid var(--t-key-rim); color: var(--t-ink); font-weight: 700; line-height: 1;
-  overflow: hidden;
+  overflow: hidden; container-type: size; white-space: nowrap;
 }
+/* Labels keep the Mac glyph size; longer Windows words (Shift, Ctrl) shrink by --chars to fit the key.
+   cqi resolves against the key (the label's container), so the size lives on the child span. */
+.tpl-key-label { font-size: min(1em, calc(125cqi / var(--chars, 1))); }
 .tpl-key--modtap { background: #f2a35e; border-color: #b45309; font-size: 26px; }
 .tpl-key--layer { background: #5fc8ec; border-color: #0e7490; font-size: 16px; }
 .tpl-key--binding { background: rgba(95, 200, 236, 0.35); border: 2px dashed #0e7490; font-size: 22px; color: var(--t-text); }

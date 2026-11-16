@@ -58,4 +58,6 @@
 .hr-timeline { margin-top: 14px; }
 /* ⌃ ⌥ ⇧ ⌘ are tiny in the mono face; the system face draws them at full size. */
 .hr-mini-key, .hr-tl-hold b, .hr-cap[data-mod] { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
-.hr-mini-key { font-size: 14px; }
+.hr-mini-key { font-size: 14px; container-type: inline-size; }
+/* One Mac glyph stays 14px; longer Windows words (Shift, Ctrl) shrink by --chars to fit the cap. */
+.hr-mini-sym { font-size: min(14px, calc(150cqi / var(--chars, 1))); white-space: nowrap; }

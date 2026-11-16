@@ -13,7 +13,7 @@ interface Props {
 
 /** Built-in keyboard first; Scroll & Mouse is Mac-only (Windows shows why instead of a dead link). */
 const hostNav = (): { section: Section; label: string; icon: typeof Command }[] => [
-  { section: { kind: 'karabiner' }, label: hostTerms().laptopKeys, icon: Command },
+  { section: { kind: 'karabiner' }, label: hostTerms().laptopKeys, icon: isWindows() ? Keyboard : Command },
   ...(isWindows() ? [] : [{ section: { kind: 'mouse' } as Section, label: 'Scroll & Mouse', icon: MousePointer2 }]),
 ]
 

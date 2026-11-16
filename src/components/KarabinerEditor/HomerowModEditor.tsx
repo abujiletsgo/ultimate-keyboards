@@ -166,7 +166,7 @@ export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn 
                 {HOMEROW_KEYS.map((hk, i) => (
                   <React.Fragment key={hk.key}>
                     {i === 4 && <span className="hr-mini-gap" />}
-                    <span className="hr-mini-key"><b>{hk.label}</b>{symOf(p.mods[hk.key])}</span>
+                    <span className="hr-mini-key"><b>{hk.label}</b><span className="hr-mini-sym" style={{ '--chars': [...symOf(p.mods[hk.key])].length || 1 } as React.CSSProperties}>{symOf(p.mods[hk.key])}</span></span>
                   </React.Fragment>
                 ))}
               </span>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { LAPTOP_LAYOUT, getKeyStyle, boardSize, KEY_UNIT, KEY_GAP } from '@/lib/macbookLayout'
 import type { KeyMark } from '@/lib/templates'
 import ScaledBoard from '@/components/ScaledBoard'
@@ -22,10 +23,11 @@ export default function TemplateKeyboard({ marks, label }: Props) {
       <ScaledBoard width={WIDTH} height={HEIGHT} maxScale={1}>
         {KEYS.map(key => {
           const mark = marks.get(key.code)
-          const style = { ...getKeyStyle(key), top: key.y * (KEY_UNIT + KEY_GAP) - TOP }
+          // --chars lets long labels (Windows 'Shift', 'Ctrl') shrink to fit; one glyph keeps its full size.
+          const style = { ...getKeyStyle(key), top: key.y * (KEY_UNIT + KEY_GAP) - TOP, '--chars': [...(mark?.mark ?? '')].length || 1 } as CSSProperties
           return (
             <div key={key.code} className={`tpl-key${mark ? ` tpl-key--${mark.role}` : ''}`} style={style} data-key={key.code} data-role={mark?.role}>
-              {mark?.mark}
+              {mark && <span className="tpl-key-label">{mark.mark}</span>}
             </div>
           )
         })}

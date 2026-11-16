@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { LAPTOP_LAYOUT, getKeyStyle, boardSize, type MacKey } from '@/lib/macbookLayout'
-import { hostTerms, modifierName, modifierPrefix } from '@/lib/platform'
+import { hostTerms, isWindows, modifierName, modifierPrefix } from '@/lib/platform'
 import type { Rule } from '@/lib/karabinerGenerator'
 import ScaledBoard from '@/components/ScaledBoard'
 import PhysicalBoard from '@/components/board/PhysicalBoard'
@@ -44,7 +44,8 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
     switch (rule.type) {
       case 'simple': changed.set(rule.fromKey, `→ ${modsOf(rule.toModifiers)}${labelOf(rule.toKey)}`); break
       case 'layer_activator': changed.set(rule.fromKey, `hold: ${rule.layerName}`); break
-      case 'homerow_mod': changed.set(rule.fromKey, `hold ${modifierName(rule.modKey)}`); break
+      // Windows words (Ctrl, Shift) don't fit after 'hold'; the mod-tap colour already says hold.
+      case 'homerow_mod': changed.set(rule.fromKey, isWindows() ? modifierName(rule.modKey) : `hold ${modifierName(rule.modKey)}`); break
       default: break // combos and layer keys are shown in their own tabs
     }
   }
