@@ -4,9 +4,6 @@
 use windows_sys::Win32::UI::Shell::ShellExecuteW;
 use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-/// Why the scroll & mouse engine is missing on this OS (the UI shows it in place).
-pub const MOUSE_ENGINE_REASON: &str = "Scroll and mouse tuning is not available on Windows.";
-
 /// Turning the laptop keyboard off has no safe Windows equivalent here (no
 /// per-device switch without a kernel driver), so only "restore" succeeds, and
 /// restoring when nothing was changed is a no-op.
@@ -23,8 +20,8 @@ pub fn install_karabiner_rules(_title: &str, _json: &str) -> Result<String, Stri
     Err("Exporting rules for another remapper is not available on Windows.".into())
 }
 
-/// Windows has no Accessibility grant to ask for; the scroll engine is absent
-/// instead (see `MOUSE_ENGINE_REASON`).
+/// Windows has no Accessibility grant to ask for: the scroll engine's
+/// low-level mouse hook needs no permission.
 pub fn accessibility_trusted() -> bool {
     true
 }
