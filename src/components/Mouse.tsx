@@ -1,7 +1,7 @@
 /**
- * This Mac › Scroll & Mouse — the native scroll engine (Rust CGEventTap).
+ * Scroll & Mouse — the native scroll engine (Mac: CGEventTap, Windows: low-level hook).
  * Changes discrete scroll-wheel events only (mice, the keyboard's scroll
- * layer); the MacBook trackpad's gestures pass through untouched.
+ * layer); the trackpad / touchpad passes through untouched.
  *
  * Every change is applied to the engine first and only shown as "on" once
  * the engine accepted it, so a refusal can never look like a dead switch.
@@ -14,39 +14,20 @@ import { isWindows } from '@/lib/platform'
 
 const STORE_KEY = 'uk.mouseConfig'
 
-interface MouseConfig { enabled: boolean; reverse: boolean; speed: number }
-const DEFAULTS: MouseConfig = { enabled: false, reverse: false, speed: 1.0 }
+export interface MouseConfig { enabled: boolean; reverse: boolean; speed: number; smooth: boolean }
+export const DEFAULTS: MouseConfig = { enabled: false, reverse: false, speed: 1.0, smooth: true }
 
-function loadSaved(): MouseConfig {
-  try { const raw = localStorage.getItem(STORE_KEY); if (raw) return { ...DEFAULTS, ...JSON.parse(raw) } } catch { /* ignore */ }
+/** Older saved configs have no `smooth`; they load as on. */
+export function loadSaved(): MouseConfig {
+  try {
+    const raw = localStorage.getItem(STORE_KEY)
+    if (raw) { const c = JSON.parse(raw); return { ...DEFAULTS, ...c, smooth: c.smooth !== false } }
+  } catch { /* ignore */ }
   return DEFAULTS
 }
 function save(c: MouseConfig) { try { localStorage.setItem(STORE_KEY, JSON.stringify(c)) } catch { /* ignore */ } }
 
-/** Windows has no scroll engine here; say so in place and point at the Windows setting that does the job. */
-function NotOnWindows() {
-  return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
-      <div className="section-header">
-        <span className="section-title">Scroll &amp; Mouse</span>
-      </div>
-      <div style={{ padding: 24, maxWidth: 560, margin: '0 auto' }}>
-        <div className="glass" role="note" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <strong style={{ fontSize: 13, color: 'var(--text)' }}>Scroll &amp; Mouse is only on the Mac</strong>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            The scroll engine changes how a Mac scrolls, and Windows does not let an app do that safely. To reverse scrolling or change the pointer speed on this PC, open Settings › Bluetooth &amp; devices › Mouse.
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function Mouse() {
-  return isWindows() ? <NotOnWindows /> : <MacMouse />
-}
-
-function MacMouse() {
   const [config, setConfig] = useState<MouseConfig>({ ...loadSaved(), enabled: false })
   const [busy, setBusy] = useState(false)
   const [needsPermission, setNeedsPermission] = useState(false)
@@ -60,7 +41,7 @@ function MacMouse() {
       await invoke('set_mouse_config', { config: next })
       setConfig(next); save(next); setNeedsPermission(false); wanted.current = null
     } catch (e) {
-      const trusted = await invoke<boolean>('accessibility_trusted').catch(() => true)
+      const trusted = isWindows() || await invoke<boolean>('accessibility_trusted').catch(() => true)
       if (!trusted) { setNeedsPermission(true); wanted.current = next }
       else setError(String(e))
     } finally { setBusy(false) }
@@ -69,9 +50,15 @@ function MacMouse() {
   // Resume the saved state on open (the engine does not run until asked).
   useEffect(() => { const s = loadSaved(); if (s.enabled) apply(s) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The engine itself can say it cannot run here.
+  const [unavailable, setUnavailable] = useState<string | null>(null)
+  useEffect(() => {
+    if (IS_TAURI) invoke<string | null>('mouse_engine_unavailable_reason').then(r => setUnavailable(r ?? null)).catch(() => {})
+  }, [])
+
   // While waiting for the user to grant Accessibility, retry as soon as it is granted.
   useEffect(() => {
-    if (!needsPermission) return
+    if (!needsPermission || isWindows()) return
     const t = setInterval(async () => {
       if (await invoke<boolean>('accessibility_trusted').catch(() => false)) {
         clearInterval(t)
@@ -83,6 +70,7 @@ function MacMouse() {
 
   const patch = (p: Partial<MouseConfig>) => apply({ ...config, ...p })
   const on = config.enabled
+  const pad = !IS_TAURI || !!unavailable
 
   return (
     <div style={{ height: '100%', overflow: 'auto' }}>
@@ -91,9 +79,9 @@ function MacMouse() {
       </div>
 
       <div style={{ padding: 24, maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {!IS_TAURI && (
+        {pad && (
           <div className="panel-inset" style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 14px' }}>
-            The scroll engine runs in the desktop app only.
+            {unavailable ?? 'Works in the desktop app only.'}
           </div>
         )}
 
@@ -101,17 +89,17 @@ function MacMouse() {
           <Switch
             checked={on}
             busy={busy}
-            disabled={!IS_TAURI}
+            disabled={pad}
             onChange={v => patch({ enabled: v })}
-            label="Scroll engine"
-            description={on ? 'On. Mouse wheels and your keyboard’s scroll layer use the settings below.' : 'Off. Turn on to change scroll direction and speed for mice and your keyboard’s scroll layer. The MacBook trackpad is never changed.'}
+            label="Scroll & Mouse"
+            description={isWindows() ? 'Your touchpad is left alone.' : 'Your trackpad is left alone.'}
           />
 
           {needsPermission && (
             <div className="panel-inset" role="alert" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, borderColor: 'rgba(251,191,36,0.35)' }}>
-              <strong style={{ fontSize: 13 }}>Allow Accessibility access</strong>
+              <strong style={{ fontSize: 13 }}>Allow Accessibility</strong>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                macOS only lets an app change scrolling after you allow it. Click the button, switch on <strong>Ultimate Keyboards</strong> in the list, and come back. The engine turns on by itself.
+                Open settings and turn on <strong>Ultimate Keyboards</strong>. This switches on by itself after.
               </span>
               <button className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => invoke('open_accessibility_settings').catch(e => setError(String(e)))}>
                 Open Accessibility settings
@@ -122,11 +110,16 @@ function MacMouse() {
 
           <div style={{ opacity: on ? 1 : 0.45, display: 'flex', flexDirection: 'column', gap: 18 }}>
             <Switch
+              checked={config.smooth}
+              disabled={!on || busy}
+              onChange={v => patch({ smooth: v })}
+              label="Smooth scrolling"
+            />
+            <Switch
               checked={config.reverse}
               disabled={!on || busy}
               onChange={v => patch({ reverse: v })}
               label="Reverse direction"
-              description={config.reverse ? 'Wheel down scrolls up.' : 'Wheel down scrolls down.'}
             />
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>

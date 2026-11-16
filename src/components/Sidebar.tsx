@@ -11,10 +11,10 @@ interface Props {
   onNavigate: (s: Section) => void
 }
 
-/** Built-in keyboard first; Scroll & Mouse is Mac-only (Windows shows why instead of a dead link). */
+/** Built-in keyboard first. */
 const hostNav = (): { section: Section; label: string; icon: typeof Command }[] => [
   { section: { kind: 'karabiner' }, label: hostTerms().laptopKeys, icon: isWindows() ? Keyboard : Command },
-  ...(isWindows() ? [] : [{ section: { kind: 'mouse' } as Section, label: 'Scroll & Mouse', icon: MousePointer2 }]),
+  { section: { kind: 'mouse' }, label: 'Scroll & Mouse', icon: MousePointer2 },
 ]
 
 function GroupLabel({ children }: { children: string }) {
@@ -81,11 +81,6 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
         {/* MacBook first (Tom, 2026-11-15): the built-in keyboard is the main product; split keyboards follow. */}
         <GroupLabel>{hostTerms().thisHost}</GroupLabel>
         {hostNav().map(h => item(h.section, h.label, h.icon))}
-        {isWindows() && (
-          <div style={{ padding: '2px 8px 6px', fontSize: 'var(--text-11)', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-            Scroll &amp; Mouse is Mac-only. On Windows, scroll and mouse settings are in Settings › Bluetooth &amp; devices › Mouse.
-          </div>
-        )}
 
         <GroupLabel>Keyboards</GroupLabel>
         {keyboards.length === 0 && (

@@ -134,14 +134,14 @@ export default function App() {
 
   // Resume the native scroll engine at launch from the persisted config.
   useEffect(() => {
-    if (!IS_TAURI || isWindows()) return; // the scroll engine is Mac-only
+    if (!IS_TAURI) return;
     try {
       const raw = localStorage.getItem("uk.mouseConfig");
       if (!raw) return;
-      const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number };
+      const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number; smooth?: boolean };
       if (config.enabled) {
-        invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 } })
-          .catch(() => toast.error(`The scroll engine could not start. Open ${hostTerms().thisHost} › Scroll & Mouse to allow Accessibility access.`));
+        invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1, smooth: config.smooth !== false } })
+          .catch(() => toast.error(isWindows() ? "Scroll & Mouse could not start." : `Scroll & Mouse could not start. Open ${hostTerms().thisHost} › Scroll & Mouse to allow Accessibility.`));
       }
     } catch { /* ignore corrupt config */ }
   }, []);
