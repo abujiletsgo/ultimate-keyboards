@@ -238,3 +238,10 @@ checks:
     proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
     affects: [src-tauri/src/lib.rs, src-tauri/src/native_remapping*, src-tauri/src/platform/**]
     added: '2026-11-16 bug: Windows app shows Setup required and ''not set up in this build yet'': lib.rs routes every non-Mac build to the native_remapping stub, so the app never talks to the installed keyboard service'
+    why:
+      cause: 'src-tauri/src/lib.rs: #[cfg(not(target_os = "macos"))] routed Windows to platform/native_remapping_stub.rs (KE-70 stand-in); KE-73 added the real Windows client in native_remapping/windows.rs but never switched lib.rs, so it was never compiled into the app'
+      made_by: KE-70 and KE-73 were split across two tasks; the stand-in's cfg covered Windows and the second task didn't own lib.rs
+      missed_by: Windows CI only ran cargo build for src-tauri (the stand-in compiles fine) and no test asked which client the app uses; the ZenBook e2e drives the service directly, not through the app; my post-install check looked at the Keymap screen, not Remapping, and I reported Windows laptop keys as working; Tom found it
+      class: dead code wired out by cfg (feature built but never reachable)
+      prevention: 'structural: the stand-in is now only for platforms with no client; Windows CI runs windows_app_uses_real_keyboard_service_client; ZenBook QA after install opens Remapping and clicks Apply and enable through the app'
+      sweep: mouse_engine stand-in on Windows is intended (Scroll & Mouse is Mac-only, shown in the sidebar); no other platform/ stand-ins exist
