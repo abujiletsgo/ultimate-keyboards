@@ -6,6 +6,8 @@
  * board never shows "RIGH" next to "←" or "PLUS" next to "=".
  */
 
+import { isWindows, modifierPrefix } from './platform'
+
 const KEY_SYMBOLS: Record<string, string> = {
   // arrows / navigation
   UP: '↑', UP_ARROW: '↑',
@@ -72,9 +74,10 @@ const KEY_SYMBOLS: Record<string, string> = {
   C_AC_SEARCH: 'SRCH', C_AL_CONTROL_PANEL: 'CTLP',
 }
 
-const MOD_GLYPH: Record<string, string> = {
-  LG: '⌘', RG: '⌘', LC: '⌃', RC: '⌃', LS: '⇧', RS: '⇧', LA: '⌥', RA: '⌥',
-}
+const MOD_FAMILY: Record<string, string> = { G: 'command', C: 'control', S: 'shift', A: 'option' }
+
+/** Windows names for the modifier keycaps: the GUI key is Win, Control is Ctrl. */
+const WINDOWS_CAPS: Record<string, string> = { CMD: 'WIN', CTL: 'CTRL' }
 
 const ZERO_ARG: Record<string, string> = {
   '&trans': '···',
@@ -107,8 +110,9 @@ export function keycodeLabel(code: string): string {
   if (f) return c
   // Modifier wrap, possibly nested: LG(LS(NUMBER_4)) → ⌘⇧4
   const wrap = c.match(/^([LR][GCSA])\((.+)\)$/)
-  if (wrap) return MOD_GLYPH[wrap[1]] + keycodeLabel(wrap[2])
-  return KEY_SYMBOLS[c] ?? c.slice(0, 4)
+  if (wrap) return modifierPrefix([MOD_FAMILY[wrap[1][1]]]) + keycodeLabel(wrap[2])
+  const cap = KEY_SYMBOLS[c] ?? c.slice(0, 4)
+  return isWindows() ? WINDOWS_CAPS[cap] ?? cap : cap
 }
 
 /** Short keycap label for a full ZMK binding string. */

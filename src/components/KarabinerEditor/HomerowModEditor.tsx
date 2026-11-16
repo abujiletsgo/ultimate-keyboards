@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { modifierLong, modifierName, localizeKeys } from '@/lib/platform'
 import { ConfirmBanner } from '@/components/ui'
 import MacbookKeyboard from './MacbookKeyboard'
 import PracticeCard from './PracticeCard'
@@ -14,17 +15,12 @@ import {
   isRecommendedFeel, readTypingFeel, replaceHomerowRules, type HoldMode,
 } from './typingFeel'
 
-// Mod key options shown in the picker
-const MOD_OPTIONS: { modKey: string; label: string; sym: string }[] = [
-  { modKey: 'left_control', label: 'Control', sym: '⌃' },
-  { modKey: 'left_option', label: 'Option', sym: '⌥' },
-  { modKey: 'left_shift', label: 'Shift', sym: '⇧' },
-  { modKey: 'left_command', label: 'Command', sym: '⌘' },
-  { modKey: 'right_control', label: 'Control', sym: '⌃' },
-  { modKey: 'right_option', label: 'Option', sym: '⌥' },
-  { modKey: 'right_shift', label: 'Shift', sym: '⇧' },
-  { modKey: 'right_command', label: 'Command', sym: '⌘' },
-]
+// Mod key options shown in the picker; the names follow the computer (Command / Option on a Mac, Win / Alt on Windows).
+const MOD_KEYS = ['left_control', 'left_option', 'left_shift', 'left_command', 'right_control', 'right_option', 'right_shift', 'right_command']
+const modOptions = (): { modKey: string; label: string; sym: string }[] =>
+  MOD_KEYS.map(modKey => ({ modKey, label: modifierLong(modKey), sym: modifierName(modKey) }))
+/** A symbol and its name, once when they are the same word (Windows: "Alt", not "Alt Alt"). */
+const symAndName = (o: { label: string; sym: string }) => o.sym === o.label ? o.label : `${o.sym} ${o.label}`
 
 const PRESETS = HOMEROW_PRESETS
 
@@ -60,7 +56,7 @@ export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn 
   function setKeyMod(hk: { key: string; label: string }, modKey: string | null) {
     const entry = modsByKey.get(hk.key)
     if (modKey === null) { if (entry) removeRule(entry.idx); return }
-    const sym = MOD_OPTIONS.find(m => m.modKey === modKey)?.sym ?? modKey
+    const sym = modOptions().find(m => m.modKey === modKey)?.sym ?? modKey
     const description = `${hk.label}: hold → ${sym}, tap → ${hk.label.toLowerCase()}`
     const rule: HomerowModRule = entry ? { ...entry.rule, modKey, description }
       : { type: 'homerow_mod', description, fromKey: hk.key, tapKey: hk.key, modKey, ...feelFields(feel) }
@@ -137,15 +133,15 @@ export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn 
             {selectedEntry && drillFor(selectedEntry.rule) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPractice(selectedEntry.rule)}>Try {selectedKey.label}</button>}
           </div>
           <div role="radiogroup" aria-label={`What holding ${selectedKey.label} does`} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[null, ...MOD_OPTIONS.filter(m => m.modKey.startsWith(selectedKey.hand === 'left' ? 'left_' : 'right_')).map(m => m.modKey)].map(modKey => {
-              const opt = MOD_OPTIONS.find(m => m.modKey === modKey)
+            {[null, ...modOptions().filter(m => m.modKey.startsWith(selectedKey.hand === 'left' ? 'left_' : 'right_')).map(m => m.modKey)].map(modKey => {
+              const opt = modOptions().find(m => m.modKey === modKey)
               const on = selectedMod === modKey
               return (
                 <button key={modKey ?? 'off'} type="button" role="radio" aria-checked={on}
                   onClick={() => setKeyMod(selectedKey, modKey)} className="hr-pick" data-on={on || undefined}
                   data-mod={modKey ? true : undefined}>
                   <span className="hr-pick-sym">{opt ? opt.sym : selectedKey.label}</span>
-                  <span className="hr-pick-name">{opt ? opt.label : 'Just the letter'}</span>
+                  {!(opt && opt.sym === opt.label) && <span className="hr-pick-name">{opt ? opt.label : 'Just the letter'}</span>}
                 </button>
               )
             })}
@@ -164,7 +160,7 @@ export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn 
               onMouseEnter={() => setPreview(p)} onMouseLeave={() => setPreview(null)}
               onFocus={() => setPreview(p)} onBlur={() => setPreview(null)}
               onClick={() => { setPreview(null); requestPreset(p) }}
-              aria-label={`Use ${p.label}: ${p.desc}`}>
+              aria-label={`Use ${p.label}: ${localizeKeys(p.desc)}`}>
               <span style={{ fontSize: 12, fontWeight: 600 }}>{p.label}</span>
               <span className="hr-mini" aria-hidden="true">
                 {HOMEROW_KEYS.map((hk, i) => (
@@ -244,16 +240,16 @@ export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn 
 
 const MOD_TAP = '#f2a35e'
 const HOME_KEYS = new Set(HOMEROW_KEYS.map(hk => hk.key))
-const symOf = (modKey?: string) => MOD_OPTIONS.find(m => m.modKey === modKey)?.sym ?? ''
+const symOf = (modKey?: string) => modOptions().find(m => m.modKey === modKey)?.sym ?? ''
 
 /** "tap F → f · hold F → ⌘" drawn as two little keys. */
 function TapHold({ letter, mod }: { letter: string; mod: string | null }) {
-  const opt = MOD_OPTIONS.find(m => m.modKey === mod)
+  const opt = modOptions().find(m => m.modKey === mod)
   return (
     <span className="hr-taphold">
       <span className="hr-chip">tap</span><span className="hr-cap">{letter}</span><span aria-hidden="true">→</span><span className="hr-cap hr-out">{letter.toLowerCase()}</span>
       <span className="hr-chip" style={{ marginLeft: 8 }}>hold</span><span className="hr-cap">{letter}</span><span aria-hidden="true">→</span>
-      {opt ? <span className="hr-cap hr-out" data-mod>{opt.sym} {opt.label}</span> : <span className="hr-cap hr-out">{letter.toLowerCase()}</span>}
+      {opt ? <span className="hr-cap hr-out" data-mod>{symAndName(opt)}</span> : <span className="hr-cap hr-out">{letter.toLowerCase()}</span>}
     </span>
   )
 }
@@ -267,7 +263,7 @@ function HoldTimeline({ ms, disabled }: { ms: number; disabled: boolean }) {
       aria-label={`Let go within ${ms} milliseconds to type the letter; hold longer for the modifier.`}>
       <div className="hr-tl-bar">
         <div className="hr-tl-tap" style={{ width: `${pct}%` }}><span>let go → <b>f</b></span></div>
-        <div className="hr-tl-hold"><span>keep holding → <b>⌘</b></span></div>
+        <div className="hr-tl-hold"><span>keep holding → <b>{modifierName('command')}</b></span></div>
         <div className="hr-tl-line" style={{ left: `${pct}%` }}><span>{ms} ms</span></div>
       </div>
     </div>

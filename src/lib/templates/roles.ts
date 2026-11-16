@@ -1,5 +1,6 @@
 import type { Rule } from '../karabinerGenerator'
-import { MACBOOK_LAYOUT } from '../macbookLayout'
+import { LAPTOP_LAYOUT } from '../macbookLayout'
+import { modifierName } from '../platform'
 import type { KeyTemplate } from './index'
 
 /** What a key on the preview is doing. Names are the same words as the page legend. */
@@ -20,7 +21,6 @@ export const PAGE_LEGEND: { role: KeyRole; word: string }[] = [
 
 export interface KeyMark { role: KeyRole; mark: string }
 
-const MOD_GLYPH: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧' }
 const SHIFTED_DIGIT = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')']
 const OUTPUT: Record<string, string> = {
   left_arrow: '←', right_arrow: '→', up_arrow: '↑', down_arrow: '↓', spacebar: 'space', escape: 'esc', tab: 'tab',
@@ -29,8 +29,8 @@ const OUTPUT: Record<string, string> = {
   comma: ',', period: '.', slash: '/', grave_accent_and_tilde: '`',
 }
 
-export const modGlyph = (modKey: string): string => MOD_GLYPH[modKey.replace(/^(left|right)_/, '')] ?? '⌘'
-const keyLabel = (code: string): string => MACBOOK_LAYOUT.find(k => k.code === code)?.label.toUpperCase() ?? code
+export const modGlyph = (modKey: string): string => modifierName(/(command|option|control|shift)$/.test(modKey) ? modKey : 'command')
+const keyLabel = (code: string): string => LAPTOP_LAYOUT.find(k => k.code === code)?.label.toUpperCase() ?? code
 
 /** The mark a layer binding shows: its new output. */
 export function bindingMark(toKey: string, toModifiers?: string[]): string {

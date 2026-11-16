@@ -7,6 +7,7 @@
  *   - a .uf2 built elsewhere: copied to a UF2 bootloader drive.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { tail } from '@/lib/paths'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Copy, Upload, Zap } from 'lucide-react'
@@ -245,7 +246,7 @@ function WriteToKeyboard({ keyboard, link }: { keyboard: KeyboardDef; link: Devi
             Wrote and checked {state.report.written.length} key{state.report.written.length === 1 ? '' : 's'}.
           </div>
           {state.report.written.length > 0 && <ChangeList writes={state.report.written} />}
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Backup from before writing: <span className="mono">{state.report.backupPath.split('/').slice(-3).join('/')}</span></div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Backup from before writing: <span className="mono">{tail(state.report.backupPath, 3)}</span></div>
           <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setState({ step: 'idle' })}>Done</button>
         </>
       )}

@@ -4,6 +4,7 @@
  * devicetree options as controls, and writes back minimal diffs.
  */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { basename } from '@/lib/paths'
 import { readText, saveText, ValidationError } from '@/lib/io'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
 import { ConfirmBanner, Switch, useToast } from '@/components/ui'
@@ -349,7 +350,7 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
             ))}
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dev.name} · {dev.chip} · <span className="mono" style={{ fontSize: 11 }}>{dev.overlayPath.split('/').pop()}</span></span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dev.name} · {dev.chip} · <span className="mono" style={{ fontSize: 11 }}>{basename(dev.overlayPath)}</span></span>
         )}
         <span style={{ flex: 1 }} />
         {status && <span role="status" style={{ fontSize: 12, color: status.ok ? 'var(--success)' : 'var(--danger)' }}>{status.msg}</span>}
@@ -367,7 +368,7 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
             onConfirm={removeDevice}
             onCancel={() => setConfirmRemove(false)}
             message={dev.templateId
-              ? <>Remove <strong>{dev.name}</strong>? The marked blocks in <span className="mono">{dev.overlayPath.split('/').pop()}</span>, its .conf and west.yml are deleted (backups are kept as .bak).</>
+              ? <>Remove <strong>{dev.name}</strong>? The marked blocks in <span className="mono">{basename(dev.overlayPath)}</span>, its .conf and west.yml are deleted (backups are kept as .bak).</>
               : <>Remove <strong>{dev.name}</strong> from this keyboard? It was not added by the wizard, so the overlay is left untouched — only the app forgets it.</>}
           />
         )}
@@ -401,7 +402,7 @@ function Tuner({ keyboard, devices, onAdd }: { keyboard: KeyboardDef; devices: P
         ) : (
           <>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: -8 }}>
-              {dev.chip} — editing <span className="mono">{dev.overlayPath.split('/').slice(-1)[0]}</span>.
+              {dev.chip} — editing <span className="mono">{basename(dev.overlayPath)}</span>.
               Changes take effect after you commit, rebuild, and flash the firmware.
             </div>
 

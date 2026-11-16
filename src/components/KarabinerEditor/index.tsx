@@ -12,7 +12,8 @@ import { macLayerActivators } from '@/lib/macLayerEditing'
 import { ConfirmBanner, useToast } from '@/components/ui'
 import Templates from '@/components/Templates'
 import { initialEditorTab } from '@/lib/templates'
-import { MACBOOK_LAYOUT } from '@/lib/macbookLayout'
+import { LAPTOP_LAYOUT } from '@/lib/macbookLayout'
+import { hostTerms } from '@/lib/platform'
 import { macLayers, validMacLayer, macKeyFace, macUnplacedKeys, macKeyLabel } from '@/lib/macKeymapView'
 
 type Tab = 'templates' | 'keys' | 'homerow' | 'combos' | 'remapping'
@@ -24,7 +25,7 @@ export default function KarabinerEditor() {
   const toast = useToast()
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   useEffect(() => {
-    const unregister = registerDirtySource('MacBook keymap', () => useKarabinerStore.getState().isDirty,
+    const unregister = registerDirtySource(`${hostTerms().laptop} keymap`, () => useKarabinerStore.getState().isDirty,
       async () => useKarabinerStore.getState().saveProfile(), () => useKarabinerStore.getState().revertProfile())
     const unsubscribe = useKarabinerStore.subscribe(syncDirty)
     return () => { unsubscribe(); unregister() }
@@ -35,15 +36,15 @@ export default function KarabinerEditor() {
   const layer = validMacLayer(rules, selectedLayer, layerNames)
   const layerIndex = layers.findIndex(item => item.name === layer)
   const layerInfo = layers[layerIndex]
-  const conflicts = layer === null ? [] : MACBOOK_LAYOUT.filter(key => macKeyFace(rules, key, layer).shadowedBy !== undefined)
+  const conflicts = layer === null ? [] : LAPTOP_LAYOUT.filter(key => macKeyFace(rules, key, layer).shadowedBy !== undefined)
   const unplaced = macUnplacedKeys(rules)
   useEffect(() => { if (selectedLayer !== layer) setSelectedLayer(layer) }, [selectedLayer, layer])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div className="section-header" style={{ flexWrap: 'wrap', height: 'auto', minHeight: 52, flexShrink: 0, gap: 10 }}>
-        <span className="section-title" style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>MacBook<span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-secondary)' }}>Native · US ANSI · {MACBOOK_LAYOUT.length} keys</span></span>
-        <div className="seg-ctrl" role="tablist" aria-label="MacBook Keys sections" style={{ flexWrap: 'wrap' }}>
+        <span className="section-title" style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>{hostTerms().laptop}<span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-secondary)' }}>Native · US ANSI · {LAPTOP_LAYOUT.length} keys</span></span>
+        <div className="seg-ctrl" role="tablist" aria-label={`${hostTerms().laptopKeys} sections`} style={{ flexWrap: 'wrap' }}>
           {TABS.map(([id, label], index) => (
             <button key={id} id={`mac-keys-tab-${id}`} role="tab" aria-selected={tab === id}
               aria-controls="mac-keys-editor" tabIndex={tab === id ? 0 : -1}
@@ -72,7 +73,7 @@ export default function KarabinerEditor() {
           {tab === 'keys' && <>
             <LayerControls layers={layers.map(item => ({ key: item.name === null ? 'base' : `layer:${item.name}`, name: item.name ?? 'Base' }))}
               selected={layerIndex} onSelect={index => { setSelectedLayer(layers[index].name); setConfirmDelete(null) }}
-              label="MacBook layers" idPrefix="mac-layer-tab" panelId="mac-layer-panel" accessibleLayerNames
+              label={`${hostTerms().laptop} layers`} idPrefix="mac-layer-tab" panelId="mac-layer-panel" accessibleLayerNames
               canRename={layer !== null} canDelete={layer !== null}
               onAdd={name => { const error = addLayer(name); if (!error) setSelectedLayer(name); return error }}
               onRename={name => { const error = renameLayer(layer, name); if (!error) setSelectedLayer(name); return error }}

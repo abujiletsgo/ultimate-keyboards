@@ -5,6 +5,7 @@
  * export, with the layout from a local info.json or downloaded from QMK.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { basename, dirname, splitId, tail } from '@/lib/paths'
 import { open } from '@tauri-apps/plugin-dialog'
 import { readText } from '@/lib/io'
 import { parseKeymapText, isDevicetreeReady } from '@/lib/zmkParser'
@@ -32,8 +33,8 @@ function fallbackGrid(keyCount: number, name: string): PhysicalLayout {
 
 /** A keymap inside `<repo>/config/` belongs to `<repo>`; anywhere else there is no known config repo. */
 function repoOfKeymap(file: string): string | undefined {
-  const dir = file.slice(0, file.lastIndexOf('/'))
-  return dir.endsWith('/config') ? dir.slice(0, -'/config'.length) : undefined
+  const dir = dirname(file)
+  return basename(dir) === 'config' ? dirname(dir) : undefined
 }
 
 export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Props) {
@@ -61,14 +62,14 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
       } else {
         const file = await open({ multiple: false, filters: [{ name: 'Keymap', extensions: ['keymap', 'json'] }], title: 'Choose a ZMK .keymap or a QMK keymap JSON' })
         if (!file || Array.isArray(file)) { onCancel(); return }
-        const fileName = file.split('/').pop()!
+        const fileName = basename(file)
         const pretty = (s: string) => s.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
         let d: DetectedKeyboard
         if (fileName.endsWith('.json')) {
           const facts = qmkKeymapFacts(await readText(file), file)
           if (!facts) { setError(`${fileName} is not a QMK keymap: a keymap.json from QMK Configurator or a VIA export has a "layers" list.`); return }
           d = {
-            firmware: 'qmk', suggestedName: pretty(facts.keyboard?.split('/')[0] ?? fileName.replace(/\.json$/, '')),
+            firmware: 'qmk', suggestedName: pretty((facts.keyboard ? splitId(facts.keyboard)[0] : undefined) ?? fileName.replace(/\.json$/, '')),
             shield: facts.keyboard, keymapCandidates: [file], layoutCandidates: [], pointing: [], notes: [], qmk: facts,
           }
         } else {
@@ -183,7 +184,7 @@ export default function AddKeyboard({ mode, existingNames, onAdd, onCancel }: Pr
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
           <span style={{ color: 'var(--text-secondary)' }}>Keymap file</span>
           <select value={keymapPath} onChange={e => setKeymapPath(e.target.value)} style={{ height: 30 }}>
-            {detected.keymapCandidates.map(p => <option key={p} value={p}>{p.split('/').slice(-2).join('/')}</option>)}
+            {detected.keymapCandidates.map(p => <option key={p} value={p}>{tail(p, 2)}</option>)}
           </select>
         </label>
       )}

@@ -3,6 +3,7 @@ import { Keyboard, Command, MousePointer2, Settings, Plus, Laptop } from 'lucide
 import LogoMark from '@/components/ui/LogoMark'
 import type { KeyboardDef } from '@/lib/registry/types'
 import { sameSection, type Section } from '@/lib/nav'
+import { hostTerms, isWindows } from '@/lib/platform'
 
 interface Props {
   keyboards: KeyboardDef[]
@@ -10,9 +11,10 @@ interface Props {
   onNavigate: (s: Section) => void
 }
 
-const HOST_NAV: { section: Section; label: string; icon: typeof Command }[] = [
-  { section: { kind: 'karabiner' }, label: 'MacBook Keys', icon: Command },
-  { section: { kind: 'mouse' }, label: 'Scroll & Mouse', icon: MousePointer2 },
+/** Built-in keyboard first; Scroll & Mouse is Mac-only (Windows shows why instead of a dead link). */
+const hostNav = (): { section: Section; label: string; icon: typeof Command }[] => [
+  { section: { kind: 'karabiner' }, label: hostTerms().laptopKeys, icon: Command },
+  ...(isWindows() ? [] : [{ section: { kind: 'mouse' } as Section, label: 'Scroll & Mouse', icon: MousePointer2 }]),
 ]
 
 function GroupLabel({ children }: { children: string }) {
@@ -77,8 +79,13 @@ export default function Sidebar({ keyboards, active, onNavigate }: Props) {
 
       <nav className="anim-stagger" style={{ padding: '2px 10px', display: 'flex', flexDirection: 'column', gap: 3, flex: 1, overflowY: 'auto' }}>
         {/* MacBook first (Tom, 2026-11-15): the built-in keyboard is the main product; split keyboards follow. */}
-        <GroupLabel>This Mac</GroupLabel>
-        {HOST_NAV.map(h => item(h.section, h.label, h.icon))}
+        <GroupLabel>{hostTerms().thisHost}</GroupLabel>
+        {hostNav().map(h => item(h.section, h.label, h.icon))}
+        {isWindows() && (
+          <div style={{ padding: '2px 8px 6px', fontSize: 'var(--text-11)', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+            Scroll &amp; Mouse is Mac-only. On Windows, scroll and mouse settings are in Settings › Bluetooth &amp; devices › Mouse.
+          </div>
+        )}
 
         <GroupLabel>Keyboards</GroupLabel>
         {keyboards.length === 0 && (

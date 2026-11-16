@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isWindows } from '@/lib/platform'
 import type { Rule } from '@/lib/karabinerGenerator'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { nativeIsRunning, useNativeRemapping } from '@/lib/nativeRemapping'
@@ -59,7 +60,7 @@ export default function Templates({ onTurnOn }: { onTurnOn: () => void }) {
     <div className="tpl-scope tpl-page" data-templates-page>
       <div>
         <h2 className="tpl-title">Templates</h2>
-        <p className="tpl-lede">Pick a setup that’s popular with Mac people. You’ll see what it changes before you add it.</p>
+        <p className="tpl-lede">{isWindows() ? 'Pick a setup that’s popular with fast typists.' : 'Pick a setup that’s popular with Mac people.'} You’ll see what it changes before you add it.</p>
       </div>
       <Legend roles={PAGE_LEGEND.map(l => l.role)} />
       {sections.length === 0 && <div className="tpl-empty">No templates yet</div>}

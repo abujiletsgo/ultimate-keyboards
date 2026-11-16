@@ -6,6 +6,7 @@
 // those throw a friendly error telling the user to use Open.
 
 import { getHandle, getFile } from './fs-handles'
+import { basename } from '../paths'
 
 // Injected by vite `define` (dev server only); undefined in production builds.
 declare const __DEV_FS_TOKEN__: string | undefined
@@ -50,7 +51,7 @@ export async function writeTextFile(path: string, contents: string): Promise<voi
     throw new Error(`Dev save failed: ${res.status} ${await res.text()}`)
   }
   // No live handle (e.g. picked via <input type=file> fallback) — download instead
-  const name = path.replace(/^web(-ro)?:\/\//, '').split('/').pop() || 'keymap.keymap'
+  const name = basename(path.replace(/^web(-ro)?:\/\//, '')) || 'keymap.keymap'
   const blob = new Blob([contents], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

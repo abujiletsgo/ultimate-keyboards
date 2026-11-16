@@ -1,4 +1,5 @@
-// MacBook Pro (US ANSI) keyboard layout
+// MacBook Pro (US ANSI) keyboard layout, and the Windows laptop one beside it
+import { hostOS, type HostOS } from './platform'
 // Each key: key_code (Karabiner), label, x/y in key-units, w/h in key-units
 // 1u = KEY_UNIT px, gap = KEY_GAP px
 
@@ -11,6 +12,8 @@ export interface MacKey {
   h?: number         // height in key units (default 1)
   small?: boolean    // fn-row sizing
   icon?: string      // optional symbol override
+  /** Why this key cannot be remapped (the keyboard handles it before the computer sees it). */
+  fixed?: string
 }
 
 // Geometry of a current MacBook (US ANSI): every row is 14.5u wide, the
@@ -66,6 +69,50 @@ export const MACBOOK_LAYOUT: MacKey[] = [
 const R5_Y = ROW(4)
 const ROW_UNITS = 14.5
 
+/**
+ * A typical Windows laptop (US ANSI), 15u wide: Esc and Del around the function
+ * row, a 2u Backspace, and Ctrl / Fn / Win / Alt along the bottom. The key codes
+ * are the same ones the rules use on a Mac (left_command is the Win key,
+ * left_option is Alt), so one profile means the same thing on both.
+ */
+export const WINDOWS_LAPTOP_LAYOUT: MacKey[] = [
+  ...row(0, [
+    ['escape', 'Esc', 1.5],
+    ...Array.from({ length: 12 }, (_, i): Spec => [`f${i + 1}`, `F${i + 1}`]),
+    ['delete_forward', 'Del', 1.5],
+  ], { h: FN_H, small: true }),
+  ...row(ROW(0), [
+    ['grave_accent_and_tilde', '`'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'],
+    ['7', '7'], ['8', '8'], ['9', '9'], ['0', '0'], ['hyphen', '-'], ['equal_sign', '='], ['delete_or_backspace', 'Backspace', 2],
+  ]),
+  ...row(ROW(1), [
+    ['tab', 'Tab', 1.5], ['q', 'Q'], ['w', 'W'], ['e', 'E'], ['r', 'R'], ['t', 'T'], ['y', 'Y'], ['u', 'U'],
+    ['i', 'I'], ['o', 'O'], ['p', 'P'], ['open_bracket', '['], ['close_bracket', ']'], ['backslash', '\\', 1.5],
+  ]),
+  ...row(ROW(2), [
+    ['caps_lock', 'Caps Lock', 1.75], ['a', 'A'], ['s', 'S'], ['d', 'D'], ['f', 'F'], ['g', 'G'], ['h', 'H'],
+    ['j', 'J'], ['k', 'K'], ['l', 'L'], ['semicolon', ';'], ['quote', "'"], ['return_or_enter', 'Enter', 2.25],
+  ]),
+  ...row(ROW(3), [
+    ['left_shift', 'Shift', 2.25], ['z', 'Z'], ['x', 'X'], ['c', 'C'], ['v', 'V'], ['b', 'B'], ['n', 'N'],
+    ['m', 'M'], ['comma', ','], ['period', '.'], ['slash', '/'], ['right_shift', 'Shift', 2.75],
+  ]),
+  ...row(ROW(4), [
+    ['left_control', 'Ctrl', 1.25], ['fn', 'Fn', 1.25], ['left_command', 'Win', 1.25], ['left_option', 'Alt', 1.25],
+    ['spacebar', '', 5], ['right_option', 'Alt'], ['right_control', 'Ctrl'],
+  ]).map(k => k.code === 'fn' ? { ...k, fixed: 'Fn is handled by the keyboard itself, so Windows never sees it.' } : k),
+  { code: 'left_arrow',  label: '←', x: 12, y: ROW(4) },
+  { code: 'up_arrow',    label: '↑', x: 13, y: ROW(4),       h: 0.5 },
+  { code: 'down_arrow',  label: '↓', x: 13, y: ROW(4) + 0.5, h: 0.5 },
+  { code: 'right_arrow', label: '→', x: 14, y: ROW(4) },
+]
+
+export function laptopLayout(os: HostOS): MacKey[] {
+  return os === 'windows' ? WINDOWS_LAPTOP_LAYOUT : MACBOOK_LAYOUT
+}
+/** The built-in keyboard of the computer the app is running on. */
+export const LAPTOP_LAYOUT: MacKey[] = laptopLayout(hostOS())
+
 export const KEY_UNIT = 46   // px per 1u
 export const KEY_GAP = 4     // px gap between keys
 export const KEY_RADIUS = 6  // px border radius
@@ -86,3 +133,11 @@ export function getKeyStyle(key: MacKey): React.CSSProperties {
 // Total board width/height for the container
 export const BOARD_WIDTH  = ROW_UNITS * (KEY_UNIT + KEY_GAP)
 export const BOARD_HEIGHT = (R5_Y + 1) * (KEY_UNIT + KEY_GAP)
+
+/** Board size in px for any laptop layout (the Mac's matches BOARD_WIDTH / BOARD_HEIGHT). */
+export function boardSize(layout: readonly MacKey[]): { width: number; height: number } {
+  return {
+    width: Math.max(...layout.map(k => k.x + (k.w ?? 1))) * (KEY_UNIT + KEY_GAP),
+    height: Math.max(...layout.map(k => k.y + (k.h ?? 1))) * (KEY_UNIT + KEY_GAP),
+  }
+}

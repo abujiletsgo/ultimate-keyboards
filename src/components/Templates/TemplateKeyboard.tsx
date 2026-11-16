@@ -1,12 +1,12 @@
-import { MACBOOK_LAYOUT, getKeyStyle, KEY_UNIT, KEY_GAP } from '@/lib/macbookLayout'
+import { LAPTOP_LAYOUT, getKeyStyle, boardSize, KEY_UNIT, KEY_GAP } from '@/lib/macbookLayout'
 import type { KeyMark } from '@/lib/templates'
 import ScaledBoard from '@/components/ScaledBoard'
 
 /** The four lower rows (Tab row to arrows): every template's keys are inside them. */
 const FIRST_ROW_Y = 1.75
-const KEYS = MACBOOK_LAYOUT.filter(key => key.y >= FIRST_ROW_Y)
+const KEYS = LAPTOP_LAYOUT.filter(key => key.y >= FIRST_ROW_Y)
 const TOP = FIRST_ROW_Y * (KEY_UNIT + KEY_GAP)
-const WIDTH = 14.5 * (KEY_UNIT + KEY_GAP) - KEY_GAP
+const WIDTH = boardSize(LAPTOP_LAYOUT).width - KEY_GAP
 const HEIGHT = Math.max(...KEYS.map(key => key.y * (KEY_UNIT + KEY_GAP) + (key.h ?? 1) * KEY_UNIT + ((key.h ?? 1) - 1) * KEY_GAP)) - TOP
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
   label?: string
 }
 
-/** The MacBook keys at real size, scaled as one picture; the label sizes are set before the scale. */
+/** The laptop's keys at real size, scaled as one picture; the label sizes are set before the scale. */
 export default function TemplateKeyboard({ marks, label }: Props) {
   return (
     <div className="tpl-board" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>

@@ -4,6 +4,7 @@
  * created next to keymap.c when missing.
  */
 import { useEffect, useRef, useState } from 'react'
+import { tail } from '@/lib/paths'
 import { readText, saveText } from '@/lib/io'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
 import { ErrorPanel, Field, Switch, useToast } from '@/components/ui'
@@ -68,7 +69,7 @@ export default function QmkPointing({ keyboard }: { keyboard: KeyboardDef }) {
   return (
     <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Editing <span className="mono">{dir.split('/').slice(-3).join('/')}/</span> rules.mk + config.h</span>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Editing <span className="mono">{tail(dir, 3)}/</span> rules.mk + config.h</span>
         <span style={{ flex: 1 }} />
         {dirty && <span className="tag" style={{ background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)', color: 'var(--warning)' }}>Unsaved</span>}
         <button className="btn btn-primary btn-sm" onClick={() => save()} disabled={!dirty}>Save</button>

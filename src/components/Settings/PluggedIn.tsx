@@ -9,6 +9,7 @@
  * controls.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { tail } from '@/lib/paths'
 import { mkdir, writeTextFile } from '@tauri-apps/plugin-fs'
 import { documentDir, join } from '@tauri-apps/api/path'
 import { RefreshCw, Usb } from 'lucide-react'
@@ -191,7 +192,7 @@ function DeviceCard({ device, id, onAdd }: { device: UsbKeyboard; id: Identifica
       )}
       {read && shown && (
         <>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Backup of what is on the keyboard: <span className="mono">{read.backupPath.split('/').slice(-3).join('/')}</span></div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Backup of what is on the keyboard: <span className="mono">{tail(read.backupPath, 3)}</span></div>
           {read.layers.length > 1 && (
             <div className="seg-ctrl" role="tablist" aria-label="Layers" style={{ flexWrap: 'wrap', alignSelf: 'flex-start' }}>
               {read.layers.map((l, i) => <button key={i} role="tab" aria-selected={layer === i} className={`seg-btn${layer === i ? ' active' : ''}`} onClick={() => setLayer(i)}>{i} {l.name}</button>)}

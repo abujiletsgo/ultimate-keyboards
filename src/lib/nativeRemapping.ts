@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { IS_TAURI } from './io'
+import { isWindows } from './platform'
 import { HOMEROW_HOLD_MS, TYPING_STREAK_MS, type Rule } from './karabinerGenerator'
 
 export interface NativeProfile {
@@ -123,7 +124,7 @@ export function createNativeRemappingController(deps: Dependencies) {
     return polling
   }
   const act = async <T,>(busy: NonNullable<NativeRemappingSnapshot['busy']>, operation: () => Promise<T>): Promise<T> => {
-    if (!deps.available) throw new Error('Native remapping requires the macOS desktop app. You can export this profile here.')
+    if (!deps.available) throw new Error(`Native remapping requires the ${isWindows() ? 'Windows' : 'macOS'} desktop app. You can export this profile here.`)
     if (snapshot.busy) throw new Error('Wait for the current native setup action to finish.')
     update({ busy, error: null, notice: null })
     try {

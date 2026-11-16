@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Download, Play, Square, RefreshCw, Settings2 } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
+import { isWindows, hostTerms } from '@/lib/platform'
 import { describeHoldTime, readTypingFeel } from './typingFeel'
 import {
   createNativeProfile, nativeCanApply, nativeIsRunning, nativeRemapping,
@@ -31,6 +32,23 @@ export function NativeEmergencyStop() {
   </>
 }
 
+/** The three steps on Windows: no driver and no permission prompt, so setup is one button. */
+function WindowsSetupSteps() {
+  return <>
+    <p style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+      Remapping works on the built-in keyboard of a Windows 10 (22H2) or Windows 11 PC. The keyboard service comes with the app. There is no driver to install and nothing to allow.
+    </p>
+    <ol className="win-steps" style={{ margin: '8px 0 0', paddingLeft: 18, lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+      <li>Choose <strong>Start keyboard service</strong>. It also starts by itself each time you sign in.</li>
+      <li>Set your rules in Keymap, Homerow mods and Combos.</li>
+      <li>Choose <strong>Apply and enable</strong>. <strong>Stop remapping</strong> puts your keyboard back to normal right away.</li>
+    </ol>
+    <p style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+      Programs that run as administrator keep the normal keys.
+    </p>
+  </>
+}
+
 // Status changes announce without moving focus (WCAG 4.1.3); stable controls keep
 // keyboard focus through setup/apply/stop (WCAG 2.4.7). Rendered QA is separate.
 // https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
@@ -50,18 +68,21 @@ export default function NativeRemappingPanel() {
     : status.state === 'running' ? 'Waiting for keyboard'
     : ({ not_installed: 'Setup required', needs_permission: 'Permission required', driver_unavailable: 'Driver unavailable', stopped: 'Stopped', error: 'Needs attention' } as const)[status.state]
 
+  const win = isWindows()
   const nextStep = !available
-    ? 'Export your profile, then open Ultimate Keyboards on macOS to enable native remapping.'
+    ? 'Export your profile, then open the Ultimate Keyboards desktop app to turn remapping on.'
     : !status ? 'Check the service status before applying rules.'
+    : win && !status.helperInstalled ? 'This copy of Ultimate Keyboards is missing its keyboard service. Reinstall the app, then choose Check status.'
+    : win && (status.state === 'error' || status.state === 'driver_unavailable') ? `The keyboard service needs attention: ${status.message} Choose Start keyboard service to try again.`
     : !status.helperInstalled ? 'Install the bundled keyboard service and driver, then complete the macOS approvals below.'
     : status.state === 'error' ? 'The keyboard service needs attention. Review its message below before retrying. Use Repair native components if its installation is incomplete.'
-    : !status.inputMonitoringGranted ? 'Allow Ultimate Keyboards Remapper in System Settings › Privacy & Security › Input Monitoring, then choose Check status. Permission for Terminal or Ultimate Keyboards itself does not approve the remapper.'
-    : status.state === 'driver_unavailable' ? 'Activate the keyboard driver and follow its approval instructions, then retry Apply and enable. The service will check the driver before capturing your keyboard.'
-    : rules.length === 0 ? 'Add a rule or load an example in Keymap, then return here to apply it to the built-in keyboard.'
-    : !status.driverReady ? 'Apply and enable to connect to the keyboard driver. The service will verify the driver before capturing your keyboard.'
+    : !win && !status.inputMonitoringGranted ? 'Allow Ultimate Keyboards Remapper in System Settings › Privacy & Security › Input Monitoring, then choose Check status. Permission for Terminal or Ultimate Keyboards itself does not approve the remapper.'
+    : !win && status.state === 'driver_unavailable' ? 'Activate the keyboard driver and follow its approval instructions, then retry Apply and enable. The service will check the driver before capturing your keyboard.'
+    : rules.length === 0 ? `Add a rule or load an example in Keymap, then return here to apply it to the ${hostTerms().laptopKeyboard}.`
+    : !win && !status.driverReady ? 'Apply and enable to connect to the keyboard driver. The service will verify the driver before capturing your keyboard.'
     : running && matchesLastApply ? 'Your last applied rules are running. Edits take effect when you apply again.'
     : running ? 'Apply the configured rules to replace the live profile, or stop native remapping.'
-    : 'Apply and enable these rules on the built-in keyboard.'
+    : `Apply and enable these rules on the ${hostTerms().laptopKeyboard}.`
 
   // Action errors are retained by the shared controller; no transient-only toast.
   const run = (action: () => Promise<unknown>) => { void action().catch(() => {}) }
@@ -75,6 +96,7 @@ export default function NativeRemappingPanel() {
   }
 
   const needsSetup = available && (!status || !status.helperInstalled || !status.inputMonitoringGranted || status.state === 'driver_unavailable' || status.state === 'error')
+  const installLabel = win ? (status?.helperInstalled ? 'Restart keyboard service' : 'Start keyboard service') : (status?.helperInstalled ? 'Repair native components' : 'Install native components')
 
   return (
     <section aria-label="Native remapping" style={{ flexShrink: 0, minWidth: 0 }}>
@@ -110,24 +132,26 @@ export default function NativeRemappingPanel() {
       <details open={needsSetup || undefined} className={needsSetup ? 'panel-inset' : undefined}
         style={{ padding: needsSetup ? '8px 12px' : 0, fontSize: 11 }}>
         <summary style={{ cursor: 'pointer', color: 'var(--text-secondary)' }}>Native setup and profile</summary>
+        {win ? <WindowsSetupSteps /> : <>
         <p style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
           Native remapping supports the built-in MacBook keyboard on macOS 13 or later (Apple silicon). The installer includes the keyboard service and standalone virtual keyboard driver; no other key app or Terminal commands are needed for setup.
         </p>
         <p style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
           macOS may ask you to allow the bundled driver from Fumihiko Takayama (pqrs.org), then Input Monitoring for Ultimate Keyboards Remapper. Complete those approvals yourself, return here and choose Check status. Remapping starts only when you choose Apply and enable.
         </p>
+        </>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-          <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || (!!status?.helperInstalled && status.driverReady)}
+          <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || (!!status?.helperInstalled && (win ? running : status.driverReady))}
             onClick={() => run(nativeRemapping.install)} aria-describedby="native-next-step">
-            <Download size={13} aria-hidden="true" />{busy === 'install' ? 'Opening installer…' : status?.helperInstalled ? 'Repair native components' : 'Install native components'}
+            <Download size={13} aria-hidden="true" />{busy === 'install' ? (win ? 'Starting…' : 'Opening installer…') : installLabel}
           </button>
-          <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || status?.helperInstalled === false} onClick={() => run(nativeRemapping.openSettings)}>
+          {!win && <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || status?.helperInstalled === false} onClick={() => run(nativeRemapping.openSettings)}>
             <Settings2 size={13} aria-hidden="true" />Input Monitoring
-          </button>
-          <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || !status?.helperInstalled || status.driverReady}
+          </button>}
+          {!win && <button className="btn btn-secondary btn-sm" disabled={!available || !!busy || !status?.helperInstalled || status.driverReady}
             onClick={() => run(nativeRemapping.activateDriver)}>
             <Play size={13} aria-hidden="true" />{busy === 'activate' ? 'Requesting activation…' : 'Activate keyboard driver'}
-          </button>
+          </button>}
           <button className="btn btn-ghost btn-sm" disabled={!available || !!busy || status?.helperInstalled === false} onClick={() => run(nativeRemapping.refreshPermissions)}>
             <RefreshCw size={13} aria-hidden="true" />{busy === 'refresh' ? 'Checking permissions…' : 'Check status'}
           </button>

@@ -7,6 +7,7 @@
  *   when opened (see ./qmk.ts).
  */
 import raw from './zmk-keyboards.json'
+import { splitId } from '../paths'
 import type { PhysicalLayout } from '@/lib/layout'
 import { QMK_POPULAR } from './qmk'
 
@@ -120,7 +121,7 @@ export function wantsQmkOnline(f: CatalogueFilter): boolean {
 
 /** `keychron/q1v2/ansi_encoder` → `Keychron Q1v2 Ansi Encoder`; revision folders dropped. */
 export function qmkPathName(path: string): string {
-  return path.split('/').filter(s => !/^rev\w*$|^v\d+$/i.test(s)).join(' ')
+  return splitId(path).filter(s => !/^rev\w*$|^v\d+$/i.test(s)).join(' ')
     .replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 

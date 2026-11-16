@@ -16,6 +16,7 @@
  * File access goes through `DetectFs` so tests can run on an in-memory tree.
  */
 import { readDir, readTextFile } from '@tauri-apps/plugin-fs'
+import { basename, dirname, segments, splitId } from '../paths'
 import {
   parseZmkPhysicalLayouts, parseInfoJsonLayouts, parseMatrixTransforms, gridLayoutFromTransform,
   type PhysicalLayout,
@@ -146,7 +147,7 @@ export function zmkCatalogueKeyboard(target: string | undefined) {
 
 export async function detectKeyboard(repoPath: string, fs: DetectFs = tauriFs): Promise<DetectedKeyboard | null> {
   const root = await fs.list(repoPath)
-  const folderName = repoPath.split('/').filter(Boolean).pop() ?? 'keyboard'
+  const folderName = basename(repoPath) || 'keyboard'
 
   // ── ZMK config repo ───────────────────────────────────────────────────────
   const hasConfig = root.some(e => e.name === 'config' && e.isDirectory)
@@ -264,7 +265,7 @@ async function walk(fs: DetectFs, root: string): Promise<{ files: string[]; trun
   return { files, truncated: false }
 }
 
-const parentOf = (p: string) => p.slice(0, p.lastIndexOf('/'))
+const parentOf = dirname
 
 async function detectQmk(repoPath: string, folderName: string, fs: DetectFs): Promise<DetectedKeyboard | null> {
   const { files, truncated } = await walk(fs, repoPath)
@@ -272,9 +273,9 @@ async function detectQmk(repoPath: string, folderName: string, fs: DetectFs): Pr
   if (truncated) notes.push('This folder is large, so only part of it was searched. If your keymap is missing, choose the keymap folder itself.')
 
   // keymap JSONs, nearest the chosen folder first
-  const depth = (p: string) => p.split('/').length
+  const depth = (p: string) => segments(p).length
   const keymaps: Array<{ path: string; facts: QmkKeymapFacts }> = []
-  for (const p of files.filter(f => f.endsWith('.json') && !NOT_KEYMAPS.has(f.split('/').pop()!)).sort((a, b) => depth(a) - depth(b)).slice(0, 40)) {
+  for (const p of files.filter(f => f.endsWith('.json') && !NOT_KEYMAPS.has(basename(f))).sort((a, b) => depth(a) - depth(b)).slice(0, 40)) {
     const text = await fs.read(p)
     const facts = text ? qmkKeymapFacts(text, p) : null
     if (facts) keymaps.push({ path: p, facts })
@@ -285,7 +286,7 @@ async function detectQmk(repoPath: string, folderName: string, fs: DetectFs): Pr
     if (keymapCs.length > 0) {
       const kc = keymapCs[0]
       const kb = keyboardFromPath(kc) ?? '<keyboard>'
-      const km = kc.split('/').slice(-2, -1)[0]
+      const km = segments(kc).slice(-2, -1)[0]
       throw new DetectError(
         `Found ${kc.slice(repoPath.length + 1) || 'keymap.c'}, but no keymap JSON. This app edits QMK keymaps as keymap.json. ` +
         `Make one with the QMK CLI: qmk c2json -kb ${kb} -km ${km} -o keymap.json ${kc}, save it next to keymap.c, and choose this folder again.`,
@@ -320,7 +321,7 @@ async function detectQmk(repoPath: string, folderName: string, fs: DetectFs): Pr
   const keyboard = chosen.facts.keyboard
   return {
     firmware: 'qmk', repoPath,
-    suggestedName: prettyName(keyboard ? keyboard.split('/').filter(s => !/^(rev\d+|base|ansi|iso|jis)$/i.test(s)).join(' ') : folderName),
+    suggestedName: prettyName(keyboard ? splitId(keyboard).filter(s => !/^(rev\d+|base|ansi|iso|jis)$/i.test(s)).join(' ') : folderName),
     shield: keyboard,
     keymapCandidates: keymaps.map(k => k.path),
     keymapCPath, layoutCandidates, pointing: [], notes, qmk: chosen.facts,

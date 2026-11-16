@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { basename } from '@/lib/paths'
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -14,11 +15,12 @@ import Updates from "./Settings/Updates";
 import Supported from "./Settings/Supported";
 import PhysicalBoard from "@/components/board/PhysicalBoard";
 import { Switch } from "@/components/ui";
+import { hostTerms, isWindows } from "@/lib/platform";
 
 type Tab = 'keyboards' | 'macbook' | 'updates' | 'about'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'keyboards', label: 'Keyboards' },
-  { id: 'macbook', label: 'MacBook' },
+  { id: 'macbook', label: hostTerms().laptop },
   { id: 'updates', label: 'Updates' },
   { id: 'about', label: 'About' },
 ]
@@ -103,7 +105,7 @@ export default function Settings({ startAdd, startEdit, onAdded }: Props) {
           <>
             <div className="glass" style={{ padding: 18, fontSize: 13, color: "var(--text-muted)", lineHeight: 1.8 }}>
               <p><strong style={{ color: "var(--text)" }}>Ultimate Keyboards</strong> v{__APP_VERSION__}</p>
-              <p>Edit ZMK and QMK keyboards, tune trackpads and trackballs, and remap the MacBook keyboard.</p>
+              <p>Edit ZMK and QMK keyboards, tune trackpads and trackballs, and remap the {hostTerms().laptopKeyboard}.</p>
               <p>MIT licensed · github.com/abujiletsgo/ultimate-keyboards · {CATALOGUE.length} layouts bundled from ZMK</p>
             </div>
             <details className="glass" style={{ padding: "14px 18px" }}>
@@ -151,11 +153,11 @@ function KeyboardRow({ kb, editing, onEdit, onSave, confirming, onAskRemove, onC
       const parsed = JSON.parse(text);
       let layout: PhysicalLayout | null = null;
       if (Array.isArray(parsed)) {
-        layout = parseKle(parsed, f.split('/').pop() ?? 'KLE', f);
+        layout = parseKle(parsed, basename(f) || 'KLE', f);
       } else {
         const ls = parseInfoJsonLayouts(text, f);
         const match = ls.find(l => l.layout.keys.length === kb.layout.keys.length) ?? ls[0];
-        if (match) layout = { ...match.layout, name: `${f.split('/').pop()} · ${match.id}` };
+        if (match) layout = { ...match.layout, name: `${basename(f)} · ${match.id}` };
       }
       if (!layout || layout.keys.length === 0) { setImportError('No layout found in that file (expected info.json "layouts" or a KLE array).'); return }
       if (layout.keys.length !== kb.layout.keys.length) { setImportError(`That layout has ${layout.keys.length} keys but this keyboard's keymap has ${kb.layout.keys.length}.`); return }
@@ -177,7 +179,7 @@ function KeyboardRow({ kb, editing, onEdit, onSave, confirming, onAskRemove, onC
             <span className={`fw-badge fw-${kb.firmware}`}>{kb.firmware.toUpperCase()}</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)" }} title={kb.keymapPath}>
-            {kb.layout.keys.length} keys{kb.pointing.length ? ` · ${kb.pointing.map(p => p.name.toLowerCase()).join(', ')}` : ''} · {(kb.repoPath ?? kb.keymapPath).split('/').filter(Boolean).pop()}
+            {kb.layout.keys.length} keys{kb.pointing.length ? ` · ${kb.pointing.map(p => p.name.toLowerCase()).join(', ')}` : ''} · {basename(kb.repoPath ?? kb.keymapPath)}
           </div>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={onEdit} aria-label={`Edit ${kb.name}`} aria-expanded={editing}><Pencil size={13} /> {editing ? 'Close' : 'Edit'}</button>
@@ -290,6 +292,15 @@ function BuiltInKeyboardField() {
 
   if (!IS_TAURI) {
     return <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Available in the desktop app.</div>;
+  }
+
+  if (isWindows()) {
+    return (
+      <div role="note" style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+        <strong style={{ color: "var(--text)" }}>Turning off the laptop keyboard is Mac-only.</strong>{" "}
+        Windows cannot switch off one keyboard without a driver, so the app leaves it on. If a keyboard resting on top of the laptop causes stray key presses, keep it just above the keys.
+      </div>
+    );
   }
 
   return (

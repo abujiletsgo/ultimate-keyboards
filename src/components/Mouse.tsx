@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { IS_TAURI } from '@/lib/io'
 import { Switch } from '@/components/ui'
+import { isWindows } from '@/lib/platform'
 
 const STORE_KEY = 'uk.mouseConfig'
 
@@ -22,7 +23,30 @@ function loadSaved(): MouseConfig {
 }
 function save(c: MouseConfig) { try { localStorage.setItem(STORE_KEY, JSON.stringify(c)) } catch { /* ignore */ } }
 
+/** Windows has no scroll engine here; say so in place and point at the Windows setting that does the job. */
+function NotOnWindows() {
+  return (
+    <div style={{ height: '100%', overflow: 'auto' }}>
+      <div className="section-header">
+        <span className="section-title">Scroll &amp; Mouse</span>
+      </div>
+      <div style={{ padding: 24, maxWidth: 560, margin: '0 auto' }}>
+        <div className="glass" role="note" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <strong style={{ fontSize: 13, color: 'var(--text)' }}>Scroll &amp; Mouse is only on the Mac</strong>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            The scroll engine changes how a Mac scrolls, and Windows does not let an app do that safely. To reverse scrolling or change the pointer speed on this PC, open Settings › Bluetooth &amp; devices › Mouse.
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Mouse() {
+  return isWindows() ? <NotOnWindows /> : <MacMouse />
+}
+
+function MacMouse() {
   const [config, setConfig] = useState<MouseConfig>({ ...loadSaved(), enabled: false })
   const [busy, setBusy] = useState(false)
   const [needsPermission, setNeedsPermission] = useState(false)

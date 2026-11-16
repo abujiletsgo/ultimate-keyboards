@@ -3,6 +3,7 @@
  * The real remapper does the work; this only reads the keys the page receives and says how it went.
  */
 import type { ComboRule, HomerowModRule, Rule } from './karabinerGenerator'
+import { modifierLong, modifierName, modifierPrefix } from './platform'
 
 /** One thing to press: a plain letter, or the special move being practised. */
 export type Step =
@@ -20,8 +21,16 @@ export interface KeyLike { key: string; code: string; metaKey: boolean; ctrlKey:
 export type Verdict = 'ok' | 'wrong' | 'split' | 'short' | 'ignore'
 
 const MOD_OF: Record<string, Mod> = { command: 'meta', control: 'ctrl', option: 'alt', shift: 'shift' }
-export const MOD_SYM: Record<Mod, string> = { meta: '⌘', ctrl: '⌃', alt: '⌥', shift: '⇧' }
-export const MOD_NAME: Record<Mod, string> = { meta: 'Command', ctrl: 'Control', alt: 'Option', shift: 'Shift' }
+const MOD_KEY: Record<Mod, string> = { meta: 'command', ctrl: 'control', alt: 'option', shift: 'shift' }
+/** What a modifier is called on this computer: ⌘ Command on a Mac, Win on Windows. Read when shown, not at load. */
+export const MOD_SYM: Record<Mod, string> = {
+  get meta() { return modifierName(MOD_KEY.meta) }, get ctrl() { return modifierName(MOD_KEY.ctrl) },
+  get alt() { return modifierName(MOD_KEY.alt) }, get shift() { return modifierName(MOD_KEY.shift) },
+}
+export const MOD_NAME: Record<Mod, string> = {
+  get meta() { return modifierLong(MOD_KEY.meta) }, get ctrl() { return modifierLong(MOD_KEY.ctrl) },
+  get alt() { return modifierLong(MOD_KEY.alt) }, get shift() { return modifierLong(MOD_KEY.shift) },
+}
 const modOf = (modKey: string): Mod | null => MOD_OF[modKey.replace(/^(left|right)_/, '')] ?? null
 
 /** Engine key code → the DOM `key` it produces, for outputs a drill can check. */
@@ -61,7 +70,7 @@ function comboDrill(rule: ComboRule): Drill | null {
   if (!out || mods.includes(null) || !rule.fromKeys.every(k => domCode(k))) return null
   const word = COMBO_WORDS.find(w => ![...w].some(c => rule.fromKeys.includes(c))) ?? 'hi'
   const outMods = mods as Mod[]
-  const outLabel = `${outMods.map(m => MOD_SYM[m]).join('')}${out[1]}`
+  const outLabel = `${modifierPrefix(outMods.map(m => MOD_KEY[m]))}${out[1]}`
   return { id: drillId(rule), steps: [...[...word].map(char => ({ kind: 'letter' as const, char })), { kind: 'combo', keys: rule.fromKeys, outKey: out[0], outMods, outLabel }] }
 }
 

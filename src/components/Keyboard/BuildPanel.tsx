@@ -5,6 +5,7 @@
  * folder, and only while nothing on screen differs from the built commit.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { basename } from '@/lib/paths'
 import { invoke } from '@tauri-apps/api/core'
 import { RefreshCw, Hammer, Zap, ExternalLink } from 'lucide-react'
 import { IS_TAURI } from '@/lib/io'
@@ -147,8 +148,8 @@ export default function BuildPanel({ keyboard }: { keyboard: KeyboardDef }) {
         )}
         {!notBuilt && firmware.map(f => (
           <div key={f} className="panel-inset" style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
-            <span className="mono" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f}>{f.split('/').pop()}</span>
-            <button className="btn btn-primary btn-sm" disabled={flashing !== null || busy !== null} onClick={() => flash(f)} title={firmware.length > 1 ? `Double-tap reset on the half ${f.split('/').pop()} is for, then click` : 'Double-tap reset on the keyboard, then click'}>
+            <span className="mono" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f}>{basename(f)}</span>
+            <button className="btn btn-primary btn-sm" disabled={flashing !== null || busy !== null} onClick={() => flash(f)} title={firmware.length > 1 ? `Double-tap reset on the half ${basename(f)} is for, then click` : 'Double-tap reset on the keyboard, then click'}>
               <Zap size={12} /> {flashing === f ? 'Waiting for bootloader…' : 'Flash'}
             </button>
           </div>

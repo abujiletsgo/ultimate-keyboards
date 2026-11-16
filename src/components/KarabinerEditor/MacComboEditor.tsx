@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
 import { type ComboRule } from '@/lib/karabinerGenerator'
 import type { MacKey } from '@/lib/macbookLayout'
+import { isWindows, modifierName, modifierSpoken } from '@/lib/platform'
 import BindingParamPicker from '@/components/board/BindingParamPicker'
 import { NATIVE_KEYS, NATIVE_KEY_CHOICES, NATIVE_MODIFIERS, nativeKeyChoice, selectNativeKeyChoice, type NativeBinding } from '@/lib/nativeBinding'
 import MacbookKeyboard from './MacbookKeyboard'
@@ -23,15 +24,20 @@ const COMBO_COLORS = [
 
 const KEY_LABELS: Record<string, string> = {
   return_or_enter: 'Enter', delete_or_backspace: '⌫', escape: 'Esc',
-  spacebar: 'Space', caps_lock: 'Caps', left_shift: '⇧L', right_shift: '⇧R',
-  left_control: '⌃L', right_control: '⌃R', left_option: '⌥L', right_option: '⌥R',
-  left_command: '⌘L', right_command: '⌘R', up_arrow: '↑', down_arrow: '↓',
+  spacebar: 'Space', caps_lock: 'Caps', up_arrow: '↑', down_arrow: '↓',
   left_arrow: '←', right_arrow: '→', grave_accent_and_tilde: '`~',
   hyphen: '-', equal_sign: '=', open_bracket: '[', close_bracket: ']',
   backslash: '\\', semicolon: ';', quote: "'", comma: ',', period: '.', slash: '/',
 }
 
-function displayKey(k: string) { return KEY_LABELS[k] ?? k }
+/** Left/right modifier keys: ⌃L on a Mac, LCtrl on Windows. */
+function sidedModifier(k: string): string | null {
+  const m = /^(left|right)_(shift|control|option|command)$/.exec(k)
+  if (!m) return null
+  const side = m[1] === 'left' ? 'L' : 'R'
+  return isWindows() ? `${side}${modifierName(m[2])}` : `${modifierName(m[2])}${side}`
+}
+function displayKey(k: string) { return sidedModifier(k) ?? KEY_LABELS[k] ?? k }
 
 // ── Add / Edit form ────────────────────────────────────────────────────────────
 
@@ -98,15 +104,14 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {[...new Set(['command', 'option', 'control', 'shift', ...toMods])].map(mod => {
             const active = toMods.includes(mod)
-            const sym: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
             return (
-              <button key={mod} aria-label={mod.replace(/_/g, ' ')} aria-pressed={active} onClick={() => toggleMod(mod)} style={{
+              <button key={mod} aria-label={modifierSpoken(mod)} aria-pressed={active} onClick={() => toggleMod(mod)} style={{
                 padding: '3px 8px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
                 background: active ? 'rgba(45,212,191,0.3)' : 'rgba(255,255,255,0.06)',
                 border: active ? '1px solid rgba(45,212,191,0.6)' : '1px solid rgba(255,255,255,0.1)',
                 color: active ? 'var(--accent-hover)' : 'var(--text-muted)',
                 transition: 'background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out)',
-              }}>{sym[mod] ?? mod}</button>
+              }}>{modifierName(mod)}</button>
             )
           })}
         </div>

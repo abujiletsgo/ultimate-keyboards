@@ -1,3 +1,4 @@
+import { modifierName } from './platform'
 import { HOMEROW_MISFIRE_DEFAULTS, type ComboRule, type HomerowModRule, type Rule } from './karabinerGenerator'
 
 /** Home-row positions: left hand A S D F, right hand J K L ; */
@@ -12,7 +13,6 @@ export const HOMEROW_KEYS: { key: string; label: string; hand: 'left' | 'right' 
   { key: 'semicolon', label: ';', hand: 'right' },
 ]
 
-const MOD_SYM: Record<string, string> = { control: '⌃', option: '⌥', shift: '⇧', command: '⌘' }
 
 export const HOMEROW_PRESETS: { label: string; desc: string; mods: Record<string, string> }[] = [
   {
@@ -46,7 +46,7 @@ export function homerowRules(preset: (typeof HOMEROW_PRESETS)[number]): HomerowM
   return HOMEROW_KEYS.flatMap(hk => {
     const modKey = preset.mods[hk.key]
     if (!modKey) return []
-    const sym = MOD_SYM[modKey.replace(/^(left|right)_/, '')] ?? modKey
+    const sym = modifierName(modKey)
     return [{ type: 'homerow_mod' as const, description: `${hk.label}: hold → ${sym}, tap → ${hk.label.toLowerCase()}`, fromKey: hk.key, tapKey: hk.key, modKey, ...HOMEROW_MISFIRE_DEFAULTS }]
   })
 }

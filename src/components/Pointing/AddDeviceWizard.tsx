@@ -6,6 +6,7 @@
  * Pointing tab can tune it and remove it exactly later.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { tail } from '@/lib/paths'
 import { readText, saveText } from '@/lib/io'
 import { ErrorPanel, Field, useToast } from '@/components/ui'
 import { TEMPLATES, validateField, type PointingTemplate } from '@/lib/pointing/templates'
@@ -30,7 +31,7 @@ function deviceId(t: PointingTemplate, existing: PointingDescriptor[]): string {
 }
 
 function short(path: string): string {
-  return path.split('/').slice(-3).join('/')
+  return tail(path, 3)
 }
 
 export default function AddDeviceWizard({ keyboard, onDone }: Props) {

@@ -5,7 +5,8 @@ import { useKarabinerStore } from '@/stores/karabinerStore'
 import { macLayerNames } from '@/lib/macLayerEditing'
 import { nativeShiftedSymbol, isShiftModifier } from '@/lib/nativeSymbols'
 import { macKeyFace, macModifierLabel } from '@/lib/macKeymapView'
-import { MACBOOK_LAYOUT } from '@/lib/macbookLayout'
+import { LAPTOP_LAYOUT } from '@/lib/macbookLayout'
+import { isWindows, modifierSpoken } from '@/lib/platform'
 import { applyNativeBinding, readNativeBinding, nativeBindingError, nativeBindingContextError, NATIVE_KEYS, NATIVE_KEY_CHOICES, nativeKeyChoice, selectNativeKeyChoice, NATIVE_HOLD_MODIFIERS, type NativeBehavior, type NativeBinding } from '@/lib/nativeBinding'
 
 const BEHAVIORS: BindingBehavior[] = [
@@ -30,7 +31,7 @@ export default function MacBindingEditor({ keyCode, layerName, anchorX, anchorY,
   const update = (patch: Partial<NativeBinding>) => { setSaveError(''); setBinding(current => ({ ...current, ...patch })) }
   const error = nativeBindingContextError(rules, keyCode) ?? nativeBindingError(binding, keyCode, layerName)
   const readOnly = !NATIVE_KEYS.includes(keyCode)
-  const physical = MACBOOK_LAYOUT.find(key => key.code === keyCode)
+  const physical = LAPTOP_LAYOUT.find(key => key.code === keyCode)
   const face = physical ? macKeyFace(rules, physical, layerName) : null
   const symbol = nativeShiftedSymbol(binding.key, binding.modifiers)
   const preview = binding.behavior === 'trans' ? (layerName === null ? 'Original key' : 'Pass → Base')
@@ -62,8 +63,8 @@ export default function MacBindingEditor({ keyCode, layerName, anchorX, anchorY,
         </ParamRow>}
         {binding.behavior === 'key' && <ParamRow label="Mods"><div className="seg-ctrl" role="group" aria-label="Output modifiers" style={{ flexWrap: 'wrap', minWidth: 0 }}>
           {[...new Set(['command', 'option', 'control', 'shift', ...binding.modifiers])].map(mod => <button type="button" className={`seg-btn${binding.modifiers.includes(mod) ? ' active' : ''}`} key={mod} aria-pressed={binding.modifiers.includes(mod)}
-            aria-label={mod.replace(/_/g, ' ')} title={mod.replace(/_/g, ' ')} style={{ padding: '4px 8px' }}
-            onClick={() => update({ modifiers: binding.modifiers.includes(mod) ? binding.modifiers.filter(value => value !== mod) : [...binding.modifiers, mod] })}>{({ command: 'CMD', option: 'ALT', control: 'CTL', shift: 'SFT' } as Record<string, string>)[mod] ?? mod.replace('left_', 'L ').replace('right_', 'R ').replace('command', 'CMD').replace('option', 'ALT').replace('control', 'CTL').replace('shift', 'SFT')}</button>)}
+            aria-label={modifierSpoken(mod)} title={modifierSpoken(mod)} style={{ padding: '4px 8px' }}
+            onClick={() => update({ modifiers: binding.modifiers.includes(mod) ? binding.modifiers.filter(value => value !== mod) : [...binding.modifiers, mod] })}>{({ command: isWindows() ? 'WIN' : 'CMD', option: 'ALT', control: isWindows() ? 'CTRL' : 'CTL', shift: 'SFT' } as Record<string, string>)[mod] ?? mod.replace('left_', 'L ').replace('right_', 'R ').replace('command', isWindows() ? 'WIN' : 'CMD').replace('option', 'ALT').replace('control', isWindows() ? 'CTRL' : 'CTL').replace('shift', 'SFT')}</button>)}
         </div></ParamRow>}
         {binding.behavior === 'mo' && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Immediate while held; release returns to the previous layer.</div>}
         {binding.behavior === 'lt' && <fieldset style={{ border: 0, padding: 0, margin: 0, fontSize: 11 }}><legend style={{ marginBottom: 6 }}>Native layer timing</legend>

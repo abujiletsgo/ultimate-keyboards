@@ -1,4 +1,5 @@
-import { MACBOOK_LAYOUT, type MacKey } from './macbookLayout'
+import { MACBOOK_LAYOUT, LAPTOP_LAYOUT, type MacKey } from './macbookLayout'
+import { modifierName, modifierPrefix, modifierText, hyperName } from './platform'
 import { nativeShiftedSymbol, isShiftModifier } from './nativeSymbols'
 import { keycodeLabel } from './keyLabel'
 import { macLayerNames } from './macLayerEditing'
@@ -9,6 +10,11 @@ import type { Rule } from './karabinerGenerator'
 export const MAC_PHYSICAL_LAYOUT: PhysicalLayout = {
   name: 'MacBook US ANSI', source: 'legacy',
   keys: MACBOOK_LAYOUT.map(({ x, y, w, h }) => ({ x, y, w, h })),
+}
+/** The same for the laptop the app is running on (the Mac's is MAC_PHYSICAL_LAYOUT). */
+export const LAPTOP_PHYSICAL_LAYOUT: PhysicalLayout = {
+  name: LAPTOP_LAYOUT === MACBOOK_LAYOUT ? 'MacBook US ANSI' : 'Windows laptop US ANSI', source: 'legacy',
+  keys: LAPTOP_LAYOUT.map(({ x, y, w, h }) => ({ x, y, w, h })),
 }
 export interface MacLayer { name: string | null; activators: string[]; bindings: number }
 export function macLayers(rules: readonly Rule[], layerNames: readonly string[] = []): MacLayer[] {
@@ -32,10 +38,10 @@ export function macBaseRuleIndex(rules: readonly Rule[], code: string): number {
   return rules.findIndex(rule => ['simple', 'layer_activator', 'homerow_mod'].includes(rule.type) && rule.type !== 'combo' && rule.fromKey === code
     && (rule.type !== 'simple' || !rule.fromModifiers?.length))
 }
-const MODS: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
-export const macModifierLabel = (mods?: readonly string[]) => (mods ?? []).map(mod => MODS[mod.replace(/^(left|right)_/, '')] ?? mod).join('')
-/** Modifier symbols for home-row sub-labels: "hold ⌘" fits a 1u key where "hold CMD" is cut off. */
-const MOD_GLYPH: Record<string, string> = { control: '⌃', option: '⌥', shift: '⇧', command: '⌘', hyper: '⌃⌥⇧⌘' }
+/** Held modifiers as a prefix for a key label: `⌃⇧` on a Mac, `Ctrl+Shift+` on Windows. */
+export const macModifierLabel = (mods?: readonly string[]) => modifierPrefix(mods)
+/** Modifiers on their own ("If ⌃⇧", "If Ctrl+Shift"). */
+const macModifierText = (mods?: readonly string[]) => modifierText(mods)
 export function macKeyLabel(code: string): string {
   const aliases: Record<string, string> = { spacebar: 'SPACE', return_or_enter: 'ENTER', delete_or_backspace: 'BSPC', delete_forward: 'DELETE', grave_accent_and_tilde: 'GRAVE', open_bracket: 'LBKT', close_bracket: 'RBKT', quote: 'SQT', period: 'DOT', left_option: 'LALT', right_option: 'RALT' }
   return keycodeLabel(aliases[code] ?? code.toUpperCase())
@@ -58,7 +64,7 @@ export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | 
   const rule = rules[index]
   const combo = rules.some(rule => rule.type === 'combo' && rule.fromKeys.includes(key.code))
   const modifierRule = rules.find(rule => rule.type === 'simple' && rule.fromKey === key.code && !!rule.fromModifiers?.length)
-  let label = physical, sub = combo ? 'Combo' : modifierRule?.type === 'simple' ? `If ${macModifierLabel(modifierRule.fromModifiers)}` : '', kind: MacKeyFace['kind'] = 'normal'
+  let label = physical, sub = combo ? 'Combo' : modifierRule?.type === 'simple' ? `If ${macModifierText(modifierRule.fromModifiers)}` : '', kind: MacKeyFace['kind'] = 'normal'
   if (rule?.type === 'simple' || rule?.type === 'layer_binding') {
     const symbol = nativeShiftedSymbol(rule.toKey, rule.toModifiers ?? [])
     const modifiers = symbol ? (rule.toModifiers ?? []).filter(mod => !isShiftModifier(mod)) : rule.toModifiers
@@ -69,7 +75,8 @@ export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | 
     sub = rule.tapKey ? `hold ${rule.layerName}` : 'hold'; kind = rule.tapKey ? 'layer-tap' : 'layer'
   } else if (rule?.type === 'homerow_mod') {
     label = macKeyLabel(rule.tapKey)
-    sub = `hold ${MOD_GLYPH[rule.modKey.replace(/^(left|right)_/, '')] ?? macKeyLabel(rule.modKey)}`; kind = 'homerow'
+    const family = rule.modKey.replace(/^(left|right)_/, '')
+    sub = `hold ${family === 'hyper' ? hyperName() : ['control', 'option', 'shift', 'command'].includes(family) ? modifierName(family) : macKeyLabel(rule.modKey)}`; kind = 'homerow'
   }
   const shadowedBy = layer !== null && index >= 0 && baseIndex >= 0 && baseIndex < index ? baseIndex : undefined
   const detail = `${physical}: ${rule ? rule.description : 'Original key'}${conditional ? '. Modifier or combo rules also apply; this is a configured preview.' : ''}`
@@ -78,6 +85,6 @@ export function macKeyFace(rules: readonly Rule[], key: MacKey, layer: string | 
     kind: shadowedBy !== undefined ? 'conflict' : kind, ruleIndex: index, conditional, shadowedBy }
 }
 export function macUnplacedKeys(rules: readonly Rule[]): string[] {
-  const physical = new Set(MACBOOK_LAYOUT.map(key => key.code))
+  const physical = new Set(LAPTOP_LAYOUT.map(key => key.code))
   return [...new Set(rules.flatMap(rule => rule.type === 'combo' ? rule.fromKeys : [rule.fromKey]))].filter(code => !physical.has(code))
 }

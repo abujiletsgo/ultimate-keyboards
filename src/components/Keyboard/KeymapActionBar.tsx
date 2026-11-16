@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { hostTerms, isWindows } from '@/lib/platform'
 import { Undo2, Redo2 } from 'lucide-react'
 
 /** Local editing actions shared by file-backed and native keymaps. */
@@ -25,8 +26,8 @@ export default function KeymapActionBar({ label, dirty, editable = true, canUndo
     {afterSave}
     <span style={{ flex: 1 }} />
     {extraActions}
-    <button className="btn btn-ghost btn-sm btn-icon" aria-label="Undo" title="Undo (⌘Z)" disabled={!canUndo || !editable} onClick={onUndo}><Undo2 size={13} /></button>
-    <button className="btn btn-ghost btn-sm btn-icon" aria-label="Redo" title="Redo (⇧⌘Z)" disabled={!canRedo || !editable} onClick={onRedo}><Redo2 size={13} /></button>
+    <button className="btn btn-ghost btn-sm btn-icon" aria-label="Undo" title={`Undo (${hostTerms().shortcutKey}Z)`} disabled={!canUndo || !editable} onClick={onUndo}><Undo2 size={13} /></button>
+    <button className="btn btn-ghost btn-sm btn-icon" aria-label="Redo" title={`Redo (${isWindows() ? 'Ctrl+Shift+Z' : '⇧⌘Z'})`} disabled={!canRedo || !editable} onClick={onRedo}><Redo2 size={13} /></button>
     {dirty && <button className="btn btn-ghost btn-sm" disabled={!editable} title={revertTitle} onClick={onRevert}>Revert</button>}
   </div>
 }

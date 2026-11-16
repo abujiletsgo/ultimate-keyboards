@@ -1,5 +1,6 @@
 import { FolderOpen, Search, Usb, Laptop } from 'lucide-react'
 import LogoMark from '@/components/ui/LogoMark'
+import { isWindows } from '@/lib/platform'
 import type { HubTab } from '@/components/Settings/AddKeyboardHub'
 
 interface Props {
@@ -33,8 +34,10 @@ export default function Onboarding({ onStart, onMacBook }: Props) {
             <button className="btn btn-primary" onClick={onMacBook}
               style={{ justifyContent: 'flex-start', padding: 14, height: 'auto', alignItems: 'flex-start', flexDirection: 'column', gap: 8 }}>
               <Laptop size={18} />
-              <span style={{ textAlign: 'left' }}><div style={{ fontWeight: 600 }}>Remap this MacBook</div>
-                <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400, whiteSpace: 'normal' }}>Open MacBook, then the Remapping tab to set up the bundled keyboard service. No other key app needed.</div></span>
+              <span style={{ textAlign: 'left' }}><div style={{ fontWeight: 600 }}>{isWindows() ? 'Remap this laptop' : 'Remap this MacBook'}</div>
+                <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 400, whiteSpace: 'normal' }}>{isWindows()
+                  ? 'Open Laptop keys, then the Remapping tab and start the keyboard service. Nothing else to install.'
+                  : 'Open MacBook, then the Remapping tab to set up the bundled keyboard service. No other key app needed.'}</div></span>
             </button>
             {CHOICES.map(c => (
               <button key={c.tab} className={`btn ${c.primary ? 'btn-primary' : 'btn-secondary'}`} onClick={() => onStart(c.tab)}

@@ -5,6 +5,7 @@
  * read-only with the construct named.
  */
 import React, { useEffect, useState } from 'react'
+import { basename } from '@/lib/paths'
 import { parseKeymapText, updateCombosInSource, updateLayerBindingsInSource } from '@/lib/zmkParser'
 import { readText, saveText, backupExists, restoreBackup, ValidationError } from '@/lib/io'
 import { checkZmkCompatibility, type CompatReport } from '@/lib/compat'
@@ -131,7 +132,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
       const target = await saveDialog({ defaultPath: dir ? await join(dir, name) : name, filters: [{ name: 'SVG', extensions: ['svg'] }] })
       if (!target) return
       await saveText(target, svg)
-      flash(`Exported ${target.split('/').pop()}`)
+      flash(`Exported ${basename(target)}`)
     } catch (err) {
       flash(`Export failed: ${err}`, false)
     }
@@ -178,7 +179,7 @@ const ZmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <KeymapActionBar
-        label={<span className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={keyboard.keymapPath}>{keyboard.keymapPath.split('/').pop()}</span>}
+        label={<span className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={keyboard.keymapPath}>{basename(keyboard.keymapPath)}</span>}
         dirty={isDirty} editable={editable} canUndo={past.length > 0} canRedo={future.length > 0}
         onSave={onSave} onUndo={undo} onRedo={redo}
         onRevert={() => { useZMKStore.getState().setDirty(false); load() }} revertTitle="Discard unsaved edits and reload from disk"

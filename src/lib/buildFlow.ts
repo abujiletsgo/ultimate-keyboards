@@ -7,6 +7,7 @@
  * cannot pick up a build of some other commit.
  */
 import type { KeyboardDef } from '@/lib/registry/types'
+import { toPosix } from './paths'
 
 export interface Run { databaseId: number; status: string; conclusion: string | null; displayTitle: string; createdAt: string; updatedAt: string; headSha: string; url: string }
 
@@ -35,8 +36,9 @@ export function editedPaths(kb: KeyboardDef): string[] {
 
 /** Repo-relative form of an absolute path (git porcelain paths are relative). */
 export function relToRepo(repo: string, path: string): string {
-  const root = repo.endsWith('/') ? repo : `${repo}/`
-  return path.startsWith(root) ? path.slice(root.length) : path
+  const root = toPosix(repo).replace(/\/+$/, '') + '/'
+  const p = toPosix(path)
+  return p.startsWith(root) ? p.slice(root.length) : p
 }
 
 /** Porcelain lines (`XY path`, `R  old -> new`) that touch one of the app's files. */

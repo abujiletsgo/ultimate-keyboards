@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Suspense, Component, type ReactNode } from "react";
+import { hostTerms, isWindows } from "@/lib/platform";
 import { invoke } from "@tauri-apps/api/core";
 import Sidebar from "@/components/Sidebar";
 import { useZMKStore } from "@/stores/zmkStore";
@@ -133,19 +134,19 @@ export default function App() {
 
   // Resume the native scroll engine at launch from the persisted config.
   useEffect(() => {
-    if (!IS_TAURI) return;
+    if (!IS_TAURI || isWindows()) return; // the scroll engine is Mac-only
     try {
       const raw = localStorage.getItem("uk.mouseConfig");
       if (!raw) return;
       const config = JSON.parse(raw) as { enabled?: boolean; reverse?: boolean; speed?: number };
       if (config.enabled) {
         invoke("set_mouse_config", { config: { enabled: true, reverse: !!config.reverse, speed: Number(config.speed) || 1 } })
-          .catch(() => toast.error("The scroll engine could not start. Open This Mac › Scroll & Mouse to allow Accessibility access."));
+          .catch(() => toast.error(`The scroll engine could not start. Open ${hostTerms().thisHost} › Scroll & Mouse to allow Accessibility access.`));
       }
     } catch { /* ignore corrupt config */ }
   }, []);
 
-  // Cmd+S saves everything dirty; Cmd+Z / Shift+Cmd+Z undo/redo keymap edits
+  // Cmd/Ctrl+S saves everything dirty; Cmd/Ctrl+Z / Shift+Cmd/Ctrl+Z undo/redo keymap edits
   // (unless focus is in a text field, where the browser's own undo applies).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

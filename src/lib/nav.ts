@@ -1,4 +1,4 @@
-/** App navigation model: a keyboard is the top-level object; host-level tools live under "This Mac". */
+/** App navigation model: a keyboard is the top-level object; host-level tools live under "This Mac" (or "This PC" on Windows). */
 
 export type Section =
   | { kind: 'keyboard'; id: string }

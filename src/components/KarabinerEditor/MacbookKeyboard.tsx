@@ -1,9 +1,10 @@
 import { useState, type CSSProperties } from 'react'
-import { MACBOOK_LAYOUT, getKeyStyle, BOARD_WIDTH, BOARD_HEIGHT, type MacKey } from '@/lib/macbookLayout'
+import { LAPTOP_LAYOUT, getKeyStyle, boardSize, type MacKey } from '@/lib/macbookLayout'
+import { hostTerms, modifierName, modifierPrefix } from '@/lib/platform'
 import type { Rule } from '@/lib/karabinerGenerator'
 import ScaledBoard from '@/components/ScaledBoard'
 import PhysicalBoard from '@/components/board/PhysicalBoard'
-import { MAC_PHYSICAL_LAYOUT, macKeyFace } from '@/lib/macKeymapView'
+import { LAPTOP_PHYSICAL_LAYOUT, macKeyFace } from '@/lib/macKeymapView'
 import { BoardLegend } from '@/components/ui'
 import { Fingerprint } from 'lucide-react'
 import MacBindingEditor from './MacBindingEditor'
@@ -34,15 +35,16 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
   const [editing, setEditing] = useState<{ key: MacKey; x: number; y: number; top: number } | null>(null)
 
   // What each key does now, for the ones the rules change (tap output / hold output).
-  const MOD_SYM: Record<string, string> = { command: '⌘', option: '⌥', control: '⌃', shift: '⇧', fn: 'fn' }
-  const labelOf = (code: string) => MACBOOK_LAYOUT.find(k => k.code === code)?.label || code.replace(/_/g, ' ')
-  const modsOf = (mods?: string[]) => (mods ?? []).map(m => MOD_SYM[m.replace(/^(left|right)_/, '')] ?? m).join('')
+  const { laptopKeyboard } = hostTerms()
+  const { width: BOARD_WIDTH, height: BOARD_HEIGHT } = boardSize(LAPTOP_LAYOUT)
+  const labelOf = (code: string) => LAPTOP_LAYOUT.find(k => k.code === code)?.label || code.replace(/_/g, ' ')
+  const modsOf = (mods?: string[]) => modifierPrefix(mods)
   const changed = new Map<string, string>()
   for (const rule of rules) {
     switch (rule.type) {
       case 'simple': changed.set(rule.fromKey, `→ ${modsOf(rule.toModifiers)}${labelOf(rule.toKey)}`); break
       case 'layer_activator': changed.set(rule.fromKey, `hold: ${rule.layerName}`); break
-      case 'homerow_mod': changed.set(rule.fromKey, `hold ${MOD_SYM[rule.modKey.replace(/^(left|right)_/, '')] ?? rule.modKey}`); break
+      case 'homerow_mod': changed.set(rule.fromKey, `hold ${modifierName(rule.modKey)}`); break
       default: break // combos and layer keys are shown in their own tabs
     }
   }
@@ -70,18 +72,20 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
         { color: '#f2a35e', label: 'Mod-tap' }, { color: '#a48cf5', label: 'Combo' }, { color: 'rgba(255,255,255,0.15)', label: 'Pass-through' },
         { color: '#fbbf24', label: 'Rule-order conflict' },
       ]} />
-      <PhysicalBoard layout={MAC_PHYSICAL_LAYOUT} label="MacBook keyboard" showDivider={false}
+      <PhysicalBoard layout={LAPTOP_PHYSICAL_LAYOUT} label={laptopKeyboard.replace(/^./, c => c.toUpperCase())} showDivider={false}
         keyAt={position => {
-          const key = MACBOOK_LAYOUT[position]
+          const key = LAPTOP_LAYOUT[position]
           const face = macKeyFace(rules, key, selectedLayer)
           if (key.code === 'power') return { ...semanticKeyVisual('normal', '', undefined, 'power: Touch ID is system controlled'), label: <Fingerprint size={14} aria-hidden="true" /> }
+          if (key.fixed) return semanticKeyVisual('normal', key.label, undefined, `${key.label}: ${key.fixed}`)
           const behavior: KeyBehavior = face.kind === 'layer' ? 'layer' : face.kind === 'layer-tap' ? 'layer-tap'
             : face.kind === 'homerow' ? 'mod-tap' : face.kind === 'fallback' ? 'trans' : face.sub === 'Combo' ? 'combo' : 'normal'
           return semanticKeyVisual(behavior, face.label, key.small || (key.h ?? 1) < 1 ? undefined : face.sub,
             `${key.code}: ${face.detail}; output ${face.label}`)
         }}
         onKeyClick={(position, element) => {
-          const key = MACBOOK_LAYOUT[position]
+          const key = LAPTOP_LAYOUT[position]
+          if (key.fixed) return
           onKeyClick?.(key)
           const rect = element.getBoundingClientRect()
           setEditing({ key, x: rect.left, y: rect.bottom + 4, top: rect.top - 4 })
@@ -108,7 +112,7 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
       <div
         className="glass macbook-keyboard"
         role="group"
-        aria-label="MacBook keyboard"
+        aria-label={laptopKeyboard.replace(/^./, c => c.toUpperCase())}
         style={{
           position: 'relative',
           width: BOARD_WIDTH,
@@ -118,11 +122,11 @@ export default function MacbookKeyboard({ rules, onKeyClick, selectedKey, select
           flexShrink: 0,
         }}
       >
-        {MACBOOK_LAYOUT.map(key => {
+        {LAPTOP_LAYOUT.map(key => {
           const vars = getKeyVars(key)
           const style = getKeyStyle(key)
           const isSelected = selectedKey?.code === key.code || selectedKeys?.has(key.code)
-          const isStatic = isPreview || (clickableKeys !== undefined && !clickableKeys.has(key.code))
+          const isStatic = isPreview || !!key.fixed || (clickableKeys !== undefined && !clickableKeys.has(key.code))
           const badge = keyBadges?.get(key.code)
           return (
             <button

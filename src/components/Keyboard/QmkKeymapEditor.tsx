@@ -4,6 +4,7 @@
  * keymap.c path is known.
  */
 import React, { useEffect, useState } from 'react'
+import { basename } from '@/lib/paths'
 import { useQMKStore } from '@/stores/qmkStore'
 import { syncDirty } from '@/lib/dirty'
 import type { KeyboardDef } from '@/lib/registry/types'
@@ -59,7 +60,7 @@ const QmkKeymapEditor: React.FC<Props> = ({ keyboard, view }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span className="mono" style={{ fontSize: 11, color: 'var(--text-secondary)' }} title={keyboard.keymapPath}>
-          {keyboard.keymapPath.split('/').pop()}
+          {basename(keyboard.keymapPath)}
         </span>
         {isDirty && (
           <span className="tag" style={{ color: 'var(--warning)', background: 'rgba(251,191,36,0.14)', borderColor: 'rgba(251,191,36,0.25)' }}>Unsaved</span>
