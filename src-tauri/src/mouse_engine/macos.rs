@@ -1,49 +1,34 @@
-//! Native mouse/scroll engine — our own, not a fork of Mac Mouse Fix.
-//!
-//! A CGEventTap intercepts scroll-wheel events and rewrites them: reverse
-//! direction and speed scaling to start. It runs on a dedicated thread with its
-//! own CFRunLoop, and reads its config from lock-free atomics so the hot event
-//! callback never blocks.
+//! macOS side: a CGEventTap on ScrollWheel rewrites discrete wheel events
+//! (reverse + speed) or, with smooth scrolling on, swallows them and lets the
+//! emitter post eased pixel-scroll events instead. The tap runs on its own
+//! thread with a CFRunLoop and reads config from lock-free atomics.
 //!
 //! Trackpad protection (the load-bearing rule): we ONLY touch discrete
 //! scroll-wheel events (`IsContinuous == 0`). Continuous/phase events — the
 //! MacBook's built-in trackpad and other precision devices — pass through
-//! byte-identical, so multi-finger gestures and momentum are never disturbed.
+//! byte-identical, as do our own synthetic events (marked in the event's
+//! source user data).
 
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use std::sync::{mpsc, OnceLock};
 use std::time::Duration;
 
 use core_foundation::base::TCFType;
 use core_foundation::mach_port::CFMachPortRef;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
-    CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
-    EventField,
+    CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
+    EventField, ScrollEventUnit,
 };
+use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
+
+use super::{run_emitter, Msg, CONFIG};
 
 extern "C" {
     /// Re-enable a tap the system switched off (`TapDisabledByTimeout` /
     /// `TapDisabledByUserInput`). Not re-exported by core-graphics.
     fn CGEventTapEnable(tap: CFMachPortRef, enable: bool);
 }
-
-/// Engine config, read on every scroll event. Speed is an f64 stored as its bit
-/// pattern so it fits in an atomic (no lock on the hot path).
-struct EngineConfig {
-    /// Master switch. When false the callback passes every event through untouched.
-    enabled: AtomicBool,
-    /// Reverse vertical scroll direction.
-    reverse: AtomicBool,
-    /// Multiplier applied to the scroll delta (1.0 = unchanged). f64 bits.
-    speed_bits: AtomicU64,
-}
-
-static CONFIG: EngineConfig = EngineConfig {
-    enabled: AtomicBool::new(false),
-    reverse: AtomicBool::new(false),
-    speed_bits: AtomicU64::new(0), // set to 1.0 on start()
-};
 
 /// Claimed (compare-exchange) by whichever caller spawns the tap thread, so two
 /// concurrent `start()` calls can never create two taps. Reset if creation fails.
@@ -54,35 +39,57 @@ static STARTED: AtomicBool = AtomicBool::new(false);
 static TAP_PORT: AtomicPtr<core_foundation::mach_port::__CFMachPort> =
     AtomicPtr::new(std::ptr::null_mut());
 
-/// `None`: this OS has the engine. (The other systems' stand-in names a reason.)
-pub fn unavailable_reason() -> Option<&'static str> {
-    None
+/// Feeds the emitter thread (smooth mode).
+static EMIT_TX: OnceLock<mpsc::Sender<Msg>> = OnceLock::new();
+
+/// Tag on our synthetic events (EVENT_SOURCE_USER_DATA) so the tap ignores them.
+const MARKER: i64 = 0x554B_5343; // "UKSC"
+
+/// Pixels per wheel line (one notch at speed 1.0). Mac Mouse Fix lands near
+/// 50-60; stock macOS is about 10 with acceleration on top.
+const PIXELS_PER_LINE: f64 = 50.0;
+
+/// The 0.24 tap API cannot return "drop", so neutralise the event: zero every
+/// delta and turn it into a Null event, which the system discards.
+fn swallow(event: &CGEvent) {
+    for f in [
+        EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
+        EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
+        EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_1,
+        EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_2,
+    ] {
+        event.set_integer_value_field(f, 0);
+    }
+    event.set_type(CGEventType::Null);
 }
 
-fn speed() -> f64 {
-    f64::from_bits(CONFIG.speed_bits.load(Ordering::Relaxed))
+/// Emitter thread: post each tick as a synthetic pixel scroll event.
+fn spawn_emitter() -> Result<(), String> {
+    let (tx, rx) = mpsc::channel::<Msg>();
+    std::thread::Builder::new()
+        .name("mouse-emitter".into())
+        .spawn(move || {
+            let Ok(source) = CGEventSource::new(CGEventSourceStateID::HIDSystemState) else {
+                return;
+            };
+            run_emitter(rx, |v, h| {
+                if let Ok(ev) =
+                    CGEvent::new_scroll_event(source.clone(), ScrollEventUnit::PIXEL, 2, v, h, 0)
+                {
+                    ev.set_integer_value_field(EventField::EVENT_SOURCE_USER_DATA, MARKER);
+                    ev.post(CGEventTapLocation::Session);
+                }
+            });
+        })
+        .map_err(|e| format!("Failed to spawn mouse-emitter thread: {e}"))?;
+    let _ = EMIT_TX.set(tx);
+    Ok(())
 }
 
-/// Public config setter, called from the Tauri command layer.
-pub fn set_config(enabled: bool, reverse: bool, speed: f64) {
-    CONFIG.enabled.store(enabled, Ordering::Relaxed);
-    CONFIG.reverse.store(reverse, Ordering::Relaxed);
-    // Clamp to a sane band so a bad value can't make scrolling unusable.
-    let clamped = speed.clamp(0.1, 20.0);
-    CONFIG.speed_bits.store(clamped.to_bits(), Ordering::Relaxed);
-}
-
-pub fn get_config() -> (bool, bool, f64) {
-    (
-        CONFIG.enabled.load(Ordering::Relaxed),
-        CONFIG.reverse.load(Ordering::Relaxed),
-        speed(),
-    )
-}
-
-/// Transform one scroll event in place. Returns without touching the event when
-/// disabled, when it's a continuous (trackpad) event, or when it's a no-op.
-fn transform(event: &core_graphics::event::CGEvent) {
+/// Transform one scroll event in place (or hand it to the smoother). Returns
+/// without touching the event when disabled, when it's a continuous (trackpad)
+/// event, or when it's a no-op.
+fn transform(event: &CGEvent) {
     if !CONFIG.enabled.load(Ordering::Relaxed) {
         return;
     }
@@ -94,7 +101,26 @@ fn transform(event: &core_graphics::event::CGEvent) {
     }
 
     let reverse = CONFIG.reverse.load(Ordering::Relaxed);
-    let spd = speed();
+    let spd = CONFIG.speed();
+
+    if CONFIG.smooth.load(Ordering::Relaxed) {
+        if let Some(tx) = EMIT_TX.get() {
+            let line_v = event.get_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1);
+            let line_h = event.get_integer_value_field(EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2);
+            if line_v != 0 || line_h != 0 {
+                let sign = if reverse { -1.0 } else { 1.0 };
+                let k = PIXELS_PER_LINE * spd;
+                if tx
+                    .send(Msg::Smooth(line_v as f64 * k * sign, line_h as f64 * k))
+                    .is_ok()
+                {
+                    swallow(event);
+                }
+            }
+            return;
+        }
+    }
+
     if !reverse && (spd - 1.0).abs() < f64::EPSILON {
         return; // nothing to do
     }
@@ -140,9 +166,9 @@ pub fn start() -> Result<(), String> {
         return Ok(());
     }
 
-    // Default speed 1.0 before the frontend pushes real config.
-    if CONFIG.speed_bits.load(Ordering::Relaxed) == 0 {
-        CONFIG.speed_bits.store(1.0f64.to_bits(), Ordering::Relaxed);
+    if let Err(e) = spawn_emitter() {
+        STARTED.store(false, Ordering::Release);
+        return Err(e);
     }
 
     let (tx, rx) = mpsc::channel::<Result<(), String>>();
@@ -165,7 +191,14 @@ pub fn start() -> Result<(), String> {
                                 unsafe { CGEventTapEnable(port, true) };
                             }
                         }
-                        _ => transform(event),
+                        _ => {
+                            // Our own synthetic smooth-scroll events pass untouched.
+                            if event.get_integer_value_field(EventField::EVENT_SOURCE_USER_DATA)
+                                != MARKER
+                            {
+                                transform(event);
+                            }
+                        }
                     }
                     None // keep the (possibly mutated-in-place) event
                 },

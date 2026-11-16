@@ -33,14 +33,14 @@ libc = "0.2"
 # Only for frames.rs: the WKWebView frame-rate preference.
 objc2 = "0.6"
 # The scroll engine (mouse_engine.rs).
-core-graphics = "0.24"
+core-graphics = { version = "0.24", features = ["highsierra"] }
 core-foundation = "0.10"
 hidapi = { version = "2.6.7", default-features = false, features = ["macos-shared-device"] }
 tauri-plugin-updater = "2.12.0"
 
 [target.'cfg(windows)'.dependencies]
 # ShellExecute for opening links (platform/windows.rs).
-windows-sys = { version = "0.61", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Media", "Win32_System_LibraryLoader", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 # Pure-Rust HID backend: no C compiler needed, same on x64 and ARM64.
 hidapi = { version = "2.6.7", default-features = false, features = ["windows-native"] }
 # Windows' own certificate store (schannel) instead of rustls + ring, which

@@ -10,9 +10,9 @@ mod platform;
 // The scroll & mouse engine and the keyboard-service client are macOS code
 // today. Elsewhere the same names resolve to stand-ins that say why they are
 // absent (see platform/).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", windows))]
 mod mouse_engine;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 #[path = "platform/mouse_engine_unavailable.rs"]
 mod mouse_engine;
 // macOS and Windows both have a real keyboard-service client (B-9: Windows
@@ -151,6 +151,13 @@ struct MouseConfig {
     enabled: bool,
     reverse: bool,
     speed: f64,
+    /// Ease wheel notches out. Older saved configs lack it, so default on.
+    #[serde(default = "default_smooth")]
+    smooth: bool,
+}
+
+fn default_smooth() -> bool {
+    true
 }
 
 /// Push new config to the live engine. Starts the tap thread on first enable;
@@ -160,7 +167,7 @@ fn set_mouse_config(config: MouseConfig) -> Result<(), String> {
     if config.enabled {
         mouse_engine::start()?;
     }
-    mouse_engine::set_config(config.enabled, config.reverse, config.speed);
+    mouse_engine::set_config(config.enabled, config.reverse, config.speed, config.smooth);
     Ok(())
 }
 
@@ -252,11 +259,12 @@ mod template_link_tests {
 
 #[tauri::command]
 fn get_mouse_config() -> MouseConfig {
-    let (enabled, reverse, speed) = mouse_engine::get_config();
+    let (enabled, reverse, speed, smooth) = mouse_engine::get_config();
     MouseConfig {
         enabled,
         reverse,
         speed,
+        smooth,
     }
 }
 
