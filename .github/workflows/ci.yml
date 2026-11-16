@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 jobs:
   frontend:
     runs-on: macos-latest
@@ -44,3 +45,35 @@ jobs:
       - run: python3 -m unittest discover -s native/service/tests
       - run: python3 -m unittest discover -s native/packaging/tests
       - run: python3 -m unittest discover -s scripts/tests
+  # Windows x64 and ARM64. scripts/check-windows-ci.sh reads these job names.
+  windows:
+    name: windows (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+          workspaces: |
+            native/engine
+            src-tauri
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run typecheck
+      - run: cargo test --locked --manifest-path native/engine/Cargo.toml
+      # generate_context! needs the frontend dist to exist.
+      - run: bunx vite build
+      - run: cargo build --manifest-path src-tauri/Cargo.toml
+      - if: hashFiles('native/service-win/Cargo.toml') != ''
+        run: cargo test --locked --manifest-path native/service-win/Cargo.toml
