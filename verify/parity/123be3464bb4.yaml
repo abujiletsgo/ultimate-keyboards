@@ -1,0 +1,12 @@
+# Key panel (123be34) replaces HomerowModEditor, MacComboEditor and MacBindingEditor.
+# Their parts moved: modOptions -> keyActions.ts:holdChoices (Hold chips, same per-OS labels),
+# combo editing -> KeyPanel combo row, binding editing -> KeyPanel Tap row.
+FRAME-CHECK: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + af verify run FRAME-CHECK pass on c30e42e5c343"}
+FRAME-FIRST: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + af verify run FRAME-FIRST pass on c30e42e5c343 (800px MacBook Keys: 88 checked, 0 hidden)"}
+FRAME-TIME: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + not yet re-measured; mac-app cell stays untested until a real-device frame-time run"}
+B-1: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + FRAME-FIRST pass on c30e42e5c343; agent cell to be re-checked"}
+B-2: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + FRAME-FIRST pass on c30e42e5c343; agent cell to be re-checked"}
+B-3: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + FRAME-FIRST pass on c30e42e5c343 (skeletons 0); agent cell to be re-checked"}
+B-4: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + bun test 604 pass on c30e42e5c343; agent cell to be re-checked"}
+B-5: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + bun test 604 pass on c30e42e5c343; agent cell to be re-checked"}
+B-6: {kept: "src/components/KarabinerEditor/KeyPanel.tsx + bun test 604 pass on c30e42e5c343; agent cell to be re-checked"}
