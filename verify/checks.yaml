@@ -213,3 +213,19 @@ checks:
       class: platform API contract untested on the real OS
       prevention: KE-89 e2e harness on the ZenBook now applies a profile through the real pipe; add a Windows-only cargo test that connects to a live pipe instance and expects an authorized apply (KE-90)
       sweep: 'src-tauri app client: default SecurityImpersonation, fine after the fix; macOS service uses audit tokens (not affected); no other ImpersonateNamedPipeClient calls in the repo'
+
+  - id: B-8
+    area: engine
+    check: 'Reported break does not recur: K+L → Enter never fires when K or L is also a home-row key (default MacBook profile, Windows templates): the first matching rule wins and the home-row rule comes first'
+    targets: [host, zenbook]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [native/engine/src/**]
+    added: '2026-11-16 bug: K+L → Enter never fires when K or L is also a home-row key (default MacBook profile, Windows templates): the first matching rule wins and the home-row rule comes first'
+    why:
+      cause: 'native/engine/src/lib.rs down(): the first rule matching a key wins, and macDefaults DEFAULT_RULES and the Windows templates list homerow_mod rules before combos, so K and L resolved as hold keys and K+L never reached the combo'
+      made_by: the engine treats rule order as precedence (fine for layers), but the profile builder never ordered combos ahead of home-row keys, and nothing linked the two
+      missed_by: engine tests only put combos first (combo_fallback_can_be_dual_role); no test fed the app's real DEFAULT_RULES order to the engine; the Mac was never checked with K+L on a home-row profile; found by the ZenBook hands-free e2e
+      class: ordering contract between two modules (precedence implied by list order)
+      prevention: 'structural: the engine gives a combo the first chance at any key a combo uses, whatever the order, so the wrong order can''t be written; regression test combo_wins_over_earlier_homerow_rule_on_same_key; ZenBook e2e checks K+L'
+      sweep: same engine crate runs the Mac helper (native/service) and the Windows service, both fixed by this change; layer rules keep explicit precedence over combos by design (layer_rules_before_combos_take_precedence)

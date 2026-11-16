@@ -616,10 +616,21 @@ impl Engine {
         if !(224..=231).contains(&event.usage) {
             self.last_down_at = Some(event.at_ms);
         }
-        let selected = self
+        let mut selected = self
             .rules
             .iter()
             .position(|r| self.matches(r, event.usage, allow_combo));
+        // A combo gets the first chance at a home-row key even when the
+        // home-row rule is listed first (the app writes home-row keys before
+        // combos). If the combo doesn't complete, the key is re-queued with
+        // allow_combo = false and falls back to its home-row role.
+        if allow_combo && matches!(selected.map(|i| &self.rules[i]), Some(Compiled::Dual { .. })) {
+            if let Some(c) = self.rules.iter().position(
+                |r| matches!(r, Compiled::Combo { from, .. } if from.contains(&event.usage)),
+            ) {
+                selected = Some(c);
+            }
+        }
         match selected.map(|i| (i, self.rules[i].clone())) {
             Some((
                 _,

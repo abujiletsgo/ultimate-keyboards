@@ -481,3 +481,33 @@ fn custom_timing_fields_round_trip_and_drive_deadline() {
     assert!(e.tick(209).is_empty());
     assert_eq!(e.tick(210), expected(&[("left_control", true)]));
 }
+
+// B-8: the app writes home-row keys before combos (DEFAULT_RULES, templates),
+// so a combo must still win on a key that is also a home-row key.
+#[test]
+fn combo_wins_over_earlier_homerow_rule_on_same_key() {
+    let rules = r#"[
+     {"type":"homerow_mod","fromKey":"k","tapKey":"k","modKey":"left_control"},
+     {"type":"homerow_mod","fromKey":"l","tapKey":"l","modKey":"left_option"},
+     {"type":"combo","fromKeys":["k","l"],"toKey":"return_or_enter"}
+    ]"#;
+    let mut e = engine(rules);
+    assert!(event(&mut e, "k", true, 0).is_empty());
+    assert_eq!(
+        event(&mut e, "l", true, 10),
+        expected(&[("return_or_enter", true)])
+    );
+    event(&mut e, "k", false, 70);
+    assert_eq!(
+        event(&mut e, "l", false, 72),
+        expected(&[("return_or_enter", false)])
+    );
+    // Alone, K still taps k and still holds as Ctrl.
+    let mut e = engine(rules);
+    event(&mut e, "k", true, 0);
+    assert_eq!(event(&mut e, "k", false, 80), expected(&[("k", true), ("k", false)]));
+    let mut e = engine(rules);
+    event(&mut e, "k", true, 0);
+    let held = e.tick(400);
+    assert_eq!(held, expected(&[("left_control", true)]));
+}
