@@ -1,6 +1,7 @@
 import type { PhysicalLayout } from '../lib/layout/types'
 import { create } from 'zustand'
 import { readText, saveText } from '../lib/io'
+import { detectEol } from '../lib/lineEndings'
 import { parseQMKViaJson, toVIARaw, type QMKKeymap } from '../lib/qmkParser'
 
 interface QMKState {
@@ -50,9 +51,12 @@ export const useQMKStore = create<QMKState>((set, get) => ({
     const raw = toVIARaw(keymap)
     // If the file can't be re-read, abort: writing only `layers` into an
     // empty object would silently drop every other VIA field.
-    const json = JSON.parse(await readText(filePath))
+    const text = await readText(filePath)
+    const json = JSON.parse(text)
     json.layers = raw
-    const out = JSON.stringify(json, null, 2)
+    // Keep the file's own line ending and final newline (CRLF on Windows checkouts).
+    const eol = detectEol(text)
+    const out = JSON.stringify(json, null, 2).replace(/\n/g, eol) + (/\n\s*$/.test(text) ? eol : '')
     await saveText(filePath, out, {
       validate: (o) => {
         try {
