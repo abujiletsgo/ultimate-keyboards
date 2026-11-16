@@ -54,6 +54,11 @@ static STARTED: AtomicBool = AtomicBool::new(false);
 static TAP_PORT: AtomicPtr<core_foundation::mach_port::__CFMachPort> =
     AtomicPtr::new(std::ptr::null_mut());
 
+/// `None`: this OS has the engine. (The other systems' stand-in names a reason.)
+pub fn unavailable_reason() -> Option<&'static str> {
+    None
+}
+
 fn speed() -> f64 {
     f64::from_bits(CONFIG.speed_bits.load(Ordering::Relaxed))
 }

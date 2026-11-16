@@ -23,12 +23,8 @@ tauri-plugin-fs = "2"
 tauri-plugin-persisted-scope = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
-core-graphics = "0.24"
-core-foundation = "0.10"
 tauri-plugin-store = "2"
-tauri-plugin-updater = "2.12.0"
 tauri-plugin-process = "2.3.1"
-hidapi = { version = "2.6.7", default-features = false, features = ["macos-shared-device"] }
 serialport = { version = "4.10.1", default-features = false }
 lzma-rs = "0.3.0"
 libc = "0.2"
@@ -36,6 +32,20 @@ libc = "0.2"
 [target.'cfg(target_os = "macos")'.dependencies]
 # Only for frames.rs: the WKWebView frame-rate preference.
 objc2 = "0.6"
+# The scroll engine (mouse_engine.rs).
+core-graphics = "0.24"
+core-foundation = "0.10"
+hidapi = { version = "2.6.7", default-features = false, features = ["macos-shared-device"] }
+tauri-plugin-updater = "2.12.0"
+
+[target.'cfg(windows)'.dependencies]
+# ShellExecute for opening links (platform/windows.rs).
+windows-sys = { version = "0.61", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+# Pure-Rust HID backend: no C compiler needed, same on x64 and ARM64.
+hidapi = { version = "2.6.7", default-features = false, features = ["windows-native"] }
+# Windows' own certificate store (schannel) instead of rustls + ring, which
+# needs a C toolchain per CPU (x64 and ARM64).
+tauri-plugin-updater = { version = "2.12.0", default-features = false, features = ["native-tls", "zip", "system-proxy"] }
 
 [profile.release]
 panic = "abort"

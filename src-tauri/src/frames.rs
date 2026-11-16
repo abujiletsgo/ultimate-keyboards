@@ -34,8 +34,11 @@ pub fn uncap(window: &tauri::WebviewWindow) {
     }
 }
 
+/// Only WKWebView holds a 60 fps preference; other webviews follow the display.
 #[cfg(not(target_os = "macos"))]
-pub fn uncap(_window: &tauri::WebviewWindow) {}
+pub fn uncap(_window: &tauri::WebviewWindow) {
+    let _ = PACING.set(Err("this webview does not cap the frame rate; nothing to change".into()));
+}
 
 /// Set one WebKit feature flag on a live WKWebView and return its new value.
 #[cfg(target_os = "macos")]
