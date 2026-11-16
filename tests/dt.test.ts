@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { basename, join } from 'path'
 import {
   parseKeymapText, updateLayerBindingsInSource, updateCombosInSource,
   addLayerToSource, renameLayerInSource, deleteLayerFromSource,
@@ -26,7 +26,7 @@ function changedLines(a: string, b: string): number {
 
 describe('devicetree-CST keymap parser: corpus golden tests', () => {
   for (const file of files) {
-    const name = file.split('/').pop()!
+    const name = basename(file)
     const src = readFileSync(file, 'utf8')
     test(`${name}: no-op save is byte-identical`, () => {
       expect(roundTrip(src)).toBe(src)
