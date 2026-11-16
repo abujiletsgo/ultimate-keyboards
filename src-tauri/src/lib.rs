@@ -15,9 +15,11 @@ mod mouse_engine;
 #[cfg(not(target_os = "macos"))]
 #[path = "platform/mouse_engine_unavailable.rs"]
 mod mouse_engine;
-#[cfg(target_os = "macos")]
+// macOS and Windows both have a real keyboard-service client (B-9: Windows
+// was routed to the stand-in, so the app never reached the installed service).
+#[cfg(any(target_os = "macos", windows))]
 mod native_remapping;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", windows)))]
 #[path = "platform/native_remapping_stub.rs"]
 mod native_remapping;
 
@@ -216,6 +218,20 @@ fn open_template_link(url: String) -> Result<(), String> {
         return Err("only template video and source links can be opened".into());
     }
     platform::open_url(&url)
+}
+
+#[cfg(all(test, windows))]
+mod windows_client_tests {
+    /// B-9: the Windows app must use the real client, never the stand-in.
+    #[test]
+    fn windows_app_uses_real_keyboard_service_client() {
+        let status = super::native_remapping::native_remapping_status();
+        assert!(
+            !status.message.contains("not set up in this build"),
+            "Windows build is wired to the stand-in: {}",
+            status.message
+        );
+    }
 }
 
 #[cfg(test)]

@@ -229,3 +229,12 @@ checks:
       class: ordering contract between two modules (precedence implied by list order)
       prevention: 'structural: the engine gives a combo the first chance at any key a combo uses, whatever the order, so the wrong order can''t be written; regression test combo_wins_over_earlier_homerow_rule_on_same_key; ZenBook e2e checks K+L'
       sweep: same engine crate runs the Mac helper (native/service) and the Windows service, both fixed by this change; layer rules keep explicit precedence over combos by design (layer_rules_before_combos_take_precedence)
+
+  - id: B-9
+    area: windows
+    check: 'Reported break does not recur: Windows app shows Setup required and ''not set up in this build yet'': lib.rs routes every non-Mac build to the native_remapping stub, so the app never talks to the installed keyboard service'
+    targets: [host, zenbook]
+    how: 'agent: Reproduce the reported break on {target}, then confirm it no longer happens on the build. Narrow targets/affects and make it auto if a command can prove it.'
+    proof: Screenshot or log from the named build and target showing the reported behaviour no longer happens
+    affects: [src-tauri/src/lib.rs, src-tauri/src/native_remapping*, src-tauri/src/platform/**]
+    added: '2026-11-16 bug: Windows app shows Setup required and ''not set up in this build yet'': lib.rs routes every non-Mac build to the native_remapping stub, so the app never talks to the installed keyboard service'
