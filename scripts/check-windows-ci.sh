@@ -12,7 +12,10 @@ fi
 sha=$(git rev-parse HEAD)
 branch=$(git rev-parse --abbrev-ref HEAD)
 
-run_id=$(gh run list --workflow CI --branch "$branch" --commit "$sha" \
+# Detached HEAD (af-pm repo checkouts): find the run by commit alone.
+branch_arg=(--branch "$branch")
+[ "$branch" = HEAD ] && branch_arg=()
+run_id=$(gh run list --workflow CI ${branch_arg[@]+"${branch_arg[@]}"} --commit "$sha" \
   --limit 1 --json databaseId --jq '.[0].databaseId // empty')
 if [ -z "$run_id" ]; then
   echo "no CI run for $branch@$sha" >&2
