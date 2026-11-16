@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { ConfirmBanner } from '@/components/ui'
 import MacbookKeyboard from './MacbookKeyboard'
+import PracticeCard from './PracticeCard'
+import { drillFor, drillId, triedIds } from '@/lib/practice'
 import './HomerowModEditor.css'
 import React, { useMemo } from 'react'
 import { useKarabinerStore } from '@/stores/karabinerStore'
@@ -26,7 +28,7 @@ const MOD_OPTIONS: { modKey: string; label: string; sym: string }[] = [
 
 const PRESETS = HOMEROW_PRESETS
 
-export const HomerowModEditor: React.FC = () => {
+export const HomerowModEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn }) => {
   const { rules, addRule, removeRule, updateRule, replaceRules } = useKarabinerStore()
 
   // Index all current homerow mod rules by their fromKey
@@ -60,9 +62,13 @@ export const HomerowModEditor: React.FC = () => {
     if (modKey === null) { if (entry) removeRule(entry.idx); return }
     const sym = MOD_OPTIONS.find(m => m.modKey === modKey)?.sym ?? modKey
     const description = `${hk.label}: hold → ${sym}, tap → ${hk.label.toLowerCase()}`
-    if (entry) updateRule(entry.idx, { ...entry.rule, modKey, description })
-    else addRule({ type: 'homerow_mod', description, fromKey: hk.key, tapKey: hk.key, modKey, ...feelFields(feel) })
+    const rule: HomerowModRule = entry ? { ...entry.rule, modKey, description }
+      : { type: 'homerow_mod', description, fromKey: hk.key, tapKey: hk.key, modKey, ...feelFields(feel) }
+    if (entry) updateRule(entry.idx, rule); else addRule(rule)
+    if (drillFor(rule) && !triedIds().has(drillId(rule))) setPractice(rule)
   }
+  // Try it: offered once for each new home-row key, and any time from the picker.
+  const [practice, setPractice] = useState<HomerowModRule | null>(null)
 
   const [pendingPreset, setPendingPreset] = useState<typeof PRESETS[0] | 'clear' | null>(null)
   function requestPreset(preset: typeof PRESETS[0]) {
@@ -82,7 +88,8 @@ export const HomerowModEditor: React.FC = () => {
 
   const enabledCount = HOMEROW_KEYS.filter(hk => modsByKey.has(hk.key)).length
   const selectedKey = HOMEROW_KEYS.find(hk => hk.key === selected) ?? null
-  const selectedMod = selectedKey ? modsByKey.get(selectedKey.key)?.rule.modKey ?? null : null
+  const selectedEntry = selectedKey ? modsByKey.get(selectedKey.key) ?? null : null
+  const selectedMod = selectedEntry?.rule.modKey ?? null
 
   // What the picture shows: the preset being previewed, else the profile.
   const shownMod = (key: string) => preview ? preview.mods[key] : modsByKey.get(key)?.rule.modKey
@@ -125,7 +132,10 @@ export const HomerowModEditor: React.FC = () => {
       {/* Pick what the selected key does when held. */}
       {selectedKey && (
         <div className="panel-inset" style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Hold <strong style={{ color: 'var(--text)' }}>{selectedKey.label}</strong> for…</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Hold <strong style={{ color: 'var(--text)' }}>{selectedKey.label}</strong> for…</span>
+            {selectedEntry && drillFor(selectedEntry.rule) && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPractice(selectedEntry.rule)}>Try {selectedKey.label}</button>}
+          </div>
           <div role="radiogroup" aria-label={`What holding ${selectedKey.label} does`} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[null, ...MOD_OPTIONS.filter(m => m.modKey.startsWith(selectedKey.hand === 'left' ? 'left_' : 'right_')).map(m => m.modKey)].map(modKey => {
               const opt = MOD_OPTIONS.find(m => m.modKey === modKey)
@@ -142,6 +152,8 @@ export const HomerowModEditor: React.FC = () => {
           </div>
         </div>
       )}
+
+      {practice && <PracticeCard key={drillId(practice)} rule={practice} onClose={() => setPractice(null)} onTurnOn={onTurnOn} />}
 
       {/* Ready-made sets: hover or focus to see them on the keyboard. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

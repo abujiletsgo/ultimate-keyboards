@@ -7,6 +7,8 @@ import type { MacKey } from '@/lib/macbookLayout'
 import BindingParamPicker from '@/components/board/BindingParamPicker'
 import { NATIVE_KEYS, NATIVE_KEY_CHOICES, NATIVE_MODIFIERS, nativeKeyChoice, selectNativeKeyChoice, type NativeBinding } from '@/lib/nativeBinding'
 import MacbookKeyboard from './MacbookKeyboard'
+import PracticeCard from './PracticeCard'
+import { drillFor, drillId, triedIds } from '@/lib/practice'
 
 const COMBO_COLORS = [
   '#60a5fa',
@@ -157,8 +159,11 @@ function ComboForm({ editing, onSave, onCancel }: FormProps) {
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
-const MacComboEditor: React.FC = () => {
+const MacComboEditor: React.FC<{ onTurnOn: () => void }> = ({ onTurnOn }) => {
   const { rules, addRule, removeRule, updateRule } = useKarabinerStore()
+  // Try it: offered once for each new combo, and any time from the row's Try button.
+  const [practice, setPractice] = useState<ComboRule | null>(null)
+  const offerPractice = (rule: ComboRule) => { if (drillFor(rule) && !triedIds().has(drillId(rule))) setPractice(rule) }
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<{ combo: ComboRule; idx: number } | null>(null)
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
@@ -185,12 +190,14 @@ const MacComboEditor: React.FC = () => {
   function handleAdd(rule: ComboRule) {
     addRule(rule)
     setShowForm(false)
+    offerPractice(rule)
   }
 
   function handleEdit(rule: ComboRule) {
     if (!editing) return
-    updateRule(editing.idx, rule) // keeps its position — Karabiner evaluates rules in order
+    updateRule(editing.idx, rule) // keeps its position — rules are evaluated in order
     setEditing(null)
+    offerPractice(rule)
   }
 
   const [confirmIdx, setConfirmIdx] = useState<number | null>(null)
@@ -235,6 +242,10 @@ const MacComboEditor: React.FC = () => {
             comboHighlightColor={activeColor}
           />
         </div>
+      )}
+
+      {practice && !showForm && !editing && (
+        <PracticeCard key={drillId(practice)} rule={practice} onClose={() => setPractice(null)} onTurnOn={onTurnOn} />
       )}
 
       {/* Forms */}
@@ -293,6 +304,7 @@ const MacComboEditor: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                  {drillFor(rule) && <button aria-label={`Try combo ${rule.fromKeys.map(displayKey).join(" + ")}`} className="btn btn-ghost btn-sm" onClick={() => setPractice(rule)}>Try</button>}
                   <button aria-label={`Edit combo ${rule.fromKeys.map(displayKey).join(" + ")}`} className="btn btn-secondary btn-sm" onClick={() => { setEditing({ combo: rule, idx }); setShowForm(false) }}>
                     Edit
                   </button>

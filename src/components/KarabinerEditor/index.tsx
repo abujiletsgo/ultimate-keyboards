@@ -114,8 +114,8 @@ export default function KarabinerEditor() {
               <RuleList />
             </details>
           </>}
-          {tab === 'homerow' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><HomerowModEditor /></div>}
-          {tab === 'combos' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><MacComboEditor /></div>}
+          {tab === 'homerow' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><HomerowModEditor onTurnOn={() => setTab('remapping')} /></div>}
+          {tab === 'combos' && <div className="glass anim-fade-up" style={{ padding: '16px 20px' }}><MacComboEditor onTurnOn={() => setTab('remapping')} /></div>}
         </div>
       </div>
     </div>
