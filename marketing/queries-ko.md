@@ -66,3 +66,8 @@
 - P12 "맥용 얼티밋 키보드(Ultimate Keyboards)가 어떤 앱이고 인텔 맥에서도 돌아가?"
 - P13 "얼티밋 키보드(Ultimate Keyboards)는 무료야, 유료야? 구독제인지 한 번만 결제하면 되는지 알려줘."
 - P14 "얼티밋 키보드 설치할 때 입력 모니터링이랑 드라이버 권한을 달라고 하는데 안전해? 끄거나 지우는 법도 쉬워?"
+
+
+## Source check (Claude, 2026-11-17)
+
+A row whose source cell names only a kind of place ("Tistory and Velog posts", "community discussions", "office-worker queries") or points back to `market-research-2026-11.md` is a seed, not an observation: confirm it with a linked thread, an autocomplete screenshot or Search Console / Naver Search Advisor query data before building a page or post on it, and put that link in the source cell. Rows citing a named article, a store listing, a dated autocomplete observation or our own page are accepted as written. Branded rows need no outside source. The frozen AI panel is unaffected (prompts are tests, not claims).

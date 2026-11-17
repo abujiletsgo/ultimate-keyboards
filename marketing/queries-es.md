@@ -66,3 +66,8 @@ Redactados en español neutro (`tú`, natural tanto en Hispanoamérica/EE. UU. c
 - P12 "¿Qué es Ultimate Keyboards para Mac y en qué Macs funciona?"
 - P13 "¿Ultimate Keyboards es gratis o cuánto cuesta? ¿Es de pago único o suscripción?"
 - P14 "¿Es seguro instalar Ultimate Keyboards en macOS y qué permisos del sistema necesita?"
+
+
+## Source check (Claude, 2026-11-17)
+
+A row whose source cell names only a kind of place ("Tistory and Velog posts", "community discussions", "office-worker queries") or points back to `market-research-2026-11.md` is a seed, not an observation: confirm it with a linked thread, an autocomplete screenshot or Search Console / Naver Search Advisor query data before building a page or post on it, and put that link in the source cell. Rows citing a named article, a store listing, a dated autocomplete observation or our own page are accepted as written. Branded rows need no outside source. The frozen AI panel is unaffected (prompts are tests, not claims).
