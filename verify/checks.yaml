@@ -263,3 +263,12 @@ checks:
     proof: Screenshot of the Windows app after import plus Notepad paste result
     affects: [src/lib/profileTransfer.ts, src/components/KarabinerEditor/ProfileTransfer.tsx]
     added: 2026-11-17 Tom asked for Mac<->Windows export/import with Cmd/Ctrl swap
+
+  - id: XFER-3
+    area: laptop-keys
+    check: 'On real Windows, the Mac default profile exported and imported with Import and swap remaps as on the Mac: F and J (Cmd holds on the Mac) hold Ctrl, D holds Shift, K+L Enter, W+E Escape, I+O Backspace, plain typing unchanged'
+    targets: [zenbook]
+    how: 'agent: bun native/service-win/e2e/make-profile.ts --import <Mac export> > profile.json; on the ZenBook desktop session run run-e2e.ps1 -Suite mac-import with the CI uk-remapper-e2e build; result.json ok=true'
+    proof: result.json with ok=true and every case pass
+    affects: [src/lib/profileTransfer.ts, native/service-win/e2e/**, native/engine/src/**]
+    added: 2026-11-17 key behaviour half of XFER-2, runnable without GUI control

@@ -1,12 +1,15 @@
 # End-to-end check of the Windows keyboard service on a real PC, no hands needed (KE-89).
 # Runs in the signed-in user's desktop session (Task Scheduler /IT), never over a bare SSH session.
-#   powershell -NoProfile -ExecutionPolicy Bypass -File run-e2e.ps1 -Service <e2e exe> -Profile <profile.json> -Out <result.json>
+#   powershell -NoProfile -ExecutionPolicy Bypass -File run-e2e.ps1 -Service <e2e exe> -Profile <profile.json> -Out <result.json> [-Suite templates|mac-import]
+# Suites: templates = make-profile.ts default (Windows home-row-starter + easy combos);
+#         mac-import = the Mac default profile exported and imported with "Import and swap" (make-profile.ts --import).
 # The service must be the test-only build (cargo --features e2e): only it acts on keys tagged E2E_TAG.
 # Keys go only to this script's own recorder window; focus is checked before every key and the run aborts otherwise.
 param(
   [Parameter(Mandatory)] [string] $Service,
   [Parameter(Mandatory)] [string] $Profile,
-  [Parameter(Mandatory)] [string] $Out
+  [Parameter(Mandatory)] [string] $Out,
+  [ValidateSet('templates', 'mac-import')] [string] $Suite = 'templates'
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
@@ -97,6 +100,20 @@ try {
     @{ name = 'I+O is Backspace'; expect = 'Back'; run = { K 'i' $false; Pump 10; K 'o' $false; Pump 60; K 'i' $true; K 'o' $true } },
     @{ name = 'fast typing keeps letters'; expect = 'F J D K'; run = { foreach ($c in 'f','j','d','k') { Tap $c 35; Pump 45 } } }
   )
+  if ($Suite -eq 'mac-import') {
+    # Mac default: F and J hold Command (copy/paste finger), A and ; hold Control. After the swap F and J hold Ctrl.
+    $cases = @(
+      @{ name = 'plain typing'; expect = 'H E L L O'; run = { foreach ($c in 'h','e','l','l','o') { Tap $c; Pump 90 } } },
+      @{ name = 'tap F types f'; expect = 'F'; run = { Tap 'f' 60 } },
+      @{ name = 'hold F (Cmd on the Mac) is Ctrl'; expect = 'U+ctrl'; run = { K 'f' $false; Pump 320; Tap 'u'; Pump 30; K 'f' $true } },
+      @{ name = 'hold J (Cmd on the Mac) is Ctrl'; expect = 'A+ctrl'; run = { K 'j' $false; Pump 320; Tap 'a'; Pump 30; K 'j' $true } },
+      @{ name = 'hold D is Shift'; expect = 'U+shift'; run = { K 'd' $false; Pump 320; Tap 'u'; Pump 30; K 'd' $true } },
+      @{ name = 'K+L is Enter'; expect = 'Return'; run = { K 'k' $false; Pump 10; K 'l' $false; Pump 60; K 'k' $true; K 'l' $true } },
+      @{ name = 'W+E is Escape'; expect = 'Escape'; run = { K 'w' $false; Pump 10; K 'e' $false; Pump 60; K 'w' $true; K 'e' $true } },
+      @{ name = 'I+O is Backspace'; expect = 'Back'; run = { K 'i' $false; Pump 10; K 'o' $false; Pump 60; K 'i' $true; K 'o' $true } }
+    )
+  }
+  $result.suite = $Suite
   $allOk = $true
   $n = 0
   foreach ($c in $cases) {
