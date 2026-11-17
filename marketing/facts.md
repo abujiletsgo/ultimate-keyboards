@@ -1,4 +1,4 @@
-# Ultimate Keyboards facts (last checked 2026-11-15)
+# Ultimate Keyboards facts (last checked 2026-11-17)
 
 Every page, listing, post and schema block quotes from here. Unknowns stay `[NEED FACT]`; never fill them by inference.
 
@@ -67,8 +67,26 @@ Every page, listing, post and schema block quotes from here. Unknowns stay `[NEE
 - GitHub: https://github.com/abujiletsgo/ultimate-keyboards
 - `[NEED FACT: YouTube, X, Reddit user, Product Hunt, AlternativeTo, LinkedIn]`
 
+## Locale rows: names, category phrases and misspellings (added 2026-11-17)
+
+Canonical locale routes (once `HW-L10N-07` / `HW-L10N-40` ships; `https://hyly.world/keyboards/` serves as `x-default` selector): `/en/keyboards/`, `/es/keyboards/`, `/pt/keyboards/`, `/ko/keyboards/`. Tone rules (`intent.md`): Spanish `tú` (neutral pan-Hispanic), Brazilian Portuguese `você` (with `pt-PT` lexical bridges where helpful), Korean `해요체` in UI/store/guides and `합니다체` in legal notices.
+
+| Locale (`html lang` / `hreflang` / `og:locale`) | Display name on locale surfaces | Local category phrase 1 (MacBook buyer's words) | Local category phrase 2 (ZMK/QMK builder's words) | Local misspellings, transliterations & real query variants |
+|---|---|---|---|---|
+| **English (`en`)**<br>`lang="en"` · `hreflang="en"` (`+ x-default`) · `og:locale="en_US"` | `Ultimate Keyboards` | **home row mods and layers on a MacBook's built-in keyboard** | **visual ZMK and QMK keymap editor for Mac** | `"ultimate keyboard"`, `"ultimatekeyboard"`, `"ultimate keyboards mac"`, `"ultimatekeyboards app"` |
+| **Spanish (`es`)**<br>`lang="es"` · `hreflang="es"` · `og:locale="es_LA"` (`+ es_ES`) | `Ultimate Keyboards` | **home row mods, capas y remapeo de teclas en el teclado integrado del MacBook** | **editor visual de keymaps ZMK y QMK para Mac** | `"ultimate keyboard mac"`, `"ultimatekeyboards"`, `"ultimate keyboards español"`, `"ultimate keyboards gratis"`, `"ultimate keyboards pago único"`, `"remapear teclado mac"`, `"poner la ñ teclado ingles macbook"` (unaccented mobile typing: `poner la n macbook`, `configurar teclado ingles mac`; never translate *home row mods* literally as *"modificaciones de fila de casa"*) |
+| **Portuguese (`pt-BR` + `pt-PT`)**<br>`lang="pt-BR"` · `hreflang="pt"` (`+ pt-BR`) · `og:locale="pt_BR"` (`+ pt_PT`) | `Ultimate Keyboards` | **home row mods, camadas (layers) e remapeamento de teclas no teclado integrado do MacBook** | **editor visual de keymaps ZMK e QMK para Mac** | `"ultimate keyboard mac"`, `"ultimatekeyboards"`, `"ultimate keyboards portugues"`, `"ultimate keyboards gratis"` / `"grátis"`, `"ultimate keyboards e confiavel"` / `"é confiável"`, `"ultimate keyboards reclame aqui"`, `"remapear teclado macbook"`, `"configurar teclado macbook acentos"`, `"cedilha macbook teclado ingles"` |
+| **Korean (`ko`)**<br>`lang="ko"` · `hreflang="ko"` · `og:locale="ko_KR"` | `Ultimate Keyboards (얼티밋 키보드)` *(pair English + Hangul in `<title>`, `<h1>` and lead paragraph)* | **맥북 내장 키보드 홈로우 모드·레이어·키 매핑 앱** | **맥용 비주얼 ZMK·QMK 키맵 에디터** | Hangul spellings & spacing variants: `"얼티밋 키보드"`, `"얼티밋키보드"`, `"얼티밋 키보즈"`, `"얼티밋키보즈"`, `"얼티메이트 키보드"`, `"얼티메이트키보드"`, `"울티메이트 키보드"`, `"Ultimate Keyboards 맥"`, `"홈로우 모드"` / `"홈 로우 모드"` / `"홈로우모드"`, `"키보드 매핑"` / `"키보드매핑"`, `"한영전환"` / `"한영 전환"`, `"키맵 에디터"` / `"키맵에디터"` |
+
+### Companion phone/tablet keyboard app facts (added 2026-11-17 from `docs/plan/type-on-iphone.md` & `docs/plan/type-on-android.md`)
+- Package / Bundle ID: `world.hyly.keyboards` (iOS keyboard extension `world.hyly.keyboards.keyboard`, Apple Team `D4H83LGM8K`; macOS app stays `com.ultimatekeyboards.app`).
+- Status: **spec / pre-release** (`KE-50..54` for iPhone/iPad, `KE-79/81` for Android `minSdk 29` Android 10+ and Windows `service-win`). `[NEED FACT: Google Play Console and App Store Connect live listing status and public release dates]`.
+- Store model: free download on Google Play (`en-US`, `es-419`, `es-ES`, `es-US`, `pt-BR`, `pt-PT`, `ko-KR`) and Apple App Store (`en-US`, `es-MX`, `es-ES`, `pt-BR`, `pt-PT`, `ko`), zero ads, zero account required; **Ultimate Keyboards Pro** ($24 one-time, launch $19) is checked on the desktop sender. The macOS remapper itself is distributed as a Developer ID direct installer on `hyly.world` because the Mac App Store's mandatory App Sandbox blocks global low-level HID keyboard interception.
+- Provable hard limits to state in store copy (`docs/store/`): typing and text editing only (no mouse pointer, `⌘Tab`, or Home screen); iOS switches to the system keyboard on password/passcode fields and in apps blocking third-party keyboards; Android banking/security custom keypads use their own keypad; keys stay on the laptop whenever no text field is active on the phone, and a one-tap button switches back to the phone's regular keyboard.
+
 ## Change log
 - 2026-11-15: first version (SEO/AEO/GEO workflow run).
 - 2026-11-15: competitor research added (Reddit not reachable; re-check prices by eye before public copy).
 - 2026-11-15: tiers and price locked (Tom): free core + Pro $24 one-time (launch $19).
 - 2026-11-15: price model set to freemium (Tom); split and prices still open.
+- 2026-11-17: added `es`, `pt-BR`/`pt-PT` and `ko` locale rows (local category phrases, Hangul spellings, spacing/accent variants) and companion mobile keyboard (`world.hyly.keyboards`) store-draft facts (`HW-SEO-15`).
