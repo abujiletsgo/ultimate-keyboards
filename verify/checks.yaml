@@ -245,3 +245,21 @@ checks:
       class: dead code wired out by cfg (feature built but never reachable)
       prevention: 'structural: the stand-in is now only for platforms with no client; Windows CI runs windows_app_uses_real_keyboard_service_client; ZenBook QA after install opens Remapping and clicks Apply and enable through the app'
       sweep: mouse_engine stand-in on Windows is intended (Scroll & Mouse is Mac-only, shown in the sidebar); no other platform/ stand-ins exist
+
+  - id: XFER-1
+    area: laptop-keys
+    check: A laptop-keys profile exported on one system imports on the other with Command and Control swapped in what it sends (physical keys unchanged); same-system import is unchanged; bad files are refused with a readable reason; import is an unsaved, undoable edit
+    targets: [host]
+    how: 'auto: bun test src/lib/profileTransfer.test.ts'
+    proof: bun test passes
+    affects: [src/lib/profileTransfer.ts, src/components/KarabinerEditor/ProfileTransfer.tsx, src/stores/karabinerStore.ts]
+    added: 2026-11-17 Tom asked for Mac<->Windows export/import with Cmd/Ctrl swap
+
+  - id: XFER-2
+    area: laptop-keys
+    check: 'Real desktop round trip: Export on the Mac app saves a .json through the save dialog; Import of that file in the Windows app on the ZenBook shows the swap banner, and after Import and swap + Save + Turn on, holding the old Cmd home-row key and C copies'
+    targets: [zenbook]
+    how: 'agent: export from the Mac app, copy the file to the ZenBook over NetBird SSH, import in the installed Windows app, save, enable remapping, test copy in Notepad'
+    proof: Screenshot of the Windows app after import plus Notepad paste result
+    affects: [src/lib/profileTransfer.ts, src/components/KarabinerEditor/ProfileTransfer.tsx]
+    added: 2026-11-17 Tom asked for Mac<->Windows export/import with Cmd/Ctrl swap

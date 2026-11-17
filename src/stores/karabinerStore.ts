@@ -29,6 +29,8 @@ export interface KarabinerState {
   /** Move a rule up (-1) or down (+1); Karabiner evaluates rules in order. */
   moveRule: (idx: number, delta: -1 | 1) => void;
   exportJSON: () => string;
+  /** Replace the draft with an imported profile; unsaved and undoable like any edit. */
+  importProfile: (profile: MacProfileSnapshot) => void;
 }
 
 /** Example profile (a space layer + a few combos) users can load from the empty state. */
@@ -141,6 +143,7 @@ export function createKarabinerStore(storage?: StateStorage) {
         set({ ...cloneMacProfile(next), isDirty: !sameMacProfile(next, get().savedSnapshot),
           past: [...get().past.slice(-(MAC_HISTORY_LIMIT - 1)), snapshot()], future: get().future.slice(1) });
       },
+      importProfile: profile => edit(cloneMacProfile(profile)),
       exportJSON: () => JSON.stringify(generateComplexModification(get().rules, get().profileTitle), null, 2),
     };
   }, {

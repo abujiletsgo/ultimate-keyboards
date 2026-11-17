@@ -4,6 +4,7 @@ import { RuleList } from './RuleList'
 import MacbookKeyboard from './MacbookKeyboard'
 import KeyPanel, { type AddingCombo } from './KeyPanel'
 import TypingFeelPanel from './TypingFeelPanel'
+import { useProfileTransfer } from './ProfileTransfer'
 import NativeRemappingPanel, { NativeEmergencyStop } from './NativeRemappingPanel'
 import KeymapActionBar from '@/components/Keyboard/KeymapActionBar'
 import LayerControls from '@/components/Keyboard/LayerControls'
@@ -25,6 +26,7 @@ export default function KarabinerEditor() {
   const [tab, setTab] = useState<Tab>(() => initialEditorTab<Tab>('keys'))
   const { profileTitle, rules, layerNames, isDirty, past, future, saveProfile, revertProfile, undo, redo, addLayer, renameLayer, deleteLayer } = useKarabinerStore()
   const toast = useToast()
+  const transfer = useProfileTransfer()
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   useEffect(() => {
     const unregister = registerDirtySource(`${hostTerms().laptop} keymap`, () => useKarabinerStore.getState().isDirty,
@@ -78,7 +80,8 @@ export default function KarabinerEditor() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 'clamp(12px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <KeymapActionBar label={<span className="mono" title={profileTitle} style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profileTitle}</span>}
           dirty={isDirty} canUndo={past.length > 0} canRedo={future.length > 0} onSave={saveLocal} onRevert={revertProfile} onUndo={undo} onRedo={redo}
-          extraActions={<span style={{ display: tab === 'remapping' ? 'none' : 'contents' }}><NativeEmergencyStop /></span>} />
+          extraActions={<>{transfer.buttons}<span style={{ display: tab === 'remapping' ? 'none' : 'contents' }}><NativeEmergencyStop /></span></>} />
+        {transfer.banner}
         <div id="mac-keys-editor" role="tabpanel" aria-labelledby={`mac-keys-tab-${tab}`} tabIndex={0}
           style={{ display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0, minWidth: 0 }}>
           {tab === 'templates' && <Templates onTurnOn={() => setTab('remapping')} />}
