@@ -1,95 +1,19 @@
-//! Floating on-screen layer HUD ("Show which layer is on, right on screen").
+//! On-screen layer overlay: while a layer key is held, a small frosted pill at
+//! the bottom of the screen names the layer that is on; it hides on release.
 //!
-//! Pure presentation rules live in platform-neutral Rust so tests prove:
-//! - the HUD appears only when user preference is on AND remapping is running
-//!   with captured keyboards AND at least one layer is active;
-//! - stopping remapping, turning the overlay off, or releasing the layer key
-//!   clears the HUD immediately;
-//! - key hints come from the active layer's bindings (up to 6 concise pairs +
-//!   `+N` overflow count).
-//!
-//! On macOS, the HUD renders in a borderless, click-through, non-activating
-//! `NSPanel` backed by `NSVisualEffectView` (`BehindWindow` frosted HUD glass,
-//! `CanJoinAllSpaces | FullScreenAuxiliary`), so it floats above full-screen
-//! and desktop apps without stealing keyboard focus or requiring private APIs.
-//! On Windows, a click-through, non-focusable transparent `WebviewWindow`
-//! (`?hud=1`) renders the matching `<LayerHud />` surface.
+//! The rule (shown only while remapping is really running and a layer is held)
+//! is platform-neutral and tested. On macOS the pill is a borderless,
+//! click-through, non-activating `NSPanel` with behind-window glass
+//! (`NSVisualEffectView`, Studio L6 notification layer), so it floats over
+//! full-screen apps without taking keyboard focus. Other platforms show nothing
+//! yet (shortcut: Windows has no overlay; add one when Windows ships publicly).
 
 use crate::native_remapping::NativeStatus;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
-use tauri::{Emitter, Manager};
+use std::sync::Mutex;
 
-pub const MAX_HUD_HINTS: usize = 6;
+static LAST_SHOWN: Mutex<Option<String>> = Mutex::new(None);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HudKeyHint {
-    pub from: String,
-    pub to: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HudPresentation {
-    /// Topmost (most recently activated) layer name.
-    pub layer: String,
-    /// Full held layer stack in activation order, e.g. `["nav", "sym"]`.
-    pub stack: Vec<String>,
-    /// Concise key pairs on `layer`, e.g. `H → ←`.
-    pub hints: Vec<HudKeyHint>,
-    /// Additional changed keys on `layer` beyond `hints`.
-    pub more_count: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PersistedOverlayConfig {
-    enabled: bool,
-    #[serde(default)]
-    hints: BTreeMap<String, Vec<HudKeyHint>>,
-}
-
-impl Default for PersistedOverlayConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            hints: BTreeMap::new(),
-        }
-    }
-}
-
-struct OverlayStore {
-    enabled: bool,
-    hints: BTreeMap<String, Vec<HudKeyHint>>,
-    config_path: Option<PathBuf>,
-    last_status: Option<NativeStatus>,
-    last_shown: Option<HudPresentation>,
-}
-
-impl Default for OverlayStore {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            hints: BTreeMap::new(),
-            config_path: None,
-            last_status: None,
-            last_shown: None,
-        }
-    }
-}
-
-static STORE: OnceLock<Mutex<OverlayStore>> = OnceLock::new();
-
-fn store() -> &'static Mutex<OverlayStore> {
-    STORE.get_or_init(|| Mutex::new(OverlayStore::default()))
-}
-
-/// Pure predicate mirroring `nativeIsRunning` on the frontend: never claim a
-/// layer is live unless capture and permissions are confirmed.
+/// Never claim a layer is live unless capture and permissions are confirmed.
 pub fn status_is_running(status: &NativeStatus) -> bool {
     status.state == "running"
         && status.enabled
@@ -99,265 +23,46 @@ pub fn status_is_running(status: &NativeStatus) -> bool {
         && status.captured_devices > 0
 }
 
-pub fn compute_hud_presentation(
-    overlay_enabled: bool,
-    status: &NativeStatus,
-    hints_by_layer: &BTreeMap<String, Vec<HudKeyHint>>,
-) -> Option<HudPresentation> {
-    if !overlay_enabled || !status_is_running(status) {
-        return None;
-    }
-    let layer = status.active_layers.last()?.clone();
-    let (hints, more_count) = match hints_by_layer.get(&layer) {
-        Some(all) => (
-            all.iter().take(MAX_HUD_HINTS).cloned().collect(),
-            all.len().saturating_sub(MAX_HUD_HINTS),
-        ),
-        None => (Vec::new(), 0),
-    };
-    Some(HudPresentation {
-        layer,
-        stack: status.active_layers.clone(),
-        hints,
-        more_count,
-    })
+/// The overlay text: held layers in the order they went on, or `None` to hide.
+pub fn layer_title(status: &NativeStatus) -> Option<String> {
+    (status_is_running(status) && !status.active_layers.is_empty())
+        .then(|| status.active_layers.join(" › "))
 }
 
-/// Fallback hint extractor from a raw `NativeProfile` JSON when `apply` runs
-/// before the webview has synced its formatted hints.
-pub fn extract_hints_from_profile(profile: &Value) -> BTreeMap<String, Vec<HudKeyHint>> {
-    let mut map: BTreeMap<String, Vec<HudKeyHint>> = BTreeMap::new();
-    let Some(rules) = profile.get("rules").and_then(Value::as_array) else {
-        return map;
-    };
-    for rule in rules {
-        if rule.get("type").and_then(Value::as_str) != Some("layer_binding") {
-            continue;
-        }
-        let (Some(layer), Some(from), Some(to)) = (
-            rule.get("layerName").and_then(Value::as_str),
-            rule.get("fromKey").and_then(Value::as_str),
-            rule.get("toKey").and_then(Value::as_str),
-        ) else {
-            continue;
-        };
-        let mods = rule
-            .get("toModifiers")
-            .and_then(Value::as_array)
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(Value::as_str)
-                    .map(short_modifier)
-                    .collect::<String>()
-            })
-            .unwrap_or_default();
-        map.entry(layer.to_string()).or_default().push(HudKeyHint {
-            from: short_key(from),
-            to: format!("{mods}{}", short_key(to)),
-        });
-    }
-    map
-}
-
-fn short_modifier(m: &str) -> &'static str {
-    let family = m.strip_prefix("left_").or_else(|| m.strip_prefix("right_")).unwrap_or(m);
-    if cfg!(windows) {
-        match family {
-            "control" => "Ctrl+",
-            "option" => "Alt+",
-            "shift" => "Shift+",
-            "command" => "Win+",
-            _ => "",
-        }
-    } else {
-        match family {
-            "control" => "⌃",
-            "option" => "⌥",
-            "shift" => "⇧",
-            "command" => "⌘",
-            _ => "",
-        }
-    }
-}
-
-fn short_key(code: &str) -> String {
-    match code {
-        "left_arrow" => "←".into(),
-        "down_arrow" => "↓".into(),
-        "up_arrow" => "↑".into(),
-        "right_arrow" => "→".into(),
-        "return_or_enter" => "⏎".into(),
-        "delete_or_backspace" => "⌫".into(),
-        "delete_forward" => "⌦".into(),
-        "escape" => "Esc".into(),
-        "spacebar" => "Space".into(),
-        "tab" => "Tab".into(),
-        "open_bracket" => "[".into(),
-        "close_bracket" => "]".into(),
-        "backslash" => "\\".into(),
-        "semicolon" => ";".into(),
-        "quote" => "'".into(),
-        "grave_accent_and_tilde" => "`".into(),
-        "comma" => ",".into(),
-        "period" => ".".into(),
-        "slash" => "/".into(),
-        "hyphen" => "-".into(),
-        "equal_sign" => "=".into(),
-        other if other.len() == 1 => other.to_ascii_uppercase(),
-        other => other.replace('_', " "),
-    }
-}
-
-fn load_persisted(path: &Path) -> Option<PersistedOverlayConfig> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
-}
-
-fn save_persisted(path: &Path, cfg: &PersistedOverlayConfig) {
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
-    }
-    let tmp = path.with_extension("json.tmp");
-    if let Ok(bytes) = serde_json::to_vec(cfg) {
-        if std::fs::write(&tmp, bytes).is_ok() {
-            let _ = std::fs::rename(&tmp, path);
-        }
-    }
-}
-
-/// Load persisted preference + layer hints at app startup (including `--native-background`).
-pub fn init(app: &tauri::AppHandle) {
-    let path = app
-        .path()
-        .app_data_dir()
-        .ok()
-        .map(|d| d.join("layer-overlay.json"));
-    let loaded = path.as_deref().and_then(load_persisted);
-    let mut guard = store().lock().unwrap_or_else(|e| e.into_inner());
-    guard.config_path = path;
-    if let Some(cfg) = loaded {
-        guard.enabled = cfg.enabled;
-        guard.hints = cfg.hints;
-    }
-}
-
-/// Update hints when `native_remapping_apply` succeeds if the store has none for those layers yet.
-pub fn note_applied_profile(profile: &Value) {
-    let extracted = extract_hints_from_profile(profile);
-    if extracted.is_empty() {
-        return;
-    }
-    let mut guard = store().lock().unwrap_or_else(|e| e.into_inner());
-    if guard.hints.is_empty() {
-        guard.hints = extracted;
-    }
-}
-
-/// Recompute and apply the floating HUD whenever service status or user preference changes.
+/// Show, update or hide the overlay for a fresh service status.
 pub fn sync_from_status(app: &tauri::AppHandle, status: &NativeStatus) {
-    let next = {
-        let mut guard = store().lock().unwrap_or_else(|e| e.into_inner());
-        guard.last_status = Some(status.clone());
-        let computed = compute_hud_presentation(guard.enabled, status, &guard.hints);
-        if computed == guard.last_shown {
+    let next = layer_title(status);
+    {
+        let mut last = LAST_SHOWN.lock().unwrap_or_else(|e| e.into_inner());
+        if *last == next {
             return;
         }
-        guard.last_shown = computed.clone();
-        computed
-    };
-    present_hud(app, next);
+        *last = next.clone();
+    }
+    present(app, next);
 }
 
 pub fn hide_on_exit(app: &tauri::AppHandle) {
-    {
-        let mut guard = store().lock().unwrap_or_else(|e| e.into_inner());
-        guard.last_shown = None;
-    }
-    present_hud(app, None);
+    *LAST_SHOWN.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    present(app, None);
 }
 
-/// Frontend command: syncs user choice (`enabled`) and formatted layer key hints.
-#[tauri::command]
-pub fn sync_layer_overlay(
-    app: tauri::AppHandle,
-    enabled: bool,
-    hints: BTreeMap<String, Vec<HudKeyHint>>,
-) {
-    let (to_save, recomputed) = {
-        let mut guard = store().lock().unwrap_or_else(|e| e.into_inner());
-        guard.enabled = enabled;
-        guard.hints = hints.clone();
-        let save = guard.config_path.clone().map(|p| {
-            (
-                p,
-                PersistedOverlayConfig {
-                    enabled,
-                    hints,
-                },
-            )
-        });
-        let next = guard
-            .last_status
-            .as_ref()
-            .and_then(|st| compute_hud_presentation(guard.enabled, st, &guard.hints));
-        let changed = next != guard.last_shown;
-        if changed {
-            guard.last_shown = next.clone();
-        }
-        (save, changed.then_some(next))
-    };
-    if let Some((path, cfg)) = to_save {
-        save_persisted(&path, &cfg);
-    }
-    if let Some(next) = recomputed {
-        present_hud(&app, next);
-    }
-}
-
-#[tauri::command]
-pub fn get_layer_overlay_state() -> Option<HudPresentation> {
-    store()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .last_shown
-        .clone()
-}
-
-fn present_hud(app: &tauri::AppHandle, presentation: Option<HudPresentation>) {
-    let _ = app.emit("layer-hud-update", &presentation);
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
+fn present(app: &tauri::AppHandle, title: Option<String>) {
     #[cfg(target_os = "macos")]
-    macos_hud::present(app, presentation);
-    #[cfg(windows)]
-    windows_hud::present(app, presentation);
-}
-
-/// Format the title and hint strings shown in the native HUD pill.
-pub fn format_hud_strings(p: &HudPresentation) -> (String, String) {
-    let title = if p.stack.len() > 1 {
-        p.stack.join(" › ")
-    } else {
-        p.layer.clone()
-    };
-    if p.hints.is_empty() {
-        return (title, String::new());
-    }
-    let mut parts: Vec<String> = p
-        .hints
-        .iter()
-        .map(|h| format!("{} {}", h.from, h.to))
-        .collect();
-    if p.more_count > 0 {
-        parts.push(format!("+{}", p.more_count));
-    }
-    (title, parts.join("   "))
+    let _ = app.run_on_main_thread(move || unsafe {
+        match title {
+            Some(t) => macos_hud::show(&t),
+            None => macos_hud::hide(),
+        }
+    });
 }
 
 #[cfg(target_os = "macos")]
 mod macos_hud {
-    use super::{format_hud_strings, HudPresentation};
     use objc2::encode::{Encode, Encoding, RefEncode};
+    use objc2::msg_send;
     use objc2::runtime::{AnyClass, AnyObject, Bool};
-    use objc2::{msg_send, sel};
     use std::cell::RefCell;
     use std::ffi::CString;
 
@@ -409,94 +114,72 @@ mod macos_hud {
         const ENCODING_REF: Encoding = Encoding::Struct("CGColor", &[]);
     }
 
-    // NSPanel style mask: borderless (0) + NSWindowStyleMaskNonactivatingPanel (1 << 7)
-    const NONACTIVATING_BORDERLESS: usize = 1 << 7;
-    // NSBackingStoreBuffered
-    const BACKING_BUFFERED: usize = 2;
-    // NSStatusWindowLevel (floats above normal & floating windows without fighting screen savers)
-    const STATUS_WINDOW_LEVEL: isize = 25;
-    // CanJoinAllSpaces (1<<0) | Stationary (1<<4) | IgnoresCycle (1<<6) | FullScreenAuxiliary (1<<8)
-    const HUD_COLLECTION_BEHAVIOR: usize = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8);
-    // NSVisualEffectMaterialHUDWindow = 13, BlendingModeBehindWindow = 0, StateActive = 1
-    const MATERIAL_HUD_WINDOW: isize = 13;
-    const BLEND_BEHIND_WINDOW: isize = 0;
-    const VISUAL_STATE_ACTIVE: isize = 1;
+    fn rect(x: f64, y: f64, width: f64, height: f64) -> CGRect {
+        CGRect { origin: CGPoint { x, y }, size: CGSize { width, height } }
+    }
 
-    struct NativeHudPanel {
+    // Borderless + NSWindowStyleMaskNonactivatingPanel: never takes focus from the app being typed in.
+    const NONACTIVATING_BORDERLESS: usize = 1 << 7;
+    const BACKING_BUFFERED: usize = 2;
+    // NSStatusWindowLevel: above normal and floating windows.
+    const STATUS_WINDOW_LEVEL: isize = 25;
+    // CanJoinAllSpaces | Stationary | IgnoresCycle | FullScreenAuxiliary
+    const COLLECTION_BEHAVIOR: usize = (1 << 0) | (1 << 4) | (1 << 6) | (1 << 8);
+    // NSVisualEffectMaterialPopover follows light and dark mode (HUDWindow is dark-only).
+    const MATERIAL_POPOVER: isize = 6;
+    const BLEND_BEHIND_WINDOW: isize = 0;
+    const STATE_ACTIVE: isize = 1;
+    // Studio tokens: radius-group-desktop 18, 4-based spacing.
+    const HEIGHT: f64 = 40.0;
+    const RADIUS: f64 = 18.0;
+    const PAD: f64 = 16.0;
+    const DOT: f64 = 8.0;
+    const GAP: f64 = 8.0;
+    const BOTTOM: f64 = 28.0;
+
+    struct Hud {
         panel: *mut AnyObject,
         effect: *mut AnyObject,
         dot: *mut AnyObject,
-        title_field: *mut AnyObject,
-        sep: *mut AnyObject,
-        hints_field: *mut AnyObject,
+        title: *mut AnyObject,
     }
 
     thread_local! {
-        static PANEL: RefCell<Option<NativeHudPanel>> = const { RefCell::new(None) };
+        static HUD: RefCell<Option<Hud>> = const { RefCell::new(None) };
     }
 
-    pub fn present(app: &tauri::AppHandle, presentation: Option<HudPresentation>) {
-        let _ = app.run_on_main_thread(move || unsafe {
-            match presentation {
-                Some(p) => show_or_update(&p),
-                None => hide(),
-            }
-        });
+    unsafe fn class(name: &std::ffi::CStr) -> &'static AnyClass {
+        AnyClass::get(name).expect("AppKit class")
     }
 
     pub(crate) unsafe fn nsstring(text: &str) -> *mut AnyObject {
-        let cls = AnyClass::get(c"NSString").expect("NSString");
-        let sanitized: String = text.chars().filter(|&c| c != '\0').collect();
-        let cstr = CString::new(sanitized).unwrap_or_default();
-        msg_send![cls, stringWithUTF8String: cstr.as_ptr()]
+        let c = CString::new(text.replace('\0', "")).unwrap_or_default();
+        msg_send![class(c"NSString"), stringWithUTF8String: c.as_ptr()]
     }
 
-    unsafe fn rgba(r: f64, g: f64, b: f64, a: f64) -> *mut AnyObject {
-        let cls = AnyClass::get(c"NSColor").expect("NSColor");
-        msg_send![cls, colorWithSRGBRed: r, green: g, blue: b, alpha: a]
+    unsafe fn cg(color: *mut AnyObject) -> *mut CGColorOpaque {
+        msg_send![color, CGColor]
     }
 
-    unsafe fn make_label(font: *mut AnyObject, color: *mut AnyObject) -> *mut AnyObject {
-        let cls = AnyClass::get(c"NSTextField").expect("NSTextField");
-        let empty = nsstring("");
-        let field: *mut AnyObject = msg_send![cls, labelWithString: empty];
-        let _: () = msg_send![field, setFont: font];
-        let _: () = msg_send![field, setTextColor: color];
-        let _: () = msg_send![field, setDrawsBackground: Bool::NO];
-        let _: () = msg_send![field, setBezeled: Bool::NO];
-        let _: () = msg_send![field, setEditable: Bool::NO];
-        let _: () = msg_send![field, setSelectable: Bool::NO];
-        // NSLineBreakByTruncatingTail = 4
-        let _: () = msg_send![field, setLineBreakMode: 4usize];
-        field
+    fn system_is_dark() -> bool {
+        unsafe {
+            let defaults: *mut AnyObject = msg_send![class(c"NSUserDefaults"), standardUserDefaults];
+            let style: *mut AnyObject = msg_send![defaults, stringForKey: nsstring("AppleInterfaceStyle")];
+            !style.is_null()
+        }
     }
 
-    unsafe fn build_panel() -> Option<NativeHudPanel> {
-        let panel_cls = AnyClass::get(c"NSPanel")?;
-        let effect_cls = AnyClass::get(c"NSVisualEffectView")?;
-        let view_cls = AnyClass::get(c"NSView")?;
-        let font_cls = AnyClass::get(c"NSFont")?;
-        let color_cls = AnyClass::get(c"NSColor")?;
-
-        let initial = CGRect {
-            origin: CGPoint { x: 0.0, y: 0.0 },
-            size: CGSize {
-                width: 240.0,
-                height: 40.0,
-            },
-        };
-        let alloc: *mut AnyObject = msg_send![panel_cls, alloc];
+    unsafe fn build() -> Hud {
+        let start = rect(0.0, 0.0, 160.0, HEIGHT);
+        let panel: *mut AnyObject = msg_send![class(c"NSPanel"), alloc];
         let panel: *mut AnyObject = msg_send![
-            alloc,
-            initWithContentRect: initial,
+            panel,
+            initWithContentRect: start,
             styleMask: NONACTIVATING_BORDERLESS,
             backing: BACKING_BUFFERED,
             defer: Bool::NO
         ];
-        if panel.is_null() {
-            return None;
-        }
-        let clear: *mut AnyObject = msg_send![color_cls, clearColor];
+        let clear: *mut AnyObject = msg_send![class(c"NSColor"), clearColor];
         let _: () = msg_send![panel, setReleasedWhenClosed: Bool::NO];
         let _: () = msg_send![panel, setFloatingPanel: Bool::YES];
         let _: () = msg_send![panel, setBecomesKeyOnlyIfNeeded: Bool::YES];
@@ -506,328 +189,108 @@ mod macos_hud {
         let _: () = msg_send![panel, setBackgroundColor: clear];
         let _: () = msg_send![panel, setHasShadow: Bool::YES];
         let _: () = msg_send![panel, setLevel: STATUS_WINDOW_LEVEL];
-        let _: () = msg_send![panel, setCollectionBehavior: HUD_COLLECTION_BEHAVIOR];
+        let _: () = msg_send![panel, setCollectionBehavior: COLLECTION_BEHAVIOR];
 
-        let effect_alloc: *mut AnyObject = msg_send![effect_cls, alloc];
-        let effect: *mut AnyObject = msg_send![effect_alloc, initWithFrame: initial];
-        let _: () = msg_send![effect, setMaterial: MATERIAL_HUD_WINDOW];
+        let effect: *mut AnyObject = msg_send![class(c"NSVisualEffectView"), alloc];
+        let effect: *mut AnyObject = msg_send![effect, initWithFrame: start];
+        let _: () = msg_send![effect, setMaterial: MATERIAL_POPOVER];
         let _: () = msg_send![effect, setBlendingMode: BLEND_BEHIND_WINDOW];
-        let _: () = msg_send![effect, setState: VISUAL_STATE_ACTIVE];
+        let _: () = msg_send![effect, setState: STATE_ACTIVE];
         let _: () = msg_send![effect, setWantsLayer: Bool::YES];
         let layer: *mut AnyObject = msg_send![effect, layer];
-        if !layer.is_null() {
-            let _: () = msg_send![layer, setCornerRadius: 16.0f64];
-            let _: () = msg_send![layer, setMasksToBounds: Bool::YES];
-            let _: () = msg_send![layer, setBorderWidth: 1.0f64];
-            let rim = rgba(1.0, 1.0, 1.0, 0.18);
-            let cg_rim: *mut CGColorOpaque = msg_send![rim, CGColor];
-            let _: () = msg_send![layer, setBorderColor: cg_rim];
-        }
+        let _: () = msg_send![layer, setCornerRadius: RADIUS];
+        let _: () = msg_send![layer, setMasksToBounds: Bool::YES];
+        let _: () = msg_send![layer, setBorderWidth: 1.0f64];
 
-        // Layer dot (#5fc8ec matching BoardLegend Layer hue)
-        let dot_alloc: *mut AnyObject = msg_send![view_cls, alloc];
-        let dot: *mut AnyObject = msg_send![
-            dot_alloc,
-            initWithFrame: CGRect {
-                origin: CGPoint { x: 14.0, y: 16.0 },
-                size: CGSize { width: 8.0, height: 8.0 },
-            }
-        ];
+        let dot: *mut AnyObject = msg_send![class(c"NSView"), alloc];
+        let dot: *mut AnyObject = msg_send![dot, initWithFrame: rect(PAD, (HEIGHT - DOT) / 2.0, DOT, DOT)];
         let _: () = msg_send![dot, setWantsLayer: Bool::YES];
         let dot_layer: *mut AnyObject = msg_send![dot, layer];
-        if !dot_layer.is_null() {
-            let _: () = msg_send![dot_layer, setCornerRadius: 4.0f64];
-            let sky = rgba(95.0 / 255.0, 200.0 / 255.0, 236.0 / 255.0, 1.0);
-            let cg_sky: *mut CGColorOpaque = msg_send![sky, CGColor];
-            let _: () = msg_send![dot_layer, setBackgroundColor: cg_sky];
-        }
+        let _: () = msg_send![dot_layer, setCornerRadius: DOT / 2.0];
 
-        // Fonts: SF Pro Semibold 13pt for layer name, SF Mono Medium 11.5pt for key hints
-        let title_font: *mut AnyObject = msg_send![font_cls, systemFontOfSize: 13.0f64, weight: 0.30f64];
-        let hints_font: *mut AnyObject =
-            msg_send![font_cls, monospacedSystemFontOfSize: 11.5f64, weight: 0.20f64];
-        let primary_ink = rgba(244.0 / 255.0, 246.0 / 255.0, 255.0 / 255.0, 0.98);
-        let secondary_ink = rgba(226.0 / 255.0, 232.0 / 255.0, 255.0 / 255.0, 0.82);
-
-        let title_field = make_label(title_font, primary_ink);
-        let hints_field = make_label(hints_font, secondary_ink);
-
-        // 1pt vertical hairline separator between layer name and key hints
-        let sep_alloc: *mut AnyObject = msg_send![view_cls, alloc];
-        let sep: *mut AnyObject = msg_send![
-            sep_alloc,
-            initWithFrame: CGRect {
-                origin: CGPoint { x: 0.0, y: 11.0 },
-                size: CGSize { width: 1.0, height: 18.0 },
-            }
-        ];
-        let _: () = msg_send![sep, setWantsLayer: Bool::YES];
-        let sep_layer: *mut AnyObject = msg_send![sep, layer];
-        if !sep_layer.is_null() {
-            let sep_col = rgba(1.0, 1.0, 1.0, 0.16);
-            let cg_sep: *mut CGColorOpaque = msg_send![sep_col, CGColor];
-            let _: () = msg_send![sep_layer, setBackgroundColor: cg_sep];
-        }
+        // labelColor is the system's dynamic ink: >= 7:1 on the popover material in both modes.
+        let font: *mut AnyObject = msg_send![class(c"NSFont"), systemFontOfSize: 13.0f64, weight: 0.3f64];
+        let ink: *mut AnyObject = msg_send![class(c"NSColor"), labelColor];
+        let title: *mut AnyObject = msg_send![class(c"NSTextField"), labelWithString: nsstring("")];
+        let _: () = msg_send![title, setFont: font];
+        let _: () = msg_send![title, setTextColor: ink];
+        // NSLineBreakByTruncatingTail
+        let _: () = msg_send![title, setLineBreakMode: 4usize];
 
         let _: () = msg_send![effect, addSubview: dot];
-        let _: () = msg_send![effect, addSubview: title_field];
-        let _: () = msg_send![effect, addSubview: sep];
-        let _: () = msg_send![effect, addSubview: hints_field];
+        let _: () = msg_send![effect, addSubview: title];
         let _: () = msg_send![panel, setContentView: effect];
-
-        Some(NativeHudPanel {
-            panel,
-            effect,
-            dot,
-            title_field,
-            sep,
-            hints_field,
-        })
+        Hud { panel, effect, dot, title }
     }
 
-    unsafe fn screen_visible_frame() -> Option<CGRect> {
-        let cls = AnyClass::get(c"NSScreen")?;
-        let mut screen: *mut AnyObject = msg_send![cls, mainScreen];
-        if screen.is_null() {
-            let screens: *mut AnyObject = msg_send![cls, screens];
-            if !screens.is_null() {
-                let count: usize = msg_send![screens, count];
-                if count > 0 {
-                    screen = msg_send![screens, objectAtIndex: 0usize];
-                }
-            }
-        }
-        if screen.is_null() {
-            return None;
-        }
-        let rect: CGRect = msg_send![screen, visibleFrame];
-        Some(rect)
-    }
+    pub unsafe fn show(text: &str) {
+        HUD.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            let hud = slot.get_or_insert_with(|| build());
 
-    unsafe fn show_or_update(p: &HudPresentation) {
-        PANEL.with(|slot| {
-            if slot.borrow().is_none() {
-                *slot.borrow_mut() = build_panel();
-            }
-            let borrow = slot.borrow();
-            let Some(hud) = borrow.as_ref() else {
-                return;
-            };
-            let (title, hints) = format_hud_strings(p);
-            let ns_title = nsstring(&title);
-            let _: () = msg_send![hud.title_field, setStringValue: ns_title];
-            let _: () = msg_send![hud.title_field, sizeToFit];
-            let title_frame: CGRect = msg_send![hud.title_field, frame];
+            // CGColors are static, so re-resolve the theme-dependent ones on every show.
+            let dark = system_is_dark();
+            let rim = msg_send![class(c"NSColor"), colorWithWhite: if dark { 1.0f64 } else { 0.0f64 }, alpha: if dark { 0.18f64 } else { 0.10f64 }];
+            let layer: *mut AnyObject = msg_send![hud.effect, layer];
+            let _: () = msg_send![layer, setBorderColor: cg(rim)];
+            let accent: *mut AnyObject = msg_send![class(c"NSColor"), controlAccentColor];
+            let dot_layer: *mut AnyObject = msg_send![hud.dot, layer];
+            let _: () = msg_send![dot_layer, setBackgroundColor: cg(accent)];
 
-            let max_screen_w = screen_visible_frame()
-                .map(|r| (r.size.width - 48.0).clamp(240.0, 680.0))
-                .unwrap_or(560.0);
+            let _: () = msg_send![hud.title, setStringValue: nsstring(text)];
+            let _: () = msg_send![hud.title, sizeToFit];
+            let fit: CGRect = msg_send![hud.title, frame];
+            let title_x = PAD + DOT + GAP;
+            let title_w = fit.size.width.ceil().min(320.0);
+            let width = title_x + title_w + PAD;
+            let _: () = msg_send![
+                hud.title,
+                setFrame: rect(title_x, ((HEIGHT - fit.size.height) / 2.0).round(), title_w, fit.size.height)
+            ];
+            let _: () = msg_send![hud.effect, setFrame: rect(0.0, 0.0, width, HEIGHT)];
 
-            let height = 40.0f64;
-            let pad_x = 14.0f64;
-            let dot_size = 8.0f64;
-            let dot_gap = 8.0f64;
-            let title_x = pad_x + dot_size + dot_gap;
-            let title_w = title_frame.size.width.min(220.0);
-
-            let mut total_w = title_x + title_w + pad_x;
-            if hints.is_empty() {
-                let _: () = msg_send![hud.sep, setHidden: Bool::YES];
-                let _: () = msg_send![hud.hints_field, setHidden: Bool::YES];
+            let screen: *mut AnyObject = msg_send![class(c"NSScreen"), mainScreen];
+            let (x, y) = if screen.is_null() {
+                (200.0, 80.0)
             } else {
-                let ns_hints = nsstring(&hints);
-                let _: () = msg_send![hud.hints_field, setStringValue: ns_hints];
-                let _: () = msg_send![hud.hints_field, sizeToFit];
-                let hints_frame: CGRect = msg_send![hud.hints_field, frame];
-                let sep_x = title_x + title_w + 12.0;
-                let hints_x = sep_x + 13.0;
-                let avail_hints_w = (max_screen_w - hints_x - pad_x).max(80.0);
-                let hints_w = hints_frame.size.width.min(avail_hints_w);
-
-                let _: () = msg_send![
-                    hud.sep,
-                    setFrame: CGRect {
-                        origin: CGPoint { x: sep_x, y: (height - 16.0) * 0.5 },
-                        size: CGSize { width: 1.0, height: 16.0 },
-                    }
-                ];
-                let _: () = msg_send![
-                    hud.hints_field,
-                    setFrame: CGRect {
-                        origin: CGPoint {
-                            x: hints_x,
-                            y: ((height - hints_frame.size.height) * 0.5).round(),
-                        },
-                        size: CGSize {
-                            width: hints_w,
-                            height: hints_frame.size.height,
-                        },
-                    }
-                ];
-                let _: () = msg_send![hud.sep, setHidden: Bool::NO];
-                let _: () = msg_send![hud.hints_field, setHidden: Bool::NO];
-                total_w = hints_x + hints_w + pad_x;
-            }
-
-            let _: () = msg_send![
-                hud.dot,
-                setFrame: CGRect {
-                    origin: CGPoint {
-                        x: pad_x,
-                        y: (height - dot_size) * 0.5,
-                    },
-                    size: CGSize {
-                        width: dot_size,
-                        height: dot_size,
-                    },
-                }
-            ];
-            let _: () = msg_send![
-                hud.title_field,
-                setFrame: CGRect {
-                    origin: CGPoint {
-                        x: title_x,
-                        y: ((height - title_frame.size.height) * 0.5).round(),
-                    },
-                    size: CGSize {
-                        width: title_w,
-                        height: title_frame.size.height,
-                    },
-                }
-            ];
-
-            let (origin_x, origin_y) = match screen_visible_frame() {
-                Some(vis) => (
-                    (vis.origin.x + (vis.size.width - total_w) * 0.5).round(),
-                    (vis.origin.y + 28.0).round(),
-                ),
-                None => (200.0, 80.0),
+                let vis: CGRect = msg_send![screen, visibleFrame];
+                ((vis.origin.x + (vis.size.width - width) / 2.0).round(), vis.origin.y + BOTTOM)
             };
-            let panel_frame = CGRect {
-                origin: CGPoint {
-                    x: origin_x,
-                    y: origin_y,
-                },
-                size: CGSize {
-                    width: total_w.ceil(),
-                    height,
-                },
-            };
-            let _: () = msg_send![
-                hud.effect,
-                setFrame: CGRect {
-                    origin: CGPoint { x: 0.0, y: 0.0 },
-                    size: panel_frame.size,
-                }
-            ];
-            let _: () = msg_send![hud.panel, setFrame: panel_frame, display: Bool::YES];
+            let _: () = msg_send![hud.panel, setFrame: rect(x, y, width, HEIGHT), display: Bool::YES];
             let _: () = msg_send![hud.panel, orderFrontRegardless];
         });
     }
 
-    unsafe fn hide() {
-        PANEL.with(|slot| {
+    pub unsafe fn hide() {
+        HUD.with(|slot| {
             if let Some(hud) = slot.borrow().as_ref() {
-                let null_sender: *mut AnyObject = std::ptr::null_mut();
-                let _: () = msg_send![hud.panel, orderOut: null_sender];
+                let none: *mut AnyObject = std::ptr::null_mut();
+                let _: () = msg_send![hud.panel, orderOut: none];
             }
         });
     }
 
     #[cfg(test)]
-    pub(crate) mod encoding_tests {
+    mod tests {
         use super::*;
 
         #[test]
-        fn macos_geometry_and_foundation_encodings_match_runtime() {
-            assert_eq!(
-                CGRect::ENCODING.to_string(),
-                "{CGRect={CGPoint=dd}{CGSize=dd}}"
-            );
+        fn geometry_encodings_match_the_objc_runtime() {
+            assert_eq!(CGRect::ENCODING.to_string(), "{CGRect={CGPoint=dd}{CGSize=dd}}");
             unsafe {
                 let s = nsstring("nav › sym");
-                assert!(!s.is_null());
                 let len: usize = msg_send![s, length];
-                assert!(len >= 7);
+                assert_eq!(len, 9);
             }
         }
-    }
-}
-
-#[cfg(windows)]
-mod windows_hud {
-    use super::HudPresentation;
-    use tauri::{Emitter, LogicalPosition, LogicalSize, Manager, WebviewUrl, WebviewWindowBuilder};
-
-    const LABEL: &str = "layer-hud";
-    const WIDTH: f64 = 520.0;
-    const HEIGHT: f64 = 64.0;
-
-    pub fn present(app: &tauri::AppHandle, presentation: Option<HudPresentation>) {
-        let handle = app.clone();
-        let _ = app.run_on_main_thread(move || {
-            match presentation {
-                Some(ref p) => {
-                    let window = match handle.get_webview_window(LABEL) {
-                        Some(w) => w,
-                        None => {
-                            let Ok(w) = WebviewWindowBuilder::new(
-                                &handle,
-                                LABEL,
-                                WebviewUrl::App("index.html?hud=1".into()),
-                            )
-                            .title("Layer Overlay")
-                            .inner_size(WIDTH, HEIGHT)
-                            .decorations(false)
-                            .transparent(true)
-                            .shadow(false)
-                            .always_on_top(true)
-                            .focusable(false)
-                            .focused(false)
-                            .skip_taskbar(true)
-                            .resizable(false)
-                            .visible(false)
-                            .build()
-                            else {
-                                return;
-                            };
-                            let _ = w.set_ignore_cursor_events(true);
-                            w
-                        }
-                    };
-                    if let Ok(Some(monitor)) = window.primary_monitor() {
-                        let scale = monitor.scale_factor();
-                        let work = monitor.work_area();
-                        let work_w = work.size.width as f64 / scale;
-                        let work_h = work.size.height as f64 / scale;
-                        let work_x = work.position.x as f64 / scale;
-                        let work_y = work.position.y as f64 / scale;
-                        let _ = window.set_size(LogicalSize::new(WIDTH, HEIGHT));
-                        let _ = window.set_position(LogicalPosition::new(
-                            work_x + (work_w - WIDTH) * 0.5,
-                            work_y + work_h - HEIGHT - 24.0,
-                        ));
-                    }
-                    let _ = window.set_ignore_cursor_events(true);
-                    let _ = handle.emit("layer-hud-update", &presentation);
-                    let _ = window.show();
-                }
-                None => {
-                    if let Some(window) = handle.get_webview_window(LABEL) {
-                        let _ = window.hide();
-                    }
-                }
-            }
-        });
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
-    fn running_status(layers: &[&str]) -> NativeStatus {
+    fn running(layers: &[&str]) -> NativeStatus {
         NativeStatus {
             state: "running".into(),
             message: "Active".into(),
@@ -837,72 +300,26 @@ mod tests {
             enabled: true,
             captured_devices: 1,
             profile_title: Some("Laptop".into()),
-            active_layers: layers.iter().map(|s| (*s).to_string()).collect(),
+            active_layers: layers.iter().map(|s| s.to_string()).collect(),
             state_seq: 3,
             protocol_version: 1,
         }
     }
 
     #[test]
-    fn hud_shows_only_when_enabled_running_captured_and_in_non_base_layer() {
-        let mut hints = BTreeMap::new();
-        hints.insert(
-            "nav".to_string(),
-            (1..=8)
-                .map(|i| HudKeyHint {
-                    from: format!("K{i}"),
-                    to: format!("V{i}"),
-                })
-                .collect(),
-        );
+    fn overlay_shows_only_while_running_and_a_layer_is_held() {
+        assert_eq!(layer_title(&running(&[])), None);
+        assert_eq!(layer_title(&running(&["nav"])).as_deref(), Some("nav"));
+        assert_eq!(layer_title(&running(&["nav", "numbers"])).as_deref(), Some("nav › numbers"));
 
-        // Base layer -> hidden
-        assert_eq!(
-            compute_hud_presentation(true, &running_status(&[]), &hints),
-            None
-        );
-        // Overlay preference off -> hidden even while holding `nav`
-        assert_eq!(
-            compute_hud_presentation(false, &running_status(&["nav"]), &hints),
-            None
-        );
-        // Remapping stopped or uncaptured -> hidden even if stale layer list arrived
-        let mut stopped = running_status(&["nav"]);
+        let mut stopped = running(&["nav"]);
         stopped.enabled = false;
-        assert_eq!(compute_hud_presentation(true, &stopped, &hints), None);
-
-        let mut uncaptured = running_status(&["nav"]);
+        assert_eq!(layer_title(&stopped), None);
+        let mut uncaptured = running(&["nav"]);
         uncaptured.captured_devices = 0;
-        assert_eq!(compute_hud_presentation(true, &uncaptured, &hints), None);
-
-        // Active `nav` -> shows topmost layer, full stack, 6 hints, and +2 overflow
-        let shown =
-            compute_hud_presentation(true, &running_status(&["base_ext", "nav"]), &hints).unwrap();
-        assert_eq!(shown.layer, "nav");
-        assert_eq!(shown.stack, vec!["base_ext".to_string(), "nav".to_string()]);
-        assert_eq!(shown.hints.len(), MAX_HUD_HINTS);
-        assert_eq!(shown.more_count, 2);
-
-        let (title, summary) = format_hud_strings(&shown);
-        assert_eq!(title, "base_ext › nav");
-        assert!(summary.contains("K1 V1") && summary.ends_with("+2"));
-    }
-
-    #[test]
-    fn profile_fallback_extracts_human_readable_layer_bindings() {
-        let profile = json!({
-            "version": 1,
-            "title": "Test",
-            "rules": [
-                { "type": "layer_activator", "fromKey": "spacebar", "layerName": "nav", "tapKey": "spacebar" },
-                { "type": "layer_binding", "layerName": "nav", "fromKey": "h", "toKey": "left_arrow" },
-                { "type": "layer_binding", "layerName": "nav", "fromKey": "d", "toKey": "left_arrow", "toModifiers": ["control"] }
-            ]
-        });
-        let hints = extract_hints_from_profile(&profile);
-        let nav = &hints["nav"];
-        assert_eq!(nav.len(), 2);
-        assert_eq!(nav[0], HudKeyHint { from: "H".into(), to: "←".into() });
-        assert!(nav[1].to.ends_with('←'));
+        assert_eq!(layer_title(&uncaptured), None);
+        let mut paused = running(&["nav"]);
+        paused.state = "stopped".into();
+        assert_eq!(layer_title(&paused), None);
     }
 }

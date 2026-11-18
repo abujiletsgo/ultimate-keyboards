@@ -325,8 +325,6 @@ pub fn run() {
             set_dirty,
             install_karabiner_rules,
             native_remapping::native_remapping_status,
-            layer_hud::sync_layer_overlay,
-            layer_hud::get_layer_overlay_state,
             frames::frame_pacing_status,
             frames::frame_probe_target,
             frames::frame_probe_write,
@@ -364,7 +362,6 @@ pub fn run() {
             newconfig::push_initial_config
         ])
         .setup(|app| {
-            layer_hud::init(app.handle());
             native_remapping::start_heartbeat(app.handle().clone());
             // ── Status-bar (menu-bar) item ──────────────────────────────────
             // Switching the laptop keyboard off is a macOS feature; the item

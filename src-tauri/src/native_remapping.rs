@@ -17,7 +17,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::{Condvar, Mutex, OnceLock};
 use std::time::Duration;
-use tauri::Emitter;
 
 #[derive(Default)]
 struct LiveWatch {
@@ -60,13 +59,12 @@ fn observe_status(status: &NativeStatus) {
     };
     if should_emit {
         crate::layer_hud::sync_from_status(&bridge.app, status);
-        let _ = bridge.app.emit("native-remapping-status", status);
     }
 }
 
 /// Keep the capture lease alive even when WebKit or WebView2 throttles timers in
-/// a hidden window, and run a zero-idle-cost long-poll watcher while remapping
-/// is enabled so layer holds/releases reach the HUD and webview in < 1 ms.
+/// a hidden window, and long-poll `watch` while remapping is on so layer holds
+/// and releases reach the on-screen layer overlay as they happen.
 pub fn start_heartbeat(app: tauri::AppHandle) {
     static STARTED: std::sync::Once = std::sync::Once::new();
     STARTED.call_once(|| {
@@ -100,6 +98,10 @@ pub fn start_heartbeat(app: tauri::AppHandle) {
                 };
                 match os::watch(since) {
                     Ok(status) => {
+                        // An unchanged reply (hold timeout, or a restart that answers at once) must not spin.
+                        if status.state_seq == since {
+                            std::thread::sleep(Duration::from_millis(50));
+                        }
                         observe_status(&status);
                     }
                     Err(err) => {
@@ -167,7 +169,6 @@ pub fn native_remapping_status() -> NativeStatus {
 
 #[tauri::command(async)]
 pub fn native_remapping_apply(profile: Value, enable: bool) -> Result<NativeStatus, String> {
-    crate::layer_hud::note_applied_profile(&profile);
     let status = os::apply(profile, enable)?;
     observe_status(&status);
     Ok(status)
