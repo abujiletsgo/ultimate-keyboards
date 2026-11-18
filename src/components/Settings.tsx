@@ -12,15 +12,17 @@ import { readText } from "@/lib/io";
 import type { KeyboardDef } from "@/lib/registry/types";
 import AddKeyboardHub, { type HubTab } from "./Settings/AddKeyboardHub";
 import Updates from "./Settings/Updates";
+import ProLicense from "./Settings/ProLicense";
 import Supported from "./Settings/Supported";
 import PhysicalBoard from "@/components/board/PhysicalBoard";
 import { Switch } from "@/components/ui";
 import { hostTerms, isWindows } from "@/lib/platform";
 
-type Tab = 'keyboards' | 'macbook' | 'updates' | 'about'
+type Tab = 'keyboards' | 'macbook' | 'pro' | 'updates' | 'about'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'keyboards', label: 'Keyboards' },
   { id: 'macbook', label: hostTerms().laptop },
+  { id: 'pro', label: 'Pro' },
   { id: 'updates', label: 'Updates' },
   { id: 'about', label: 'About' },
 ]
@@ -92,6 +94,12 @@ export default function Settings({ startAdd, startEdit, onAdded }: Props) {
         {tab === 'macbook' && (
           <div className="glass" style={{ padding: 18 }}>
             <BuiltInKeyboardField />
+          </div>
+        )}
+
+        {tab === 'pro' && (
+          <div className="glass" style={{ padding: 18 }}>
+            <ProLicense />
           </div>
         )}
 

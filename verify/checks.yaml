@@ -401,3 +401,12 @@ checks:
     proof: 'bun prints 21 passed using the shapes the app really reports: a Mac helper that is down (error with Input Monitoring false) is unreachable, not a permission problem; the Mac sleep, dropped-link and reconnect stops and all three Windows stops (sleep, lock, app stalled, with the app note appended) show Turn remapping back on; Mac helper errors offer Try turning on again, Windows errors offer Restart keyboard service which runs the restart command, an unsupported Windows build has no button; each fix kind calls exactly one existing engine command; priority missing > unreachable > permission > driver > error > stopped. Not covered by the test: the banner component (held while a fix runs, failure text, re-check on window focus) is checked by type and build only, and the live wake, update and helper-down paths stay with HANDS-8 and KE-13'
     affects: [src/lib/nativeProblem.ts, src/components/KarabinerEditor/NativeFixBanner.tsx, src/lib/nativeRemapping.ts]
     added: 2026-11-17 KE-43 one-tap fixes after sleep or updates (banner rendered at 390/768/1100 px via a mocked helper; the live wake and update paths stay with HANDS-8 and KE-13)
+
+  - id: PRO-LICENSE-1
+    area: pro
+    check: 'A Pro license key is checked on the Mac with no network: a key signed by the app''s Ed25519 key unlocks Pro (Settings > Pro says Pro is on and names the buyer); a changed, foreign-signed, wrong-product, expired or partial key is refused with a plain reason; Pro gates exactly the four facts.md Pro features (phone typing, per-app layers, one layout, sync) and every free feature stays usable with no key; no seller is wired (no checkout, no Paddle or Lemon Squeezy call)'
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)" && bun test tests/license.test.ts'''
+    proof: 'bun prints 23 passed: valid key and a key from scripts/license-key.ts against the shipped public key pass; edited payload, flipped signature byte, other private key, wrong product, expired, missing fields and junk input are refused; canUse is true for all eight free features with no key and false for the four Pro ones until a key; the license code holds no fetch or seller URL. Not covered: the Settings > Pro screen is checked by type and build only'
+    affects: [src/lib/license/**, src/components/Settings/ProLicense.tsx, src/components/Settings.tsx, scripts/license-key.ts]
+    added: 2026-11-17 KE-60 sandbox license keys (no vendor, no checkout)
