@@ -17,3 +17,7 @@ __pycache__/
 *.log
 archive/*/artifacts/
 target-e2e/
+
+# Pro license signing keys stay out of git (scripts/license-key.ts)
+license-signing-key*
+*.pkcs8
