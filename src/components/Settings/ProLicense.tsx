@@ -44,7 +44,7 @@ export default function ProLicense() {
         <div style={{ marginTop: 8 }}><FeatureList items={list(PRO_FEATURES)} /></div>
       </div>
       <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Everything else stays free: {list(FREE_FEATURES).join(', ').toLowerCase()}.
+        Everything else stays free: {list(FREE_FEATURES).join(', ')}.
       </p>
       {!VENDOR.checkoutUrl && <p style={{ color: 'var(--text-muted)' }}>Buying Pro opens soon.</p>}
 

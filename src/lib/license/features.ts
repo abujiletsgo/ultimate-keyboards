@@ -8,15 +8,16 @@ import type { LicensePayload } from './license'
 /** Price shown in the app; quoted from marketing/facts.md, change it there first. */
 export const PRO_PRICE = '$24, paid once'
 
+/** Written to sit mid-sentence ("Everything else stays free: …"). */
 export const FREE_FEATURES = {
-  'home-row-mods': 'Home-row mods with misfire protection',
-  layers: 'Layers',
-  combos: 'Combos',
+  'home-row-mods': 'home-row mods with misfire protection',
+  layers: 'layers',
+  combos: 'combos',
   'hyper-caps': 'Hyper on Caps Lock',
-  'layer-overlay': 'Layer overlay',
-  'health-panel': 'Health panel',
+  'layer-overlay': 'the layer overlay',
+  'health-panel': 'the health panel',
   'zmk-qmk-editing': 'ZMK and QMK editing',
-  'firmware-flashing': 'Firmware building and flashing',
+  'firmware-flashing': 'firmware building and flashing',
 } as const
 
 export const PRO_FEATURES = {
