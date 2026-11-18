@@ -27,7 +27,10 @@ describe('problem -> fix mapping (Mac)', () => {
     ['permission flag false while stopped', { inputMonitoringGranted: false }, null, 'permission', 'open_input_monitoring'],
     ['driver not approved after macOS update', { state: 'driver_unavailable', driverReady: false }, null, 'driver', 'approve_driver'],
     ['helper missing', { helperInstalled: false, state: 'not_installed' }, null, 'missing', 'install'],
-    ['helper error', { state: 'error', message: 'Keyboard capture failed; all captured devices were released.' }, null, 'error', 'install'],
+    // What the Tauri layer reports for a down service: error, Input Monitoring false, helper installed.
+    ['helper down after an update', { state: 'error', inputMonitoringGranted: false, driverReady: false, message: 'Connection refused (os error 61)' }, null, 'unreachable', 'check_again'],
+    ['helper error', { state: 'error', message: 'Keyboard capture failed; all captured devices were released.' }, null, 'error', 'enable'],
+    ['no built-in keyboard (lid closed)', { state: 'error', message: 'No supported built-in keyboard is available. External/split and unsupported mixed-input devices remain untouched.' }, null, 'error', 'enable'],
     ['helper unreachable', null, 'connection refused', 'unreachable', 'check_again'],
   ]
   for (const [name, patch, error, id, kind] of cases) {
@@ -62,11 +65,29 @@ describe('problem -> fix mapping (Mac)', () => {
 })
 
 describe('problem -> fix mapping (Windows)', () => {
-  test('no driver or permission steps; missing service has no false button; error restarts the service', () => {
-    expect(diagnose({ helperInstalled: false, state: 'not_installed' }, { windows: true })).toMatchObject({ id: 'missing', fix: null })
-    expect(diagnose({ inputMonitoringGranted: false }, { windows: true })).toBeNull()
-    expect(diagnose({ state: 'driver_unavailable' }, { windows: true })).toMatchObject({ id: 'error', fix: { kind: 'install', label: 'Restart keyboard service' } })
-    expect(diagnose({ message: 'Sleep or event-loop interruption detected; physical keyboards released. Enable again to resume.' }, { windows: true })!.body).toContain('PC')
+  const win = { windows: true }
+  // The app appends this to every stopped or running Windows message.
+  const note = ' Administrator windows (such as elevated PowerShell or Task Manager) keep normal keys.'
+  test('no driver or permission steps; missing service has no false button', () => {
+    expect(diagnose({ helperInstalled: false, state: 'not_installed' }, win)).toMatchObject({ id: 'missing', fix: null })
+    expect(diagnose({ inputMonitoringGranted: false }, win)).toBeNull()
+  })
+  test('every message the service uses to let go shows the banner, with the app note appended', () => {
+    const sleep = 'Your PC went to sleep, so remapping turned off. Turn it on again to keep going.' + note
+    const locked = 'Your PC was locked or switched to another user, so remapping turned off. Turn it on again to keep going.' + note
+    const stalled = 'The app stopped answering, so remapping was turned off. Your keyboard works as normal.' + note
+    expect(diagnose({ message: sleep }, win)).toMatchObject({ id: 'released', fix: { kind: 'enable' } })
+    expect(diagnose({ message: sleep }, win)!.body).toContain('slept')
+    expect(diagnose({ message: locked }, win)).toMatchObject({ id: 'released', fix: { kind: 'enable' } })
+    expect(diagnose({ message: stalled }, win)).toMatchObject({ id: 'released', fix: { kind: 'enable' } })
+    expect(diagnose({ message: 'Windows is shutting down.' + note }, win)).toBeNull()
+    expect(diagnose({ message: 'Remapping is disabled. Your keyboard works as normal.' + note }, win)).toBeNull()
+  })
+  test('a service in error restarts the service (the check-again command does the restart); an old Windows has no button', () => {
+    const stuck = 'The keyboard service was stuck, so remapping turned off. Your keyboard works as normal.'
+    expect(diagnose({ state: 'error', message: stuck }, win)).toMatchObject({ id: 'error', fix: { kind: 'check_again', label: 'Restart keyboard service' } })
+    expect(diagnose({ state: 'driver_unavailable', message: 'Remapping needs Windows 10 version 22H2 or newer.' }, win))
+      .toMatchObject({ id: 'error', fix: null })
   })
 })
 

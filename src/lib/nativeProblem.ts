@@ -24,11 +24,15 @@ interface Input {
   hasRules: boolean
 }
 
-/** Stops the helper reports when it let go of the keyboard by itself (wake, stall, lost link), not when you pressed Stop. */
+/**
+ * Stops the helpers report when they let go of the keyboard by themselves (wake, lock, stall, lost link),
+ * not when you pressed Stop. The Windows messages arrive with a note appended, so match inside the text.
+ */
 function releasedByItself(message: string): 'sleep' | 'other' | null {
-  if (message.endsWith('Enable again to resume.')) return /sleep/i.test(message) ? 'sleep' : 'other'
-  if (message.endsWith('physical keyboards were released.')) return 'other'
-  return null
+  const byItself = message.includes('Enable again to resume.') || message.includes('physical keyboards were released.')
+    || /so remapping (was )?turned off/.test(message)
+  if (!byItself) return null
+  return /sleep/i.test(message) ? 'sleep' : 'other'
 }
 
 /**
@@ -57,11 +61,21 @@ export function diagnoseNative({ available, status, error, windows, hasRules }: 
       fix: windows ? null : { kind: 'install', label: 'Install keyboard helper', busyLabel: 'Opening installer…' },
     }
   }
+  // The Mac layer reports a helper it cannot reach as `error` with Input Monitoring `false`. That is not a
+  // permission problem: a helper that really lost the permission says `needs_permission`.
+  if (!windows && status.state === 'error' && !status.inputMonitoringGranted) {
+    return {
+      id: 'unreachable',
+      title: 'The keyboard helper is not answering',
+      body: `Your keys work as normal. This can happen after a restart or an update. Check again to reconnect.`,
+      fix: { kind: 'check_again', label: 'Check again', busyLabel: 'Checking…' },
+    }
+  }
   if (!windows && (status.state === 'needs_permission' || !status.inputMonitoringGranted)) {
     return {
       id: 'permission',
       title: 'Input Monitoring is switched off',
-      body: `macOS needs you to turn on Ultimate Keyboards Remapper there. An update can switch it off. Your keys work as normal until then.`,
+      body: `macOS needs you to turn on Ultimate Keyboards Remapper there. An update can switch it off. Your keys work as normal until then. Switch it on, then come back here.`,
       fix: { kind: 'open_input_monitoring', label: 'Open Input Monitoring settings', busyLabel: 'Opening…' },
     }
   }
@@ -73,14 +87,26 @@ export function diagnoseNative({ available, status, error, windows, hasRules }: 
       fix: { kind: 'approve_driver', label: 'Approve keyboard driver', busyLabel: 'Asking macOS…' },
     }
   }
-  if (status.state === 'error' || (windows && status.state === 'driver_unavailable')) {
+  if (windows && status.state === 'driver_unavailable') {
+    // Only an unsupported Windows build reports this; nothing the app can do about it.
+    return {
+      id: 'error',
+      title: 'Remapping cannot run on this PC',
+      body: `Your keys work as normal. ${status.message}`.trim(),
+      fix: null,
+    }
+  }
+  if (status.state === 'error') {
+    // The helper stays in `error` until the next apply (Mac) or a service restart (Windows); reinstalling does not clear it.
     return {
       id: 'error',
       title: 'The keyboard helper ran into a problem',
       body: `Your keys work as normal. ${status.message}`.trim(),
       fix: windows
-        ? { kind: 'install', label: 'Restart keyboard service', busyLabel: 'Starting…' }
-        : { kind: 'install', label: 'Repair keyboard helper', busyLabel: 'Opening installer…' },
+        ? { kind: 'check_again', label: 'Restart keyboard service', busyLabel: 'Restarting…' }
+        : hasRules && nativeCanApply(status)
+          ? { kind: 'enable', label: 'Try turning on again', busyLabel: 'Turning on…' }
+          : null,
     }
   }
   const released = status.state === 'stopped' && !status.enabled ? releasedByItself(status.message) : null
