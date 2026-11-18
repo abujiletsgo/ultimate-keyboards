@@ -392,3 +392,12 @@ checks:
     proof: 'Tom''s note: where the pill appeared, its text, whether typing focus stayed in the app, and any flash on quick taps'
     affects: [src-tauri/src/layer_hud.rs, src-tauri/src/native_remapping.rs, src-tauri/src/native_remapping/**, native/service/src/**, native/engine/src/**]
     added: 2026-11-17 KE-42 on-screen layer overlay (rendered light/dark/truncation via a preview of the same AppKit code on the homelab Mac; live-held-key path needs the helper)
+
+  - id: RECOVER-1
+    area: laptop-keys
+    check: 'When remapping is stopped or broken (after wake, a dropped link, an update that switched off Input Monitoring or the driver approval, a missing or failing helper, or an unreachable helper) a banner on every Keys tab names the problem in plain words and offers one button: Turn remapping back on, Open Input Monitoring settings, Approve keyboard driver, Install or Repair keyboard helper, or Check again; nothing shows when remapping is running or you pressed Stop; a problem with no real fix (Windows service missing, no rules) shows no button'
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)" && bun test tests/nativeProblem.test.ts'''
+    proof: 'bun prints 17 passed: every status the helper can report maps to one problem and one fix kind, each fix kind calls exactly one existing engine command (apply with enable, install, activate_driver, open_settings, refresh_permissions), priority missing > permission > driver > stopped, no button when the engine cannot fix it'
+    affects: [src/lib/nativeProblem.ts, src/components/KarabinerEditor/NativeFixBanner.tsx, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-43 one-tap fixes after sleep or updates (the live wake and update paths stay with HANDS-8 and KE-13)

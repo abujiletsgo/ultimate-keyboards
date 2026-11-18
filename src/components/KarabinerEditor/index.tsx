@@ -6,6 +6,7 @@ import KeyPanel, { type AddingCombo } from './KeyPanel'
 import TypingFeelPanel from './TypingFeelPanel'
 import { useProfileTransfer } from './ProfileTransfer'
 import NativeRemappingPanel, { NativeEmergencyStop } from './NativeRemappingPanel'
+import NativeFixBanner from './NativeFixBanner'
 import KeymapActionBar from '@/components/Keyboard/KeymapActionBar'
 import LayerControls from '@/components/Keyboard/LayerControls'
 import { registerDirtySource, syncDirty } from '@/lib/dirty'
@@ -81,6 +82,7 @@ export default function KarabinerEditor() {
         <KeymapActionBar label={<span className="mono" title={profileTitle} style={{ fontSize: 11, color: 'var(--text-secondary)', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profileTitle}</span>}
           dirty={isDirty} canUndo={past.length > 0} canRedo={future.length > 0} onSave={saveLocal} onRevert={revertProfile} onUndo={undo} onRedo={redo}
           extraActions={<>{transfer.buttons}<span style={{ display: tab === 'remapping' ? 'none' : 'contents' }}><NativeEmergencyStop /></span></>} />
+        <NativeFixBanner />
         {transfer.banner}
         <div id="mac-keys-editor" role="tabpanel" aria-labelledby={`mac-keys-tab-${tab}`} tabIndex={0}
           style={{ display: 'flex', flexDirection: 'column', gap: 14, flexShrink: 0, minWidth: 0 }}>

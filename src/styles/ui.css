@@ -47,6 +47,15 @@
 }
 .confirm-banner[data-danger="true"] { border-color: rgba(251, 113, 133, 0.35); }
 
+/* Native remapping problem + its one fix (Studio: glass card, warning rim, one primary action). */
+.native-fix {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; font-size: var(--text-12); color: var(--text);
+  border-color: rgba(251, 191, 36, 0.35); flex-shrink: 0;
+}
+.native-fix-text { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.native-fix-text span { color: var(--text-secondary); line-height: 1.5; }
+
 /* ── Toast ───────────────────────────────────────────────────────────────── */
 .toast-stack {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
