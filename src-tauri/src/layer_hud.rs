@@ -111,7 +111,7 @@ mod macos_hud {
         _priv: [u8; 0],
     }
     unsafe impl RefEncode for CGColorOpaque {
-        const ENCODING_REF: Encoding = Encoding::Struct("CGColor", &[]);
+        const ENCODING_REF: Encoding = Encoding::Pointer(&Encoding::Struct("CGColor", &[]));
     }
 
     fn rect(x: f64, y: f64, width: f64, height: f64) -> CGRect {
@@ -161,12 +161,12 @@ mod macos_hud {
         msg_send![color, CGColor]
     }
 
-    fn system_is_dark() -> bool {
-        unsafe {
-            let defaults: *mut AnyObject = msg_send![class(c"NSUserDefaults"), standardUserDefaults];
-            let style: *mut AnyObject = msg_send![defaults, stringForKey: nsstring("AppleInterfaceStyle")];
-            !style.is_null()
-        }
+    /// The pill's own resolved appearance (follows the system light/dark setting).
+    unsafe fn is_dark(view: *mut AnyObject) -> bool {
+        let appearance: *mut AnyObject = msg_send![view, effectiveAppearance];
+        let name: *mut AnyObject = msg_send![appearance, name];
+        let utf8: *const std::ffi::c_char = msg_send![name, UTF8String];
+        !utf8.is_null() && std::ffi::CStr::from_ptr(utf8).to_string_lossy().contains("Dark")
     }
 
     unsafe fn build() -> Hud {
@@ -229,7 +229,7 @@ mod macos_hud {
             let hud = slot.get_or_insert_with(|| build());
 
             // CGColors are static, so re-resolve the theme-dependent ones on every show.
-            let dark = system_is_dark();
+            let dark = is_dark(hud.effect);
             let rim = msg_send![class(c"NSColor"), colorWithWhite: if dark { 1.0f64 } else { 0.0f64 }, alpha: if dark { 0.18f64 } else { 0.10f64 }];
             let layer: *mut AnyObject = msg_send![hud.effect, layer];
             let _: () = msg_send![layer, setBorderColor: cg(rim)];
@@ -281,6 +281,9 @@ mod macos_hud {
                 let s = nsstring("nav › sym");
                 let len: usize = msg_send![s, length];
                 assert_eq!(len, 9);
+                // objc2 checks the CGColor return encoding in debug builds; a wrong one panics here.
+                let accent: *mut AnyObject = msg_send![class(c"NSColor"), controlAccentColor];
+                assert!(!cg(accent).is_null());
             }
         }
     }

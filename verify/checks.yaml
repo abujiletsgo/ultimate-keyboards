@@ -383,3 +383,12 @@ checks:
     proof: 'bun prints the after-wake test passing (not running, can apply); cargo asserts the stop message ends with Enable again to resume.'
     affects: [native/service/src/**, src/lib/nativeRemapping.ts, src/components/KarabinerEditor/NativeRemappingPanel.tsx]
     added: 2026-11-17 KE-11 sleep, wake and crash recovery
+
+  - id: LAYER-HUD-1
+    area: laptop-keys
+    check: While a layer key is held with remapping on, a small pill at the bottom of the screen names the layer (two held layers read "nav › numbers") over any app, without taking focus; it hides on release, on a quick tap it never shows, and it hides when remapping stops or the app quits; the pill follows light and dark mode
+    targets: [macbook]
+    how: 'person: With the default profile running, hold Space (nav layer) in TextEdit and in a full-screen app, then release; tap Space quickly while typing; hold Space and press Stop remapping; repeat once in light and once in dark mode'
+    proof: 'Tom''s note: where the pill appeared, its text, whether typing focus stayed in the app, and any flash on quick taps'
+    affects: [src-tauri/src/layer_hud.rs, src-tauri/src/native_remapping.rs, src-tauri/src/native_remapping/**, native/service/src/**, native/engine/src/**]
+    added: 2026-11-17 KE-42 on-screen layer overlay (rendered light/dark/truncation via a preview of the same AppKit code on the homelab Mac; live-held-key path needs the helper)
