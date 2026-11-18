@@ -293,8 +293,72 @@ impl Outputs {
         }
     }
 }
-struct Service {
+
+trait Backend {
+    fn effective_uid(&self) -> u32;
+    fn console_uid(&self) -> u32;
+    fn permission(&self) -> bool;
+    fn driver_present(&self) -> bool;
+    fn now_ms(&self) -> u64;
+    fn begin(&mut self) -> bool;
+    fn ready(&self) -> bool;
+    fn fault(&self) -> bool;
+    fn pump(&mut self, wait_ms: u64);
+    fn capture(&mut self) -> i32;
+    fn next_event(&mut self) -> Option<RawEvent>;
+    fn post(&mut self, page: u16, usage: u16, down: bool) -> bool;
+    fn end(&mut self);
+}
+
+struct OsBackend;
+impl Backend for OsBackend {
+    fn effective_uid(&self) -> u32 {
+        unsafe { libc::geteuid() }
+    }
+    fn console_uid(&self) -> u32 {
+        unsafe { native::uk_console_uid() }
+    }
+    fn permission(&self) -> bool {
+        unsafe { native::uk_permission() }
+    }
+    fn driver_present(&self) -> bool {
+        unsafe { native::uk_driver_present() }
+    }
+    fn now_ms(&self) -> u64 {
+        unsafe { native::uk_now_ms() }
+    }
+    fn begin(&mut self) -> bool {
+        unsafe { native::uk_begin() }
+    }
+    fn ready(&self) -> bool {
+        unsafe { native::uk_ready() }
+    }
+    fn fault(&self) -> bool {
+        unsafe { native::uk_fault() }
+    }
+    fn pump(&mut self, wait_ms: u64) {
+        unsafe { native::uk_pump(wait_ms) }
+    }
+    fn capture(&mut self) -> i32 {
+        unsafe { native::uk_capture() }
+    }
+    fn next_event(&mut self) -> Option<RawEvent> {
+        let mut event = RawEvent::default();
+        unsafe { native::uk_event(&mut event) }.then_some(event)
+    }
+    fn post(&mut self, page: u16, usage: u16, down: bool) -> bool {
+        unsafe { native::uk_post(page, usage, down) }
+    }
+    fn end(&mut self) {
+        unsafe { native::uk_end() }
+    }
+}
+
+struct Service<B: Backend = OsBackend> {
+    backend: B,
     synthetic: bool,
+    state_dir: PathBuf,
+    state_uid: u32,
     profile: Option<Profile>,
     engines: BTreeMap<u64, Engine>,
     outputs: Outputs,
@@ -308,10 +372,19 @@ struct Service {
     armed_resume: bool,
     restart_at: Option<Instant>,
 }
-impl Service {
+impl Service<OsBackend> {
     fn new(synthetic: bool) -> Self {
+        Self::with_backend(OsBackend, synthetic, PathBuf::from(STATE_DIR), 0)
+    }
+}
+impl<B: Backend> Service<B> {
+    fn with_backend(backend: B, synthetic: bool, state_dir: PathBuf, state_uid: u32) -> Self {
+        let console_uid = backend.console_uid();
         Self {
+            backend,
             synthetic,
+            state_dir,
+            state_uid,
             profile: None,
             engines: BTreeMap::new(),
             outputs: Outputs::default(),
@@ -320,18 +393,18 @@ impl Service {
             enabled: false,
             captured: 0,
             started: false,
-            console_uid: unsafe { native::uk_console_uid() },
+            console_uid,
             lease: None,
             armed_resume: false,
             restart_at: None,
         }
     }
     fn status(&self) -> NativeStatus {
-        let permission = !self.synthetic && unsafe { native::uk_permission() };
+        let permission = !self.synthetic && self.backend.permission();
         NativeStatus {
             state: self.state.clone(),
             message: self.message.clone(),
-            driver_ready: self.started && unsafe { native::uk_ready() },
+            driver_ready: self.started && self.backend.ready(),
             input_monitoring_granted: permission,
             helper_installed: true,
             enabled: self.enabled,
@@ -346,9 +419,7 @@ impl Service {
             let _ = engine.reset();
         }
         if self.started && !self.synthetic {
-            unsafe {
-                native::uk_end();
-            }
+            self.backend.end();
         }
         self.started = false;
         self.enabled = false;
@@ -372,19 +443,19 @@ impl Service {
         if self.lease.is_none_or(|t| t.elapsed() > LEASE) {
             return Err("A trusted foreground session heartbeat is required".into());
         }
-        if unsafe { libc::geteuid() } != 0 {
+        if self.backend.effective_uid() != 0 {
             return Err("The production helper must run as root".into());
         }
-        if !unsafe { native::uk_permission() } {
+        if !self.backend.permission() {
             self.stop("needs_permission", "Grant Input Monitoring to Ultimate Keyboards Remapper in System Settings, then enable again.");
             return Err(self.message.clone());
         }
-        if !unsafe { native::uk_driver_present() } {
+        if !self.backend.driver_present() {
             self.stop("driver_unavailable", "The signed virtual HID service is unavailable. Install and approve the bundled driver, then enable again.");
             return Err(self.message.clone());
         }
-        let enabling_console = unsafe { native::uk_console_uid() };
-        if !unsafe { native::uk_begin() } {
+        let enabling_console = self.backend.console_uid();
+        if !self.backend.begin() {
             self.stop(
                 "driver_unavailable",
                 "Could not connect to the virtual HID service; no keyboard was captured.",
@@ -393,32 +464,29 @@ impl Service {
         }
         self.started = true;
         let deadline = Instant::now() + Duration::from_millis(1200);
-        while Instant::now() < deadline
-            && !unsafe { native::uk_ready() }
-            && !unsafe { native::uk_fault() }
-        {
+        while Instant::now() < deadline && !self.backend.ready() && !self.backend.fault() {
             thread::sleep(Duration::from_millis(5));
         }
-        if !unsafe { native::uk_ready() } {
+        if !self.backend.ready() {
             self.stop(
                 "driver_unavailable",
                 "Virtual HID handshake did not become ready; no keyboard was captured.",
             );
             return Err(self.message.clone());
         }
-        if enabling_console != unsafe { native::uk_console_uid() } {
+        if enabling_console != self.backend.console_uid() {
             self.stop(
                 "stopped",
                 "Console session changed during enable; no keyboard was captured.",
             );
             return Err(self.message.clone());
         }
-        let count = unsafe { native::uk_capture() };
+        let count = self.backend.capture();
         if count <= 0 {
             self.stop("error", if count == 0 { "No supported built-in keyboard is available. External/split and unsupported mixed-input devices remain untouched." } else { "Keyboard capture failed; all captured devices were released." });
             return Err(self.message.clone());
         }
-        if enabling_console != unsafe { native::uk_console_uid() } {
+        if enabling_console != self.backend.console_uid() {
             self.stop(
                 "stopped",
                 "Console session changed during capture; physical keyboards were released.",
@@ -451,7 +519,7 @@ impl Service {
             self.lease = Some(Instant::now());
             if r.command == "status" && self.armed_resume {
                 self.armed_resume = false;
-                if self.console_uid == unsafe { native::uk_console_uid() } {
+                if self.console_uid == self.backend.console_uid() {
                     self.start()?;
                 }
             }
@@ -505,22 +573,41 @@ impl Service {
             _ => Err("Unknown command".into()),
         }
     }
+    fn check_state_dir(&self) -> Result<(), String> {
+        if self.state_uid == 0 {
+            return secure_dir(&self.state_dir);
+        }
+        let meta = fs::symlink_metadata(&self.state_dir).map_err(|e| e.to_string())?;
+        if !meta.is_dir()
+            || meta.file_type().is_symlink()
+            || meta.uid() != self.state_uid
+            || meta.mode() & 0o077 != 0
+        {
+            return Err("State directory ownership or mode is invalid".into());
+        }
+        Ok(())
+    }
     fn persist(&self) -> Result<(), String> {
+        self.save(false)
+    }
+    /// `enabled` on disk means "resume on next start". Only a clean signal exit while
+    /// enabled writes true; a crash or SIGKILL leaves false, so launchd restarts idle.
+    fn save(&self, resume: bool) -> Result<(), String> {
         if self.synthetic {
             return Ok(());
         }
         let Some(profile) = self.profile.as_ref() else {
             return Ok(());
         };
-        secure_dir(Path::new(STATE_DIR))?;
+        self.check_state_dir()?;
         let saved = Saved {
             version: 1,
             profile: profile.clone(),
-            enabled: self.enabled,
+            enabled: resume,
             console_uid: self.console_uid,
         };
         let data = serde_json::to_vec(&saved).map_err(|e| e.to_string())?;
-        let temp = Path::new(STATE_DIR).join("profile.new");
+        let temp = self.state_dir.join("profile.new");
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -531,8 +618,8 @@ impl Service {
         let result = (|| {
             file.write_all(&data)?;
             file.sync_all()?;
-            fs::rename(&temp, Path::new(STATE_DIR).join("profile.json"))?;
-            fs::File::open(STATE_DIR)?.sync_all()
+            fs::rename(&temp, self.state_dir.join("profile.json"))?;
+            fs::File::open(&self.state_dir)?.sync_all()
         })();
         if result.is_err() {
             let _ = fs::remove_file(&temp);
@@ -543,15 +630,15 @@ impl Service {
         if self.synthetic {
             return Ok(());
         }
-        secure_dir(Path::new(STATE_DIR))?;
-        let pending = Path::new(STATE_DIR).join("profile.new");
+        self.check_state_dir()?;
+        let pending = self.state_dir.join("profile.new");
         if let Ok(meta) = fs::symlink_metadata(&pending) {
-            if meta.uid() != 0 || !meta.is_file() || meta.mode() & 0o077 != 0 {
+            if meta.uid() != self.state_uid || !meta.is_file() || meta.mode() & 0o077 != 0 {
                 return Err("Untrusted pending state snapshot".into());
             }
             fs::remove_file(pending).map_err(|e| e.to_string())?;
         }
-        let path = Path::new(STATE_DIR).join("profile.json");
+        let path = self.state_dir.join("profile.json");
         if !path.exists() {
             return Ok(());
         }
@@ -561,7 +648,10 @@ impl Service {
             .open(path)
             .map_err(|e| e.to_string())?;
         let meta = file.metadata().map_err(|e| e.to_string())?;
-        if meta.uid() != 0 || meta.mode() & 0o077 != 0 || meta.len() > MAX_MESSAGE as u64 {
+        if meta.uid() != self.state_uid
+            || meta.mode() & 0o077 != 0
+            || meta.len() > MAX_MESSAGE as u64
+        {
             return Err("Stored profile ownership, mode or size is invalid".into());
         }
         let saved: Saved = serde_json::from_reader(file).map_err(|e| e.to_string())?;
@@ -571,7 +661,8 @@ impl Service {
         Engine::new(saved.profile.clone()).map_err(|e| e.to_string())?;
         self.profile = Some(saved.profile);
         self.console_uid = saved.console_uid;
-        self.armed_resume = saved.enabled;
+        // Consume the resume intent first so a crash after resuming restarts idle (fail-open).
+        self.armed_resume = saved.enabled && self.persist().is_ok();
         if self.armed_resume {
             self.message =
                 "Saved profile is waiting for a trusted app heartbeat in its console session."
@@ -579,9 +670,19 @@ impl Service {
         }
         Ok(())
     }
+    fn check_interruption(&mut self, mono_gap: Duration, wall_gap: Option<Duration>) -> bool {
+        if self.enabled && (mono_gap > TIMEOUT || wall_gap.is_none_or(|gap| gap > TIMEOUT)) {
+            self.stop(
+                "stopped",
+                "Sleep or event-loop interruption detected; physical keyboards released. Enable again to resume.",
+            );
+            let _ = self.persist();
+            return true;
+        }
+        false
+    }
     fn output(&mut self, device: u64, page: u16, usage: u16, down: bool) -> bool {
-        !self.outputs.change(device, page, usage, down)
-            || unsafe { native::uk_post(page, usage, down) }
+        !self.outputs.change(device, page, usage, down) || self.backend.post(page, usage, down)
     }
     fn outputs(&mut self, device: u64, events: Vec<OutputEvent>) -> bool {
         for event in events {
@@ -596,16 +697,13 @@ impl Service {
             return;
         }
         if self.lease.is_none_or(|t| t.elapsed() > LEASE)
-            || self.console_uid != unsafe { native::uk_console_uid() }
+            || self.console_uid != self.backend.console_uid()
         {
             self.stop("stopped", "The trusted app disconnected or console session changed; physical keyboards were released.");
             let _ = self.persist();
             return;
         }
-        if !unsafe { native::uk_ready() }
-            || unsafe { native::uk_fault() }
-            || !unsafe { native::uk_permission() }
-        {
+        if !self.backend.ready() || self.backend.fault() || !self.backend.permission() {
             self.stop(
                 "driver_unavailable",
                 "Native input/output became unavailable; physical keyboards were released.",
@@ -618,26 +716,23 @@ impl Service {
             .values()
             .filter_map(Engine::next_deadline_ms)
             .min();
-        let wait_ms = event_wait_ms(unsafe { native::uk_now_ms() }, deadline);
-        unsafe {
-            native::uk_pump(wait_ms);
-        }
+        let wait_ms = event_wait_ms(self.backend.now_ms(), deadline);
+        self.backend.pump(wait_ms);
         // A power callback or session change during the wait must release input before output.
-        if unsafe { native::uk_fault() }
-            || !unsafe { native::uk_ready() }
-            || self.console_uid != unsafe { native::uk_console_uid() }
+        if self.backend.fault()
+            || !self.backend.ready()
+            || self.console_uid != self.backend.console_uid()
             || self.lease.is_none_or(|t| t.elapsed() > LEASE)
         {
             self.stop(
                 "stopped",
-                "Device disconnect, sleep, or driver loss detected; physical keyboards released.",
+                "Device disconnect, sleep, or driver loss detected; physical keyboards released. Enable again to resume.",
             );
             let _ = self.persist();
             return;
         }
-        let ms = unsafe { native::uk_now_ms() };
-        let mut event = RawEvent::default();
-        while unsafe { native::uk_event(&mut event) } {
+        let ms = self.backend.now_ms();
+        while let Some(event) = self.backend.next_event() {
             let success = if event.page == 7 {
                 if !self.engines.contains_key(&event.device) {
                     let engine = Engine::new(self.profile.as_ref().unwrap().clone())
@@ -685,7 +780,7 @@ impl Service {
         }
     }
 }
-impl Drop for Service {
+impl<B: Backend> Drop for Service<B> {
     fn drop(&mut self) {
         self.stop("stopped", "Helper stopped.");
     }
@@ -715,10 +810,11 @@ fn secure_dir(path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
-fn production_lock() -> Result<fs::File, String> {
-    if unsafe { libc::geteuid() } != 0 {
-        return Err("Production helper requires root".into());
-    }
+fn acquire_endpoint_lock(
+    lock_path: &Path,
+    socket_path: &Path,
+    expected_uid: u32,
+) -> Result<fs::File, String> {
     let lock = OpenOptions::new()
         .read(true)
         .write(true)
@@ -726,25 +822,35 @@ fn production_lock() -> Result<fs::File, String> {
         .truncate(false)
         .mode(0o600)
         .custom_flags(libc::O_NOFOLLOW)
-        .open("/var/run/com.ultimatekeyboards.remapper.lock")
+        .open(lock_path)
         .map_err(|e| e.to_string())?;
     let meta = lock.metadata().map_err(|e| e.to_string())?;
-    if meta.uid() != 0 || !meta.is_file() || meta.mode() & 0o077 != 0 {
+    if meta.uid() != expected_uid || !meta.is_file() || meta.mode() & 0o077 != 0 {
         return Err("Untrusted helper lock file".into());
     }
     if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
         return Err("Another remapper helper already holds the service lock".into());
     }
-    if let Ok(meta) = fs::symlink_metadata(SOCKET) {
-        if meta.uid() != 0 || !meta.file_type().is_socket() {
+    if let Ok(meta) = fs::symlink_metadata(socket_path) {
+        if meta.uid() != expected_uid || !meta.file_type().is_socket() {
             return Err("Untrusted existing helper socket".into());
         }
-        if UnixStream::connect(SOCKET).is_ok() {
+        if UnixStream::connect(socket_path).is_ok() {
             return Err("A live process already owns the helper endpoint".into());
         }
-        fs::remove_file(SOCKET).map_err(|e| e.to_string())?;
+        fs::remove_file(socket_path).map_err(|e| e.to_string())?;
     }
     Ok(lock)
+}
+fn production_lock() -> Result<fs::File, String> {
+    if unsafe { libc::geteuid() } != 0 {
+        return Err("Production helper requires root".into());
+    }
+    acquire_endpoint_lock(
+        Path::new("/var/run/com.ultimatekeyboards.remapper.lock"),
+        Path::new(SOCKET),
+        0,
+    )
 }
 fn listener(path: &Path, synthetic: bool) -> Result<UnixListener, String> {
     if !synthetic && unsafe { libc::geteuid() } != 0 {
@@ -929,15 +1035,7 @@ fn run() -> Result<(), String> {
         let now = Instant::now();
         let wall_now = std::time::SystemTime::now();
         // SystemTime includes sleep on macOS. A stalled event loop must also release captures.
-        if service.enabled
-            && (now.duration_since(last) > TIMEOUT
-                || wall_now
-                    .duration_since(wall)
-                    .map_or(true, |gap| gap > TIMEOUT))
-        {
-            service.stop("stopped", "Sleep or event-loop interruption detected; physical keyboards released. Enable again to resume.");
-            let _ = service.persist();
-        }
+        service.check_interruption(now.duration_since(last), wall_now.duration_since(wall).ok());
         last = now;
         wall = wall_now;
         for work in rx.try_iter().take(16) {
@@ -953,6 +1051,10 @@ fn run() -> Result<(), String> {
             thread::sleep(Duration::from_millis(MAX_EVENT_WAIT_MS));
         }
     }
+    // A clean signal exit (shutdown, restart, upgrade) keeps the resume intent; Drop then releases.
+    if QUIT.load(Ordering::Relaxed) && (service.enabled || service.armed_resume) {
+        let _ = service.save(true);
+    }
     Ok(())
 }
 fn main() {
@@ -965,6 +1067,162 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::VecDeque;
+    use std::sync::Mutex;
+
+    struct FakeState {
+        effective_uid: u32,
+        console_uid: u32,
+        permission: bool,
+        driver_present: bool,
+        now_ms: u64,
+        ready: bool,
+        fault: bool,
+        fault_on_pump: bool,
+        capture_count: i32,
+        begins: usize,
+        captures: usize,
+        ends: usize,
+        events: VecDeque<RawEvent>,
+        posted: Vec<(u16, u16, bool)>,
+    }
+
+    #[derive(Clone)]
+    struct FakeBackend(Arc<Mutex<FakeState>>);
+
+    impl FakeBackend {
+        fn healthy() -> Self {
+            Self(Arc::new(Mutex::new(FakeState {
+                effective_uid: 0,
+                console_uid: 501,
+                permission: true,
+                driver_present: true,
+                now_ms: 0,
+                ready: true,
+                fault: false,
+                fault_on_pump: false,
+                capture_count: 1,
+                begins: 0,
+                captures: 0,
+                ends: 0,
+                events: VecDeque::new(),
+                posted: Vec::new(),
+            })))
+        }
+        fn push_key(&self, page: u16, usage: u16, down: bool, at_ms: u64) {
+            let mut s = self.0.lock().unwrap();
+            s.now_ms = s.now_ms.max(at_ms);
+            s.events.push_back(RawEvent {
+                device: 1,
+                page,
+                usage,
+                down,
+                at_ms,
+            });
+        }
+        fn take_posted(&self) -> Vec<(u16, u16, bool)> {
+            std::mem::take(&mut self.0.lock().unwrap().posted)
+        }
+    }
+
+    impl Backend for FakeBackend {
+        fn effective_uid(&self) -> u32 {
+            self.0.lock().unwrap().effective_uid
+        }
+        fn console_uid(&self) -> u32 {
+            self.0.lock().unwrap().console_uid
+        }
+        fn permission(&self) -> bool {
+            self.0.lock().unwrap().permission
+        }
+        fn driver_present(&self) -> bool {
+            self.0.lock().unwrap().driver_present
+        }
+        fn now_ms(&self) -> u64 {
+            self.0.lock().unwrap().now_ms
+        }
+        fn begin(&mut self) -> bool {
+            let mut s = self.0.lock().unwrap();
+            s.begins += 1;
+            s.fault = false;
+            true
+        }
+        fn ready(&self) -> bool {
+            let s = self.0.lock().unwrap();
+            s.ready && !s.fault
+        }
+        fn fault(&self) -> bool {
+            self.0.lock().unwrap().fault
+        }
+        fn pump(&mut self, _wait_ms: u64) {
+            let mut s = self.0.lock().unwrap();
+            if s.fault_on_pump {
+                s.fault = true;
+            }
+        }
+        fn capture(&mut self) -> i32 {
+            let mut s = self.0.lock().unwrap();
+            s.captures += 1;
+            s.capture_count
+        }
+        fn next_event(&mut self) -> Option<RawEvent> {
+            self.0.lock().unwrap().events.pop_front()
+        }
+        fn post(&mut self, page: u16, usage: u16, down: bool) -> bool {
+            let mut s = self.0.lock().unwrap();
+            if !s.ready || s.fault {
+                return false;
+            }
+            s.posted.push((page, usage, down));
+            true
+        }
+        fn end(&mut self) {
+            let mut s = self.0.lock().unwrap();
+            s.ends += 1;
+            s.fault = false;
+            s.events.clear();
+        }
+    }
+
+    struct TempStateDir(PathBuf);
+    impl TempStateDir {
+        fn new(label: &str) -> Self {
+            use std::os::unix::fs::DirBuilderExt;
+            let mut rand = [0_u8; 8];
+            std::io::Read::read_exact(&mut fs::File::open("/dev/urandom").unwrap(), &mut rand)
+                .unwrap();
+            let suffix: String = rand.iter().map(|b| format!("{b:02x}")).collect();
+            let dir = std::env::temp_dir().join(format!("uk-svc-{label}-{suffix}"));
+            fs::DirBuilder::new().mode(0o700).create(&dir).unwrap();
+            Self(dir)
+        }
+        fn saved(&self) -> Saved {
+            let bytes = fs::read(self.0.join("profile.json")).unwrap();
+            serde_json::from_slice(&bytes).unwrap()
+        }
+    }
+    impl Drop for TempStateDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn apply_macbook_request(enable: bool) -> Result<Request, String> {
+        parse_request(
+            format!(
+                r#"{{"version":1,"command":"apply","enable":{enable},"profile":{{"version":1,"title":"MacBook","holdThresholdMs":150,"comboWindowMs":50,"typingStreakMs":150,"rules":[
+                    {{"type":"homerow_mod","fromKey":"f","tapKey":"f","modKey":"left_command","holdThresholdMs":220,"holdBehavior":"opposite_hand"}},
+                    {{"type":"homerow_mod","fromKey":"d","tapKey":"d","modKey":"left_shift","holdThresholdMs":220,"holdBehavior":"opposite_hand"}},
+                    {{"type":"homerow_mod","fromKey":"j","tapKey":"j","modKey":"left_command","holdThresholdMs":220,"holdBehavior":"opposite_hand"}},
+                    {{"type":"combo","fromKeys":["k","l"],"toKey":"return_or_enter"}},
+                    {{"type":"combo","fromKeys":["w","e"],"toKey":"escape"}},
+                    {{"type":"simple","fromKey":"caps_lock","toKey":"escape"}}
+                ]}}}}"#
+            )
+            .as_bytes(),
+        )
+    }
+
     #[test]
     fn build_info_contains_only_compiled_provenance() {
         let info = build_info();
@@ -1101,5 +1359,226 @@ mod tests {
         assert!(!service.started && !service.enabled && !service.armed_resume);
         assert_eq!(response.status.profile_title.as_deref(), Some("retained"));
         assert!(parse_request(br#"{"version":1,"command":"restart","enable":true}"#).is_err());
+    }
+
+    fn status_request() -> Result<Request, String> {
+        parse_request(br#"{"version":1,"command":"status"}"#)
+    }
+
+    /// Asserts the post-stop invariants: bridge torn down, nothing held in the helper,
+    /// nothing left to resume, and the status says what to press.
+    fn assert_released(service: &Service<FakeBackend>, backend: &FakeBackend, ends: usize) {
+        let st = service.status();
+        assert_eq!(st.state, "stopped");
+        assert!(!st.enabled && !st.driver_ready && st.captured_devices == 0);
+        assert!(
+            st.message.ends_with("Enable again to resume."),
+            "{}",
+            st.message
+        );
+        assert!(service.engines.is_empty());
+        assert!(service.outputs.refs.is_empty() && service.outputs.held.is_empty());
+        assert!(!service.armed_resume);
+        assert_eq!(backend.0.lock().unwrap().ends, ends);
+    }
+
+    #[test]
+    fn sleep_or_stall_bridge_teardown_releases_every_page_and_resets_the_virtual_keyboard() {
+        // uk_end and the sleep power callback both run release_inputs, which posts an empty
+        // report for every output page and resets the virtual keyboard before closing seizures.
+        let bridge = include_str!("../bridge/native.cpp");
+        let body = |name: &str| {
+            let start = bridge.find(name).unwrap();
+            &bridge[start..start + bridge[start..].find("\n}").unwrap()]
+        };
+        let release = body("static void release_inputs()");
+        assert!(release.contains(
+            "for (auto p : {7, 0x0c, 0xff01, 0x00ff}) { pressed[p].clear(); post_page(p); }"
+        ));
+        assert!(release.contains("async_virtual_hid_keyboard_reset()"));
+        assert!(release.contains("IOHIDDeviceClose(d, kIOHIDOptionsTypeNone)"));
+        assert!(body("void uk_end()").contains("release_inputs();"));
+        let power = body("static void power_callback(");
+        let will_sleep = power.find("kIOMessageSystemWillSleep").unwrap();
+        let released = power.find("release_inputs();").unwrap();
+        assert!(will_sleep < released && released < power.find("IOAllowPowerChange").unwrap());
+        // Capture is a task-scoped seizure: the kernel drops it when the helper dies (fail-open).
+        assert!(bridge.contains("IOHIDDeviceOpen(d, kIOHIDOptionsTypeSeizeDevice)"));
+    }
+
+    #[test]
+    fn sleep_or_stall_power_notification_releases_keys_and_says_what_to_press() {
+        let dir = TempStateDir::new("sleep-power");
+        let backend = FakeBackend::healthy();
+        let uid = unsafe { libc::geteuid() };
+        let mut service = Service::with_backend(backend.clone(), false, dir.0.clone(), uid);
+        let applied = service.handle(apply_macbook_request(true), true);
+        assert!(applied.ok && applied.status.enabled && applied.status.captured_devices == 1);
+
+        // Hold J into Left Command (227), press C (6), leave D pending inside its hold window
+        // and hold consumer Volume Up, then the Mac goes to sleep.
+        backend.push_key(7, 13, true, 10);
+        backend.0.lock().unwrap().now_ms = 250;
+        service.tick();
+        backend.push_key(7, 6, true, 260);
+        backend.push_key(7, 7, true, 450);
+        backend.push_key(0x0c, 0xe9, true, 455);
+        service.tick();
+        assert_eq!(
+            backend.take_posted(),
+            vec![(7, 227, true), (7, 6, true), (0x0c, 0xe9, true)]
+        );
+        assert_eq!(service.outputs.refs.len(), 3);
+
+        // kIOMessageSystemWillSleep sets the bridge fault during the run-loop pump.
+        backend.0.lock().unwrap().fault_on_pump = true;
+        service.tick();
+        assert_released(&service, &backend, 1);
+        assert!(service.status().message.contains("sleep"));
+        // Pending D never turns into a stray tap or modifier on the way down.
+        assert!(backend.take_posted().is_empty());
+        assert!(!dir.saved().enabled);
+
+        // After wake the app offers Apply and enable, which captures again from a clean slate.
+        backend.0.lock().unwrap().fault_on_pump = false;
+        assert!(service.handle(apply_macbook_request(true), true).ok);
+        backend.push_key(7, 6, true, 600);
+        backend.push_key(7, 6, false, 610);
+        service.tick();
+        assert_eq!(backend.take_posted(), vec![(7, 6, true), (7, 6, false)]);
+    }
+
+    #[test]
+    fn sleep_or_stall_loop_and_wall_clock_gaps_release_keys_and_allow_re_enable() {
+        let dir = TempStateDir::new("sleep-gap");
+        let backend = FakeBackend::healthy();
+        let uid = unsafe { libc::geteuid() };
+        let mut service = Service::with_backend(backend.clone(), false, dir.0.clone(), uid);
+        assert!(service.handle(apply_macbook_request(true), true).ok);
+
+        // Hold F into Left Command, chord K+L into Enter and start a pending W+E combo.
+        backend.push_key(7, 9, true, 10);
+        backend.0.lock().unwrap().now_ms = 250;
+        service.tick();
+        backend.push_key(7, 14, true, 420);
+        backend.push_key(7, 15, true, 430);
+        backend.push_key(7, 26, true, 440);
+        service.tick();
+        assert_eq!(backend.take_posted(), vec![(7, 227, true), (7, 40, true)]);
+
+        // Exactly at the 2 s bound is still healthy.
+        assert!(!service.check_interruption(TIMEOUT, Some(TIMEOUT)));
+        assert!(service.enabled);
+
+        // Sleep advances wall time past 2 s while monotonic time barely moves.
+        assert!(service.check_interruption(
+            Duration::from_millis(2),
+            Some(TIMEOUT + Duration::from_millis(1))
+        ));
+        assert_released(&service, &backend, 1);
+        assert!(backend.take_posted().is_empty());
+        assert!(!dir.saved().enabled);
+
+        // A >2 s monotonic stall of the event loop releases too.
+        assert!(service.handle(apply_macbook_request(true), true).ok);
+        backend.push_key(7, 57, true, 500); // caps_lock -> escape
+        backend.push_key(0x00ff, 3, true, 505); // Fn passes through
+        service.tick();
+        assert_eq!(
+            backend.take_posted(),
+            vec![(7, 41, true), (0x00ff, 3, true)]
+        );
+        assert!(service.check_interruption(
+            TIMEOUT + Duration::from_millis(1),
+            Some(Duration::from_millis(3))
+        ));
+        assert_released(&service, &backend, 2);
+
+        // A backwards wall clock also fails open; a disabled helper ignores gaps.
+        assert!(service.handle(apply_macbook_request(true), true).ok);
+        assert!(service.check_interruption(Duration::from_millis(1), None));
+        assert_released(&service, &backend, 3);
+        assert!(!service.check_interruption(TIMEOUT * 10, None));
+    }
+
+    #[test]
+    fn crash_or_kill_restart_stays_idle_across_heartbeats_until_apply() {
+        let dir = TempStateDir::new("crash");
+        let uid = unsafe { libc::geteuid() };
+        let mut crashed = Service::with_backend(FakeBackend::healthy(), false, dir.0.clone(), uid);
+        assert!(crashed.handle(apply_macbook_request(true), true).ok && crashed.enabled);
+        // While capturing, the disk never says "resume": a crash cannot re-grab on restart.
+        assert!(!dir.saved().enabled);
+        std::mem::forget(crashed); // SIGKILL: no Drop, no clean-exit save.
+
+        // launchd KeepAlive starts a fresh helper that loads the saved profile.
+        let backend = FakeBackend::healthy();
+        let mut restarted = Service::with_backend(backend.clone(), false, dir.0.clone(), uid);
+        restarted.load().unwrap();
+        assert!(!restarted.armed_resume);
+        for _ in 0..5 {
+            let hb = restarted.handle(status_request(), true);
+            assert!(hb.ok && hb.status.state == "stopped" && !hb.status.enabled);
+            assert_eq!(hb.status.captured_devices, 0);
+            assert_eq!(hb.status.profile_title.as_deref(), Some("MacBook"));
+        }
+        assert_eq!(backend.0.lock().unwrap().begins, 0);
+        assert_eq!(backend.0.lock().unwrap().captures, 0);
+
+        // Apply and enable from the user turns remapping back on.
+        assert!(restarted.handle(apply_macbook_request(true), true).ok);
+        assert_eq!(backend.0.lock().unwrap().captures, 1);
+    }
+
+    #[test]
+    fn clean_exit_resumes_once_and_a_later_crash_restarts_idle() {
+        let dir = TempStateDir::new("clean");
+        let uid = unsafe { libc::geteuid() };
+        let mut first = Service::with_backend(FakeBackend::healthy(), false, dir.0.clone(), uid);
+        assert!(first.handle(apply_macbook_request(true), true).ok);
+        first.save(true).unwrap(); // SIGTERM at shutdown or upgrade while enabled.
+        drop(first);
+        assert!(dir.saved().enabled);
+
+        let backend = FakeBackend::healthy();
+        let mut second = Service::with_backend(backend.clone(), false, dir.0.clone(), uid);
+        second.load().unwrap();
+        assert!(second.armed_resume);
+        // The intent is consumed on load, before any capture.
+        assert!(!dir.saved().enabled);
+        let hb = second.handle(status_request(), true);
+        assert!(hb.ok && hb.status.enabled && hb.status.captured_devices == 1);
+        assert!(second.handle(status_request(), true).ok);
+        assert_eq!(backend.0.lock().unwrap().captures, 1);
+        std::mem::forget(second); // Crash after resuming.
+
+        let backend = FakeBackend::healthy();
+        let mut third = Service::with_backend(backend.clone(), false, dir.0.clone(), uid);
+        third.load().unwrap();
+        assert!(!third.armed_resume);
+        assert!(!third.handle(status_request(), true).status.enabled);
+        assert_eq!(backend.0.lock().unwrap().captures, 0);
+    }
+
+    #[test]
+    fn crash_or_kill_leaves_a_stale_socket_that_the_restarted_helper_reclaims() {
+        let dir = TempStateDir::new("lock");
+        let uid = unsafe { libc::geteuid() };
+        let (lock, sock) = (dir.0.join("h.lock"), dir.0.join("h.sock"));
+        let held = acquire_endpoint_lock(&lock, &sock, uid).unwrap();
+        let live = UnixListener::bind(&sock).unwrap();
+        assert!(
+            acquire_endpoint_lock(&lock, &sock, uid).is_err(),
+            "a live helper keeps its lock"
+        );
+        // Process death closes the lock fd and the listener but leaves the socket path behind.
+        drop(held);
+        drop(live);
+        assert!(fs::symlink_metadata(&sock).is_ok());
+        let _again = acquire_endpoint_lock(&lock, &sock, uid).unwrap();
+        assert!(
+            fs::symlink_metadata(&sock).is_err(),
+            "stale socket removed for the new listener"
+        );
     }
 }

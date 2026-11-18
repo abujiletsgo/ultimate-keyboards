@@ -76,6 +76,19 @@ describe('native profile contract', () => {
     }
     expect(nativeCanApply(null)).toBe(false)
   })
+
+  test('after wake, a stall or a helper crash the status is stopped and Apply and enable stays available', () => {
+    // Messages the helper reports (native/service/src/main.rs); ledger row SLEEP-3.
+    for (const message of [
+      'Device disconnect, sleep, or driver loss detected; physical keyboards released. Enable again to resume.',
+      'Sleep or event-loop interruption detected; physical keyboards released. Enable again to resume.',
+      'Remapping is disabled; physical keyboards remain available.',
+    ]) {
+      const after: NativeStatus = { ...ready, message, driverReady: false, profileTitle: 'MacBook' }
+      expect(nativeIsRunning(after)).toBe(false)
+      expect(nativeCanApply(after)).toBe(true)
+    }
+  })
 })
 
 describe('native command lifecycle', () => {

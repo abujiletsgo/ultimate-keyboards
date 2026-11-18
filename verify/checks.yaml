@@ -356,3 +356,30 @@ checks:
     proof: "Tom's note: what the app said and what the keys did after each"
     affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
     added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: SLEEP-1
+    area: laptop-keys
+    check: 'When the Mac sleeps or the helper loop stalls over 2 s, every captured key and modifier comes up, nothing stays held or pending, and Apply and enable captures again from a clean slate'
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)/native/service" && cargo test -q sleep_or_stall'''
+    proof: 'cargo prints 3 passed for sleep_or_stall_*: fake-backend power fault and wall/monotonic gaps leave no engine, held output or resume intent; the bridge test pins release_inputs (empty report per page + keyboard reset) in uk_end and before IOAllowPowerChange'
+    affects: [native/service/src/**, native/service/bridge/native.cpp]
+    added: 2026-11-17 KE-11 sleep, wake and crash recovery (lid close by hand stays HANDS-8)
+
+  - id: SLEEP-2
+    area: laptop-keys
+    check: 'If the helper crashes or is killed, the keyboard types plain keys and the helper launchd restarts stays idle across app heartbeats until Apply and enable; only a clean shutdown resumes, once'
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)/native/service" && cargo test -q -- crash_or_kill clean_exit'''
+    proof: 'cargo prints 3 passed: restart after a forgotten (SIGKILL) service never begins or captures; clean exit resumes once and a crash after that restarts idle; a stale socket is reclaimed after the lock holder dies. KeepAlive is pinned by native/packaging/tests/test_packaging.py'
+    affects: [native/service/src/**, native/service/bridge/native.cpp, native/packaging/**]
+    added: 2026-11-17 KE-11 sleep, wake and crash recovery; fixed crash re-grab (enabled used to stay true on disk, so the restarted helper captured again on the next heartbeat)
+
+  - id: SLEEP-3
+    area: laptop-keys
+    check: 'After wake or a stall the app status says Stopped, the helper message ends with Enable again to resume, and Apply and enable stays available'
+    targets: [host]
+    how: 'auto: sh -c ''cd "$(git rev-parse --show-toplevel)" && bun test tests/nativeRemapping.test.ts && cd native/service && cargo test -q sleep_or_stall'''
+    proof: 'bun prints the after-wake test passing (not running, can apply); cargo asserts the stop message ends with Enable again to resume.'
+    affects: [native/service/src/**, src/lib/nativeRemapping.ts, src/components/KarabinerEditor/NativeRemappingPanel.tsx]
+    added: 2026-11-17 KE-11 sleep, wake and crash recovery
