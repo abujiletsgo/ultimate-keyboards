@@ -48,6 +48,8 @@ pub struct Service<H: Host> {
     lease: Option<u64>,
     armed_resume: bool,
     restart_at: Option<u64>,
+    active_layers: Vec<String>,
+    state_seq: u64,
     save: bool,
 }
 
@@ -69,8 +71,31 @@ impl<H: Host> Service<H> {
             lease: None,
             armed_resume: false,
             restart_at: None,
+            active_layers: Vec::new(),
+            state_seq: 1,
             save: false,
         }
+    }
+
+    fn bump_seq(&mut self) {
+        self.state_seq = self.state_seq.wrapping_add(1).max(1);
+    }
+
+    fn sync_layers(&mut self) {
+        let next = self
+            .engine
+            .as_ref()
+            .filter(|_| self.enabled)
+            .map(|e| e.active_layers().to_vec())
+            .unwrap_or_default();
+        if next != self.active_layers {
+            self.active_layers = next;
+            self.bump_seq();
+        }
+    }
+
+    pub fn state_seq(&self) -> u64 {
+        self.state_seq
     }
 
     pub fn load(&mut self) -> Result<(), String> {
@@ -101,6 +126,8 @@ impl<H: Host> Service<H> {
             // One low-level hook covers every keyboard, so it reports as a single source.
             captured_devices: usize::from(self.enabled),
             profile_title: self.profile.as_ref().map(|p| p.title.clone()),
+            active_layers: self.active_layers.clone(),
+            state_seq: self.state_seq,
             protocol_version: 1,
         }
     }
@@ -116,7 +143,7 @@ impl<H: Host> Service<H> {
     }
 
     fn request(&mut self, r: Request, authorized: bool, now: u64) -> Result<(), String> {
-        if r.command != "status" && !authorized {
+        if !matches!(r.command.as_str(), "status" | "watch") && !authorized {
             return Err("Changes need the Ultimate Keyboards app running as this Windows user".into());
         }
         if authorized {
@@ -126,11 +153,11 @@ impl<H: Host> Service<H> {
                 self.start(now)?;
             }
         }
-        if self.restart_at.is_some() && r.command != "status" {
+        if self.restart_at.is_some() && !matches!(r.command.as_str(), "status" | "watch") {
             return Err("The keyboard service is restarting; wait for a fresh status.".into());
         }
         match r.command.as_str() {
-            "status" => Ok(()),
+            "status" | "watch" => Ok(()),
             "restart" => {
                 self.release("stopped", "The keyboard service is restarting. Remapping stays off until you turn it on.");
                 self.persist()?;
@@ -149,6 +176,7 @@ impl<H: Host> Service<H> {
                 Engine::new(profile.clone()).map_err(|e| e.to_string())?;
                 self.release("stopped", "Profile saved. Remapping is still off.");
                 self.profile = Some(profile);
+                self.bump_seq();
                 if r.enable == Some(true) {
                     if let Err(e) = self.start(now) {
                         let _ = self.persist();
@@ -186,6 +214,7 @@ impl<H: Host> Service<H> {
         self.enabled = true;
         self.state = "running".into();
         self.message = "Remapping is on for all keyboards. Windows can't tell your laptop keyboard from other keyboards, so any keyboard you plug in is remapped too.".into();
+        self.bump_seq();
         Ok(())
     }
 
@@ -209,10 +238,12 @@ impl<H: Host> Service<H> {
         self.host.remove_hook();
         self.phys.clear();
         self.repeat.clear();
+        self.active_layers.clear();
         self.enabled = false;
         self.armed_resume = false;
         self.state = state.into();
         self.message = message.into();
+        self.bump_seq();
     }
 
     /// Mirrors one engine output into `held` and `SendInput`. Duplicate transitions are dropped.
@@ -262,6 +293,7 @@ impl<H: Host> Service<H> {
             engine.process(KeyEvent { usage, down, at_ms: now })
         };
         if self.emit(events) {
+            self.sync_layers();
             KeyAction::Swallow
         } else {
             KeyAction::Pass
@@ -281,6 +313,7 @@ impl<H: Host> Service<H> {
         if !self.emit(events) {
             return None;
         }
+        self.sync_layers();
         next
     }
 

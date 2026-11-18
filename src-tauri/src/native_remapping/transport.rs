@@ -81,6 +81,11 @@ pub fn status_request() -> Value {
     json!({ "version": 1, "command": "status" })
 }
 
+#[cfg_attr(not(any(target_os = "macos", windows)), allow(dead_code))]
+pub fn watch_request(since: u64) -> Value {
+    json!({ "version": 1, "command": "watch", "since": since })
+}
+
 /// Builds an `apply` request. `enable` is always explicit (`false` validates and
 /// stores the profile while keeping remapping off; Save never starts remapping).
 pub fn apply_request(profile: Value, enable: bool) -> Value {
@@ -215,6 +220,8 @@ pub fn missing_windows_service_status(helper_files_present: bool) -> NativeStatu
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         }
     } else {
@@ -227,6 +234,8 @@ pub fn missing_windows_service_status(helper_files_present: bool) -> NativeStatu
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         }
     }

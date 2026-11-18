@@ -3,10 +3,10 @@
 use super::transport::{
     apply_request, check_windows_build, disable_request, exchange_with_transport,
     format_windows_run_command, missing_windows_service_status, read_response_line,
-    restart_request, status_request, with_windows_status_notes, windows_service_candidates,
-    Transport, TransportKind, TIMEOUT, WINDOWS_ELEVATED_NOTE, WINDOWS_NO_DRIVER,
-    WINDOWS_NO_INPUT_MONITORING, WINDOWS_PIPE, WINDOWS_RUN_SUBKEY, WINDOWS_RUN_VALUE,
-    WINDOWS_SERVICE_EXE,
+    restart_request, status_request, watch_request, with_windows_status_notes,
+    windows_service_candidates, Transport, TransportKind, TIMEOUT, WINDOWS_ELEVATED_NOTE,
+    WINDOWS_NO_DRIVER, WINDOWS_NO_INPUT_MONITORING, WINDOWS_PIPE, WINDOWS_RUN_SUBKEY,
+    WINDOWS_RUN_VALUE, WINDOWS_SERVICE_EXE,
 };
 use super::NativeStatus;
 use core::ffi::c_void;
@@ -599,6 +599,8 @@ pub fn status() -> NativeStatus {
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         };
     }
@@ -614,9 +616,19 @@ pub fn status() -> NativeStatus {
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         },
     }
+}
+
+pub fn watch(since: u64) -> Result<NativeStatus, String> {
+    if pipe_is_absent() {
+        return Err("Windows keyboard service pipe is unavailable.".into());
+    }
+    let (status, _) = exchange_with_transport(&NamedPipeTransport, watch_request(since))?;
+    Ok(with_windows_status_notes(status))
 }
 
 pub fn apply(profile: Value, enable: bool) -> Result<NativeStatus, String> {
@@ -641,6 +653,8 @@ pub fn disable() -> Result<NativeStatus, String> {
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         }));
     }

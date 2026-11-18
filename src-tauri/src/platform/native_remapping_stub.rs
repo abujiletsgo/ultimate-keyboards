@@ -8,11 +8,11 @@ use serde_json::Value;
 
 const NOT_READY: &str = "Keyboard remapping for Windows is not set up in this build yet.";
 
-pub fn start_heartbeat() {}
+pub fn start_heartbeat(_app: tauri::AppHandle) {}
 
 pub fn stop_on_exit() {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeStatus {
     pub state: String,
@@ -23,6 +23,10 @@ pub struct NativeStatus {
     pub enabled: bool,
     pub captured_devices: usize,
     pub profile_title: Option<String>,
+    #[serde(default)]
+    pub active_layers: Vec<String>,
+    #[serde(default)]
+    pub state_seq: u64,
     pub protocol_version: u32,
 }
 
@@ -36,6 +40,8 @@ fn not_installed() -> NativeStatus {
         enabled: false,
         captured_devices: 0,
         profile_title: None,
+        active_layers: Vec::new(),
+        state_seq: 0,
         protocol_version: 1,
     }
 }

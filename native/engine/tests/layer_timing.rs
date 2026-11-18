@@ -459,3 +459,53 @@ fn nested_distinct_layers_release_independently_and_keep_held_key_action() {
     assert_eq!(event(&mut e, "h", false, 30), out(&[("left_arrow", false)]));
     assert_eq!(event(&mut e, "h", true, 31), out(&[("h", true)]));
 }
+
+#[test]
+fn active_layers_stays_empty_on_quick_taps_and_tracks_held_stack_in_order() {
+    // Quick spacebar taps during ordinary typing never flash active_layers.
+    let mut e = navigation(true, None);
+    assert!(e.active_layers().is_empty());
+    event(&mut e, "spacebar", true, 0);
+    assert!(e.active_layers().is_empty());
+    event(&mut e, "spacebar", false, 80);
+    assert!(e.active_layers().is_empty());
+
+    // Holding past the threshold activates the layer until release.
+    event(&mut e, "spacebar", true, 100);
+    assert!(e.active_layers().is_empty());
+    e.tick(249);
+    assert!(e.active_layers().is_empty());
+    e.tick(250);
+    assert_eq!(e.active_layers(), &["nav".to_string()]);
+    event(&mut e, "spacebar", false, 260);
+    assert!(e.active_layers().is_empty());
+
+    // Dedicated layer + second layer track activation order, share refcounts, and reset cleanly.
+    let mut nested = engine(vec![
+        layer_rule(false, None),
+        json!({"type":"layer_activator","fromKey":"caps_lock","layerName":"nav"}),
+        json!({"type":"layer_activator","fromKey":"tab","tapKey":"tab","layerName":"numbers"}),
+        json!({"type":"layer_binding","layerName":"numbers","fromKey":"h","toKey":"1"}),
+    ]);
+    event(&mut nested, "spacebar", true, 0);
+    assert_eq!(nested.active_layers(), &["nav".to_string()]);
+    event(&mut nested, "caps_lock", true, 5);
+    assert_eq!(nested.active_layers(), &["nav".to_string()]);
+    event(&mut nested, "tab", true, 10);
+    event(&mut nested, "h", true, 15);
+    event(&mut nested, "h", false, 20);
+    assert_eq!(
+        nested.active_layers(),
+        &["nav".to_string(), "numbers".to_string()]
+    );
+    event(&mut nested, "spacebar", false, 25);
+    // caps_lock still holds "nav"
+    assert_eq!(
+        nested.active_layers(),
+        &["nav".to_string(), "numbers".to_string()]
+    );
+    event(&mut nested, "caps_lock", false, 30);
+    assert_eq!(nested.active_layers(), &["numbers".to_string()]);
+    nested.reset();
+    assert!(nested.active_layers().is_empty());
+}

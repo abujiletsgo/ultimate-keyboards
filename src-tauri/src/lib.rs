@@ -5,6 +5,7 @@ mod device;
 mod build;
 mod newconfig;
 mod frames;
+mod layer_hud;
 mod platform;
 
 // The scroll & mouse engine and the keyboard-service client are macOS code
@@ -117,6 +118,7 @@ fn set_dirty(state: State<AppState>, dirty: bool) {
 fn request_quit(app: &tauri::AppHandle) {
     let dirty = *app.state::<AppState>().dirty.lock().unwrap();
     if !dirty {
+        layer_hud::hide_on_exit(app);
         native_remapping::stop_on_exit();
         app.exit(0);
         return;
@@ -137,6 +139,7 @@ fn request_quit(app: &tauri::AppHandle) {
         .show(move |confirmed| {
             if confirmed {
                 *handle.state::<AppState>().dirty.lock().unwrap() = false;
+                layer_hud::hide_on_exit(&handle);
                 native_remapping::stop_on_exit();
                 handle.exit(0);
             }
@@ -322,6 +325,8 @@ pub fn run() {
             set_dirty,
             install_karabiner_rules,
             native_remapping::native_remapping_status,
+            layer_hud::sync_layer_overlay,
+            layer_hud::get_layer_overlay_state,
             frames::frame_pacing_status,
             frames::frame_probe_target,
             frames::frame_probe_write,
@@ -359,7 +364,8 @@ pub fn run() {
             newconfig::push_initial_config
         ])
         .setup(|app| {
-            native_remapping::start_heartbeat();
+            layer_hud::init(app.handle());
+            native_remapping::start_heartbeat(app.handle().clone());
             // ── Status-bar (menu-bar) item ──────────────────────────────────
             // Switching the laptop keyboard off is a macOS feature; the item
             // is simply absent elsewhere.
@@ -492,6 +498,7 @@ pub fn run() {
                     return;
                 }
                 // Never leave the user with a dead keyboard.
+                layer_hud::hide_on_exit(app);
                 native_remapping::stop_on_exit();
                 let _ = set_builtin_state(app, false);
             }

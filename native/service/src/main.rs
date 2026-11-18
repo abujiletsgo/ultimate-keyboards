@@ -24,6 +24,7 @@ const STATE_DIR: &str = "/Library/Application Support/com.ultimatekeyboards.app/
 const MAX_MESSAGE: usize = 1024 * 1024;
 const LEASE: Duration = Duration::from_secs(15);
 const TIMEOUT: Duration = Duration::from_secs(2);
+const WATCH_HOLD: Duration = Duration::from_millis(1200);
 const MAX_EVENT_WAIT_MS: u64 = 3;
 // Bound IPC/safety latency while waking immediately on input or an engine deadline.
 fn event_wait_ms(now_ms: u64, deadline_ms: Option<u64>) -> u64 {
@@ -126,6 +127,10 @@ struct Request {
     command: String,
     profile: Option<Profile>,
     enable: Option<bool>,
+    since: Option<u64>,
+}
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -139,6 +144,10 @@ struct NativeStatus {
     captured_devices: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    active_layers: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    state_seq: u64,
     protocol_version: u32,
 }
 #[derive(Serialize)]
@@ -162,6 +171,11 @@ struct Work {
     console_uid: u32,
     reply: SyncSender<Response>,
 }
+struct Waiter {
+    since: u64,
+    deadline: Instant,
+    reply: SyncSender<Response>,
+}
 
 fn parse_request(bytes: &[u8]) -> Result<Request, String> {
     if bytes.len() > MAX_MESSAGE {
@@ -174,12 +188,15 @@ fn parse_request(bytes: &[u8]) -> Result<Request, String> {
     }
     if !matches!(
         request.command.as_str(),
-        "status" | "apply" | "disable" | "restart"
+        "status" | "watch" | "apply" | "disable" | "restart"
     ) {
         return Err("Unknown command".into());
     }
     if request.command != "apply" && (request.profile.is_some() || request.enable.is_some()) {
         return Err("Only apply accepts profile/enable".into());
+    }
+    if request.command != "watch" && request.since.is_some() {
+        return Err("Only watch accepts since".into());
     }
     Ok(request)
 }
@@ -371,6 +388,9 @@ struct Service<B: Backend = OsBackend> {
     lease: Option<Instant>,
     armed_resume: bool,
     restart_at: Option<Instant>,
+    active_layers: Vec<String>,
+    state_seq: u64,
+    waiters: Vec<Waiter>,
 }
 impl Service<OsBackend> {
     fn new(synthetic: bool) -> Self {
@@ -397,7 +417,50 @@ impl<B: Backend> Service<B> {
             lease: None,
             armed_resume: false,
             restart_at: None,
+            active_layers: Vec::new(),
+            state_seq: 1,
+            waiters: Vec::new(),
         }
+    }
+    fn bump_seq(&mut self) {
+        self.state_seq = self.state_seq.wrapping_add(1).max(1);
+    }
+    fn sync_layers(&mut self) {
+        let mut next = Vec::new();
+        if self.enabled {
+            for engine in self.engines.values() {
+                for layer in engine.active_layers() {
+                    if !next.contains(layer) {
+                        next.push(layer.clone());
+                    }
+                }
+            }
+        }
+        if next != self.active_layers {
+            self.active_layers = next;
+            self.bump_seq();
+        }
+    }
+    fn flush_waiters(&mut self, now: Instant) {
+        if self.waiters.is_empty() {
+            return;
+        }
+        let seq = self.state_seq;
+        let restarting = self.restart_at.is_some();
+        let status = self.status();
+        let mut keep = Vec::new();
+        for w in self.waiters.drain(..) {
+            if seq != w.since || restarting || now >= w.deadline {
+                let _ = w.reply.send(Response {
+                    ok: true,
+                    status: status.clone(),
+                    error: None,
+                });
+            } else {
+                keep.push(w);
+            }
+        }
+        self.waiters = keep;
     }
     fn status(&self) -> NativeStatus {
         let permission = !self.synthetic && self.backend.permission();
@@ -410,6 +473,8 @@ impl<B: Backend> Service<B> {
             enabled: self.enabled,
             captured_devices: self.captured,
             profile_title: self.profile.as_ref().map(|p| p.title.clone()),
+            active_layers: self.active_layers.clone(),
+            state_seq: self.state_seq,
             protocol_version: 1,
         }
     }
@@ -427,8 +492,10 @@ impl<B: Backend> Service<B> {
         self.armed_resume = false;
         self.engines.clear();
         self.outputs = Outputs::default();
+        self.active_layers.clear();
         self.state = state.into();
         self.message = message.into();
+        self.bump_seq();
     }
     fn start(&mut self) -> Result<(), String> {
         if self.synthetic {
@@ -498,7 +565,41 @@ impl<B: Backend> Service<B> {
         self.state = "running".into();
         self.console_uid = enabling_console;
         self.message = "Native remapping is active on the built-in keyboard. Consumer/Fn inputs pass through unchanged.".into();
+        self.bump_seq();
         Ok(())
+    }
+    fn dispatch(
+        &mut self,
+        request: Result<Request, String>,
+        authorized: bool,
+        reply: SyncSender<Response>,
+    ) {
+        if let Ok(ref r) = request {
+            if r.command == "watch" {
+                if authorized {
+                    self.lease = Some(Instant::now());
+                }
+                if r.since.is_some_and(|s| s == self.state_seq)
+                    && self.restart_at.is_none()
+                    && self.waiters.len() < 16
+                {
+                    self.waiters.push(Waiter {
+                        since: self.state_seq,
+                        deadline: Instant::now() + WATCH_HOLD,
+                        reply,
+                    });
+                    return;
+                }
+                let _ = reply.send(Response {
+                    ok: true,
+                    status: self.status(),
+                    error: None,
+                });
+                return;
+            }
+        }
+        let response = self.handle(request, authorized);
+        let _ = reply.send(response);
     }
     fn handle(&mut self, request: Result<Request, String>, authorized: bool) -> Response {
         let result = request.and_then(|r| self.request(r, authorized));
@@ -509,7 +610,7 @@ impl<B: Backend> Service<B> {
         }
     }
     fn request(&mut self, r: Request, authorized: bool) -> Result<(), String> {
-        if r.command != "status" && !authorized {
+        if !matches!(r.command.as_str(), "status" | "watch") && !authorized {
             return Err(
                 "Mutation requires the signed Ultimate Keyboards app in the active console session"
                     .into(),
@@ -524,11 +625,11 @@ impl<B: Backend> Service<B> {
                 }
             }
         }
-        if self.restart_at.is_some() && r.command != "status" {
+        if self.restart_at.is_some() && !matches!(r.command.as_str(), "status" | "watch") {
             return Err("Keyboard service is restarting; wait for a fresh status.".into());
         }
         match r.command.as_str() {
-            "status" => Ok(()),
+            "status" | "watch" => Ok(()),
             "restart" => {
                 self.stop("stopped", "Keyboard service is restarting to refresh permission state. Remapping remains disabled.");
                 self.persist()?;
@@ -555,6 +656,7 @@ impl<B: Backend> Service<B> {
                     "Validated profile applied; remapping is disabled.",
                 );
                 self.profile = Some(profile);
+                self.bump_seq();
                 if r.enable == Some(true) {
                     if let Err(e) = self.start() {
                         let _ = self.persist();
@@ -778,11 +880,20 @@ impl<B: Backend> Service<B> {
                 break;
             }
         }
+        self.sync_layers();
     }
 }
 impl<B: Backend> Drop for Service<B> {
     fn drop(&mut self) {
         self.stop("stopped", "Helper stopped.");
+        let status = self.status();
+        for w in self.waiters.drain(..) {
+            let _ = w.reply.send(Response {
+                ok: true,
+                status: status.clone(),
+                error: None,
+            });
+        }
     }
 }
 
@@ -1041,10 +1152,10 @@ fn run() -> Result<(), String> {
         for work in rx.try_iter().take(16) {
             let authorized = work.authorized
                 && (synthetic || work.console_uid == unsafe { native::uk_console_uid() });
-            let response = service.handle(work.request, authorized);
-            let _ = work.reply.send(response);
+            service.dispatch(work.request, authorized, work.reply);
         }
         service.tick();
+        service.flush_waiters(Instant::now());
         // Active input waits in CFRunLoop and wakes on its HID source; never add a pickup sleep.
         // Disabled and synthetic modes have no native source, so retain a bounded idle sleep.
         if !service.enabled {
@@ -1580,5 +1691,61 @@ mod tests {
             fs::symlink_metadata(&sock).is_err(),
             "stale socket removed for the new listener"
         );
+    }
+
+    #[test]
+    fn watch_reports_layer_state_changes_immediately_and_rejects_bad_since() {
+        assert!(parse_request(br#"{"version":1,"command":"status","since":1}"#).is_err());
+        let mut service = Service::new(true);
+        let initial_seq = service.status().state_seq;
+        assert!(service.status().active_layers.is_empty());
+
+        // Different `since` returns immediately without parking a waiter.
+        let (tx, rx) = mpsc::sync_channel(1);
+        service.dispatch(
+            parse_request(br#"{"version":1,"command":"watch","since":0}"#),
+            false,
+            tx,
+        );
+        assert_eq!(rx.try_recv().unwrap().status.state_seq, initial_seq);
+        assert!(service.waiters.is_empty());
+
+        // Matching `since` parks until active_layers changes, then flushes immediately.
+        let (tx2, rx2) = mpsc::sync_channel(1);
+        let req_bytes = format!(r#"{{"version":1,"command":"watch","since":{initial_seq}}}"#);
+        service.dispatch(parse_request(req_bytes.as_bytes()), false, tx2);
+        assert_eq!(service.waiters.len(), 1);
+        assert!(rx2.try_recv().is_err());
+
+        let profile: Profile = serde_json::from_value(serde_json::json!({
+            "version": 1,
+            "title": "layers",
+            "rules": [
+                {"type": "layer_activator", "fromKey": "spacebar", "layerName": "nav"},
+                {"type": "layer_binding", "layerName": "nav", "fromKey": "h", "toKey": "left_arrow"}
+            ]
+        }))
+        .unwrap();
+        let mut eng = Engine::new(profile).unwrap();
+        eng.process(KeyEvent {
+            usage: ultimate_keyboards_engine::key_name_to_usage("spacebar").unwrap(),
+            down: true,
+            at_ms: 10,
+        });
+        service.enabled = true;
+        service.engines.insert(1, eng);
+        service.sync_layers();
+        service.flush_waiters(Instant::now());
+
+        let pushed = rx2.try_recv().expect("watch must wake on layer change");
+        assert!(pushed.ok);
+        assert_eq!(pushed.status.active_layers, vec!["nav".to_string()]);
+        assert!(pushed.status.state_seq > initial_seq);
+
+        // Stopping clears active_layers and bumps state_seq again.
+        let seq_on = pushed.status.state_seq;
+        service.stop("stopped", "done");
+        assert!(service.status().active_layers.is_empty());
+        assert!(service.status().state_seq > seq_on);
     }
 }

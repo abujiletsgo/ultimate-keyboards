@@ -2,7 +2,7 @@
 //! DriverKit activation (unchanged macOS contract).
 use super::transport::{
     apply_request, disable_request, exchange_with_transport, read_response_line, restart_request,
-    status_request, Transport, TransportKind, TIMEOUT, UNIX_SOCKET,
+    status_request, watch_request, Transport, TransportKind, TIMEOUT, UNIX_SOCKET,
 };
 use super::NativeStatus;
 use serde::Deserialize;
@@ -112,6 +112,13 @@ pub fn status() -> NativeStatus {
         );
     }
     exchange(status_request()).unwrap_or_else(|e| NativeStatus::unavailable("error", e, true))
+}
+
+pub fn watch(since: u64) -> Result<NativeStatus, String> {
+    if !Path::new(UNIX_SOCKET).exists() {
+        return Err("Keyboard service socket is unavailable.".into());
+    }
+    exchange(watch_request(since))
 }
 
 pub fn apply(profile: Value, enable: bool) -> Result<NativeStatus, String> {

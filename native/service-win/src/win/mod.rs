@@ -17,6 +17,7 @@ pub struct Shared {
     pub beats: Arc<Beats>,
     ctl: Arc<HookCtl>,
     wake: (Mutex<bool>, Condvar),
+    pub state_cv: Condvar,
     /// Set when the service lock could not be taken to release keys; the worker finishes the job.
     unreleased: AtomicBool,
 }
@@ -25,6 +26,7 @@ impl Shared {
     pub fn wake(&self) {
         *self.wake.0.lock().unwrap_or_else(|e| e.into_inner()) = true;
         self.wake.1.notify_one();
+        self.state_cv.notify_all();
     }
 }
 
@@ -101,7 +103,12 @@ fn worker(sh: Arc<Shared>) {
                 drop(svc);
                 std::process::exit(0);
             }
-            (svc.tick(now), svc.take_save())
+            let before = svc.state_seq();
+            let res = (svc.tick(now), svc.take_save());
+            if svc.state_seq() != before {
+                sh.state_cv.notify_all();
+            }
+            res
         };
         flush(save);
         let wait = next.map_or(250, |d| d.saturating_sub(now_ms())).clamp(1, 250);
@@ -155,6 +162,7 @@ fn start(test_suffix: Option<&str>) -> i32 {
         beats,
         ctl,
         wake: (Mutex::new(false), Condvar::new()),
+        state_cv: Condvar::new(),
         unreleased: AtomicBool::new(false),
     });
     let _ = SHARED.set(sh.clone());

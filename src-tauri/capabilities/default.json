@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Default capability for Ultimate Keyboards. File access is limited to the user's Documents folder (interim, until the keyboard registry grants folders through the picker) plus anything the user picks in a dialog; picked paths persist via tauri-plugin-persisted-scope.",
   "windows": [
-    "main"
+    "main",
+    "layer-hud"
   ],
   "permissions": [
     "core:default",

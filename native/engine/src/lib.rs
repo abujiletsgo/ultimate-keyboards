@@ -354,6 +354,7 @@ pub struct Engine {
     pending: Option<Pending>,
     active: BTreeMap<u16, Active>,
     layers: BTreeMap<String, usize>,
+    layer_stack: Vec<String>,
     refs: BTreeMap<u16, usize>,
     combos: BTreeMap<u64, (usize, Vec<u16>)>,
     combo_id: u64,
@@ -487,6 +488,7 @@ impl Engine {
             pending: None,
             active: BTreeMap::new(),
             layers: BTreeMap::new(),
+            layer_stack: Vec::new(),
             refs: BTreeMap::new(),
             combos: BTreeMap::new(),
             combo_id: 0,
@@ -523,6 +525,11 @@ impl Engine {
         })
     }
 
+    /// Currently active layers in the order they were entered (empty when on Base).
+    pub fn active_layers(&self) -> &[String] {
+        &self.layer_stack
+    }
+
     /// Release every currently emitted usage and discard buffered input. Call
     /// before device removal, profile replacement, or shutdown; deliver outputs.
     pub fn reset(&mut self) -> Vec<OutputEvent> {
@@ -538,6 +545,7 @@ impl Engine {
         self.last_down_at = None;
         self.active.clear();
         self.layers.clear();
+        self.layer_stack.clear();
         self.refs.clear();
         self.combos.clear();
         out
@@ -566,7 +574,13 @@ impl Engine {
     fn start_hold(&mut self, key: u16, hold: Hold, out: &mut Vec<OutputEvent>) {
         match &hold {
             Hold::Modifiers(m) => self.press(m, out),
-            Hold::Layer(l) => *self.layers.entry(l.clone()).or_default() += 1,
+            Hold::Layer(l) => {
+                let n = self.layers.entry(l.clone()).or_default();
+                if *n == 0 {
+                    self.layer_stack.push(l.clone());
+                }
+                *n += 1;
+            }
         }
         self.active.insert(key, Active::Hold(hold));
     }
@@ -579,6 +593,7 @@ impl Engine {
                     *n -= 1;
                     if *n == 0 {
                         self.layers.remove(&l);
+                        self.layer_stack.retain(|active| active != &l);
                     }
                 }
             }

@@ -13,6 +13,11 @@ pub struct Request {
     pub command: String,
     pub profile: Option<Profile>,
     pub enable: Option<bool>,
+    pub since: Option<u64>,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -27,6 +32,10 @@ pub struct NativeStatus {
     pub captured_devices: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub profile_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub active_layers: Vec<String>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub state_seq: u64,
     pub protocol_version: u32,
 }
 
@@ -49,12 +58,15 @@ pub fn parse_request(bytes: &[u8]) -> Result<Request, String> {
     }
     if !matches!(
         request.command.as_str(),
-        "status" | "apply" | "disable" | "restart"
+        "status" | "watch" | "apply" | "disable" | "restart"
     ) {
         return Err("Unknown command".into());
     }
     if request.command != "apply" && (request.profile.is_some() || request.enable.is_some()) {
         return Err("Only apply accepts profile/enable".into());
+    }
+    if request.command != "watch" && request.since.is_some() {
+        return Err("Only watch accepts since".into());
     }
     Ok(request)
 }
@@ -130,6 +142,8 @@ mod tests {
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         };
         let json = encode_response(&Response { ok: true, status, error: None });

@@ -193,7 +193,32 @@ fn serve_client(sh: &Shared, mut conn: Conn, ours: &UserSid) {
     let authorized = client_is_same_user(conn.pipe, ours);
     let response = {
         let mut svc = sh.svc.lock().unwrap_or_else(|e| e.into_inner());
-        svc.handle(request, authorized, now_ms())
+        let before = svc.state_seq();
+        if let Ok(ref req) = request {
+            if req.command == "watch" && req.since == Some(before) && !svc.restart_due(now_ms()) {
+                let _ = svc.handle(Ok(crate::proto::Request {
+                    version: 1,
+                    command: "watch".into(),
+                    profile: None,
+                    enable: None,
+                    since: req.since,
+                }), authorized, now_ms());
+                svc = sh
+                    .state_cv
+                    .wait_timeout_while(svc, Duration::from_millis(1200), |s| s.state_seq() == before)
+                    .unwrap_or_else(|e| e.into_inner())
+                    .0;
+                crate::proto::Response { ok: true, status: svc.status(), error: None }
+            } else {
+                let resp = svc.handle(request, authorized, now_ms());
+                if svc.state_seq() != before {
+                    sh.state_cv.notify_all();
+                }
+                resp
+            }
+        } else {
+            svc.handle(request, authorized, now_ms())
+        }
     };
     if conn.write_all(&encode_response(&response)).is_ok() {
         // DisconnectNamedPipe discards unread data: wait (within the 2 s budget) for the client to take

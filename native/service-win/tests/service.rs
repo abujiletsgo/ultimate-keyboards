@@ -265,3 +265,35 @@ fn dropping_the_service_releases_the_hook() {
     drop(s);
     assert!(!host.hooked());
 }
+
+#[test]
+fn status_reports_active_layers_and_bumps_state_seq_on_transitions() {
+    let host = Fake::default();
+    let mut s = Service::new(host, None, false);
+    let layer_profile = r#"{"version":1,"title":"Layers","rules":[
+      {"type":"layer_activator","fromKey":"spacebar","tapKey":"spacebar","layerName":"nav"},
+      {"type":"layer_binding","layerName":"nav","fromKey":"h","toKey":"left_arrow"}
+    ]}"#;
+    let apply = format!(r#"{{"version":1,"command":"apply","enable":true,"profile":{layer_profile}}}"#);
+    let r0 = s.handle(parse_request(apply.as_bytes()), true, 0);
+    assert!(r0.ok && r0.status.active_layers.is_empty());
+    let seq0 = r0.status.state_seq;
+
+    // Quick space tap never activates a layer.
+    const SPACE: u16 = 44;
+    s.key(SPACE, true, 10);
+    s.key(SPACE, false, 60);
+    assert!(s.status().active_layers.is_empty());
+    assert_eq!(s.status().state_seq, seq0);
+
+    // Holding space past threshold enters `nav` and bumps state_seq; release clears it.
+    s.key(SPACE, true, 100);
+    s.tick(250);
+    assert_eq!(s.status().active_layers, vec!["nav".to_string()]);
+    let seq1 = s.status().state_seq;
+    assert!(seq1 > seq0);
+
+    s.key(SPACE, false, 260);
+    assert!(s.status().active_layers.is_empty());
+    assert!(s.status().state_seq > seq1);
+}

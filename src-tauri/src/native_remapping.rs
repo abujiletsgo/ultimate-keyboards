@@ -15,16 +15,104 @@ use windows as os;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::{Condvar, Mutex, OnceLock};
 use std::time::Duration;
+use tauri::Emitter;
+
+#[derive(Default)]
+struct LiveWatch {
+    enabled: bool,
+    watch_supported: bool,
+    last_seq: u64,
+    last_emitted: Option<NativeStatus>,
+}
+
+struct LiveBridge {
+    app: tauri::AppHandle,
+    state: Mutex<LiveWatch>,
+    cv: Condvar,
+}
+
+static BRIDGE: OnceLock<LiveBridge> = OnceLock::new();
+
+fn observe_status(status: &NativeStatus) {
+    let Some(bridge) = BRIDGE.get() else {
+        return;
+    };
+    let should_emit = {
+        let mut guard = bridge.state.lock().unwrap_or_else(|e| e.into_inner());
+        let was_enabled = guard.enabled;
+        guard.enabled = status.enabled;
+        if status.state_seq > 0 {
+            guard.last_seq = status.state_seq;
+        }
+        if status.enabled && !was_enabled {
+            guard.watch_supported = true;
+            bridge.cv.notify_one();
+        } else if !status.enabled && was_enabled {
+            bridge.cv.notify_one();
+        }
+        let changed = guard.last_emitted.as_ref() != Some(status);
+        if changed {
+            guard.last_emitted = Some(status.clone());
+        }
+        changed
+    };
+    if should_emit {
+        crate::layer_hud::sync_from_status(&bridge.app, status);
+        let _ = bridge.app.emit("native-remapping-status", status);
+    }
+}
 
 /// Keep the capture lease alive even when WebKit or WebView2 throttles timers in
-/// a hidden window. This process never enables remapping merely by sending a heartbeat.
-pub fn start_heartbeat() {
+/// a hidden window, and run a zero-idle-cost long-poll watcher while remapping
+/// is enabled so layer holds/releases reach the HUD and webview in < 1 ms.
+pub fn start_heartbeat(app: tauri::AppHandle) {
     static STARTED: std::sync::Once = std::sync::Once::new();
     STARTED.call_once(|| {
+        let _ = BRIDGE.set(LiveBridge {
+            app,
+            state: Mutex::new(LiveWatch {
+                enabled: false,
+                watch_supported: true,
+                last_seq: 0,
+                last_emitted: None,
+            }),
+            cv: Condvar::new(),
+        });
         std::thread::spawn(|| loop {
-            let _ = native_remapping_status();
+            let status = os::status();
+            observe_status(&status);
             std::thread::sleep(Duration::from_secs(3));
+        });
+        std::thread::spawn(|| {
+            let Some(bridge) = BRIDGE.get() else {
+                return;
+            };
+            loop {
+                let since = {
+                    let guard = bridge.state.lock().unwrap_or_else(|e| e.into_inner());
+                    let guard = bridge
+                        .cv
+                        .wait_while(guard, |s| !s.enabled || !s.watch_supported)
+                        .unwrap_or_else(|e| e.into_inner());
+                    guard.last_seq
+                };
+                match os::watch(since) {
+                    Ok(status) => {
+                        observe_status(&status);
+                    }
+                    Err(err) => {
+                        if err.contains("Unknown command") {
+                            let mut guard =
+                                bridge.state.lock().unwrap_or_else(|e| e.into_inner());
+                            guard.watch_supported = false;
+                        } else {
+                            std::thread::sleep(Duration::from_millis(400));
+                        }
+                    }
+                }
+            }
         });
     });
 }
@@ -44,6 +132,10 @@ pub struct NativeStatus {
     pub enabled: bool,
     pub captured_devices: usize,
     pub profile_title: Option<String>,
+    #[serde(default)]
+    pub active_layers: Vec<String>,
+    #[serde(default)]
+    pub state_seq: u64,
     pub protocol_version: u32,
 }
 
@@ -59,6 +151,8 @@ impl NativeStatus {
             enabled: false,
             captured_devices: 0,
             profile_title: None,
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         }
     }
@@ -66,17 +160,24 @@ impl NativeStatus {
 
 #[tauri::command(async)]
 pub fn native_remapping_status() -> NativeStatus {
-    os::status()
+    let status = os::status();
+    observe_status(&status);
+    status
 }
 
 #[tauri::command(async)]
 pub fn native_remapping_apply(profile: Value, enable: bool) -> Result<NativeStatus, String> {
-    os::apply(profile, enable)
+    crate::layer_hud::note_applied_profile(&profile);
+    let status = os::apply(profile, enable)?;
+    observe_status(&status);
+    Ok(status)
 }
 
 #[tauri::command(async)]
 pub fn native_remapping_disable() -> Result<NativeStatus, String> {
-    os::disable()
+    let status = os::disable()?;
+    observe_status(&status);
+    Ok(status)
 }
 
 #[tauri::command(async)]
@@ -87,7 +188,9 @@ pub fn native_remapping_install(app: tauri::AppHandle) -> Result<String, String>
 /// Explicit user refresh only. Heartbeats never call this or restart the service.
 #[tauri::command(async)]
 pub fn native_remapping_refresh_permissions() -> Result<NativeStatus, String> {
-    os::refresh_permissions()
+    let status = os::refresh_permissions()?;
+    observe_status(&status);
+    Ok(status)
 }
 
 #[tauri::command(async)]
@@ -325,6 +428,8 @@ mod tests {
             enabled: true,
             captured_devices: 1,
             profile_title: Some("Laptop".into()),
+            active_layers: Vec::new(),
+            state_seq: 0,
             protocol_version: 1,
         };
         let noted = with_windows_status_notes(base);
