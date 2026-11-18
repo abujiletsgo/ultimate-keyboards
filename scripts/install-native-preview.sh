@@ -2,9 +2,14 @@
 # Run interactively in Terminal. macOS approvals remain user actions.
 set -euo pipefail
 
-uk_repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-uk_package="$uk_repo_dir/native/installer/UltimateKeyboards-0.3.0.pkg"
-uk_expected_sha='7e146109f2b243763f126446db08abfd2fa6104bd099ce34b61c54b3f6495e1a'
+# Usage: install-native-preview.sh <package.pkg> <expected-sha256>
+# The hash comes from the build record (the package's .manifest.json); it is never pinned here.
+if [[ $# -ne 2 || ! "$2" =~ ^[0-9a-f]{64}$ ]]; then
+  echo 'Usage: install-native-preview.sh <package.pkg> <expected-sha256 from the build record>' >&2
+  exit 2
+fi
+uk_package="$1"
+uk_expected_sha="$2"
 
 if [[ ! -f "$uk_package" ]]; then
   echo "Installer not found: $uk_package" >&2
@@ -13,7 +18,7 @@ fi
 
 uk_digest="$(/usr/bin/shasum -a 256 "$uk_package")"
 if [[ "${uk_digest%% *}" != "$uk_expected_sha" ]]; then
-  echo 'The installer differs from the verified preview. Installation stopped.' >&2
+  echo 'The installer differs from the build record. Installation stopped.' >&2
   exit 1
 fi
 

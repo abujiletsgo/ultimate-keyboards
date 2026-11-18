@@ -6,12 +6,23 @@ Use the default MacBook profile: home-row mods (A=Ctrl, S=Option, D=Shift, F=Cmd
 
 ## 0. Get the build
 
-The test needs the complete native package (app, helper and driver in one installer) from the release candidate:
+**Do not start until the agent has handed you a build record.** No installable package contains the behaviour under test yet (checked 2026-11-17): the old preview `native/installer/UltimateKeyboards-0.3.0.pkg` was built 2026-11-09, before the default MacBook profile (`f76a777`), the home-row misfire guard (`6c6efea`) and combo-first-on-home-row (`056362d`), which sections 2 to 4 exercise. `/Volumes/Work/releases/ultimate-keyboards/` does not exist until KE-20 makes the release candidate.
 
-- Where: `/Volumes/Work/releases/ultimate-keyboards/<version>/` (made by KE-20). Until that exists, the development preview is `native/installer/UltimateKeyboards-0.3.0.pkg`, installed by `scripts/install-native-preview.sh` in Terminal.
-- Tests that must be green before you start (the agent runs them): `bun test`, `cargo test -q` in `native/engine` and `native/service`.
-- Install, approve and enable: [native-remapping.md](../user/native-remapping.md), steps 1 to 5. Quit Karabiner-Elements first if it runs.
-- Open TextEdit, choose Format > Make Plain Text, and keep it open for sections 2 to 5.
+The agent gives you, before you begin:
+
+1. The package path and its SHA-256 (from the build's `.manifest.json`).
+2. The source commit it was built from, which must contain `056362d`: `git merge-base --is-ancestor 056362d <commit>` exits 0. If it does not, the test is not ready.
+3. Green tests on that commit (the agent runs them): `bun test`, and `cargo test -q` in `native/engine` and `native/service`.
+
+Install it in Terminal with the path and hash from the record. The script refuses a package whose hash differs:
+
+```sh
+bash scripts/install-native-preview.sh <package.pkg> <sha256>
+```
+
+Then approve and enable: [native-remapping.md](../user/native-remapping.md), steps 1 to 5. Quit Karabiner-Elements first if it runs. Write the build's SHA-256 and commit at the top of your notes; each row is recorded against that build.
+
+Open TextEdit, choose Format > Make Plain Text, and keep it open for sections 2 to 5.
 
 ## 1. Install and turn on (HANDS-1)
 
@@ -69,16 +80,20 @@ Secure Input must not stop the mappings from passing real characters. In Termina
 
 1. Remapping > **Stop remapping**. Type `kl` quickly, then hold **F** and tap **N**: plain letters, no Enter, no shortcut.
 2. **Apply and enable**. K+L gives Enter again.
-3. If an external keyboard is at hand, plug it in: its keys type plainly and the combos do not fire on it.
+3. Plug in an external keyboard (required for this row): its keys type plainly and the combos do not fire on it. If none is at hand, record the row as blocked, not pass.
 
-Pass: stop is immediate and complete, and enable brings it back. Note what each key did.
+Pass: stop is immediate and complete, enable brings it back, and the external keyboard is unchanged. Note what each key did and which external keyboard you used.
 
 ## 8. Sleep and wake (HANDS-8)
 
+By design the helper stops capture on sleep and does not turn itself back on: the status reads "Sleep or event-loop interruption detected; physical keyboards released. Enable again to resume." (`docs/user/native-remapping.md`, step 6). This section checks that this happens cleanly and that enabling again works.
+
 1. With remapping on, close the lid for 10 seconds. Open it and unlock.
-2. Without opening the app, type `like` then K+L. Pass: letters, then Enter.
-3. Open the app: the status still says running. Note the first key that worked after wake.
-4. Close the app window (the app stays in the menu bar) and repeat steps 1 and 2.
+2. Without touching the app, type `like` then K+L. Pass: plain letters `like` and `kl` (no Enter): the keyboard is released, not stuck or half-mapped.
+3. Open the app: the status says stopped and says to enable again. Press **Apply and enable**, then type `like` then K+L: letters, then Enter.
+4. Close the app window (the app stays in the menu bar) and repeat steps 1 and 2, then open the app from the menu bar and repeat step 3.
+
+Pass: after each wake the keys are plain, the status says stopped and what to press, and Apply and enable brings the mappings back. Fail: mappings half-applied, keys stuck, a status that still says running while the keys are plain, or Apply and enable not restoring them. Note the first key that worked after wake and the exact status text.
 
 ## 9. Log out, log in, restart (HANDS-9)
 

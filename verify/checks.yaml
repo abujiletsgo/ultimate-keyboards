@@ -332,19 +332,19 @@ checks:
 
   - id: HANDS-7
     area: laptop-keys
-    check: 'Stop remapping gives back the plain keyboard at once, and Apply and enable brings the mappings back; an external keyboard is never changed'
+    check: 'Stop remapping gives back the plain keyboard at once, and Apply and enable brings the mappings back; a plugged-in external keyboard types plainly and is never changed'
     targets: [macbook]
     how: 'person: Do the checks in docs/qa/hands-on-typing.md section 7'
-    proof: "Tom's note: what each key did"
+    proof: "Tom's note: what each key did and which external keyboard was used; a row with no external keyboard tried is blocked, not pass"
     affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
     added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
 
   - id: HANDS-8
     area: laptop-keys
-    check: 'After closing the lid for 10 seconds and opening it, and unlocking, the mappings still work with nothing reopened'
+    check: 'After closing the lid for 10 seconds, opening and unlocking, the helper has released the keyboard (plain keys, status says stopped and to enable again, as designed) and Apply and enable brings the mappings back, with the app window open and closed'
     targets: [macbook]
     how: 'person: Do docs/qa/hands-on-typing.md section 8, repeat once with the app window closed'
-    proof: "Tom's note: first key that worked after wake, and whether the status said running"
+    proof: "Tom's note: first key that worked after wake and the exact status text before and after Apply and enable"
     affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
     added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
 
