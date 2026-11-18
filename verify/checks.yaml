@@ -26,6 +26,9 @@ targets:
   mac-app:
     kind: other
     label: Fresh release build on the Mac (open -n from src-tauri/target/release/bundle/macos), driven through orca computer; Tom's /Applications copy is never touched
+  macbook:
+    kind: other
+    label: Tom's own MacBook, native remapping installed from the release-candidate package; only Tom types these rows (docs/qa/hands-on-typing.md)
   zenbook:
     kind: other
     label: Tom's ASUS ZenBook (Win11 Home x64) over NetBird SSH, see ~/.claude/refs/windows-test-pc.md; desktop-session runs via Task Scheduler /IT
@@ -272,3 +275,84 @@ checks:
     proof: result.json with ok=true and every case pass
     affects: [src/lib/profileTransfer.ts, native/service-win/e2e/**, native/engine/src/**]
     added: 2026-11-17 key behaviour half of XFER-2, runnable without GUI control
+
+  - id: HANDS-1
+    area: laptop-keys
+    check: 'Native remapping installs, gets its macOS approvals and Apply and enable turns it on with the default MacBook profile'
+    targets: [macbook]
+    how: 'person: Install the package, approve the driver and Input Monitoring, open This Mac > MacBook Keys > Remapping, Apply and enable; the status says running'
+    proof: "Tom's note: the status text and any step that needed a retry"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-2
+    area: laptop-keys
+    check: 'With remapping on, ordinary fast typing of a paragraph comes out exactly as typed: no dropped, doubled, swapped or stuck letters, and no stray Cmd/Ctrl/Shift/Option from the home row'
+    targets: [macbook]
+    how: 'person: Type the paragraph in docs/qa/hands-on-typing.md section 2 twice, fast, into TextEdit (plain text)'
+    proof: "Tom's note: any wrong letter and the word it was in"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-3
+    area: laptop-keys
+    check: 'Holding a home-row key and tapping a key with the other hand acts as the modifier: J + Z undoes, J + C copies, J + V pastes, D + H types capital H, and tapping each home-row key alone types its letter'
+    targets: [macbook]
+    how: 'person: Do the five checks in docs/qa/hands-on-typing.md section 3'
+    proof: "Tom's note: which checks failed"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-4
+    area: laptop-keys
+    check: "The combos work and ordinary words do not trigger them: K+L is Enter, I+O is Backspace, W+E is Escape; typing 'like', 'kill', 'polio', 'were' and 'write' normally gives the letters"
+    targets: [macbook]
+    how: 'person: Do the checks in docs/qa/hands-on-typing.md section 4'
+    proof: "Tom's note: which combo or word misfired"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-5
+    area: laptop-keys
+    check: 'Shift, Caps Lock, Cmd+Tab, Cmd+Space and the Fn row (volume, brightness) behave normally with remapping on'
+    targets: [macbook]
+    how: 'person: Do the checks in docs/qa/hands-on-typing.md section 5'
+    proof: "Tom's note: any key that did nothing or the wrong thing"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-6
+    area: laptop-keys
+    check: 'A password field (Secure Input on) still gets every typed character with remapping on'
+    targets: [macbook]
+    how: 'person: Type the test text into the hidden prompt in docs/qa/hands-on-typing.md section 6; the length printed matches'
+    proof: "Tom's note: the printed length"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-7
+    area: laptop-keys
+    check: 'Stop remapping gives back the plain keyboard at once, and Apply and enable brings the mappings back; an external keyboard is never changed'
+    targets: [macbook]
+    how: 'person: Do the checks in docs/qa/hands-on-typing.md section 7'
+    proof: "Tom's note: what each key did"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-8
+    area: laptop-keys
+    check: 'After closing the lid for 10 seconds and opening it, and unlocking, the mappings still work with nothing reopened'
+    targets: [macbook]
+    how: 'person: Do docs/qa/hands-on-typing.md section 8, repeat once with the app window closed'
+    proof: "Tom's note: first key that worked after wake, and whether the status said running"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
+
+  - id: HANDS-9
+    area: laptop-keys
+    check: 'After log out and log in, and after a restart, the status is honest and remapping either returns by itself or says what to press'
+    targets: [macbook]
+    how: 'person: Do docs/qa/hands-on-typing.md section 9'
+    proof: "Tom's note: what the app said and what the keys did after each"
+    affects: [native/engine/src/**, native/service/src/**, src/lib/macDefaults.ts, src/lib/nativeRemapping.ts]
+    added: 2026-11-17 KE-10 hands-on typing test of native MacBook remapping (physical acceptance pending in docs/release/standalone-macos.md)
